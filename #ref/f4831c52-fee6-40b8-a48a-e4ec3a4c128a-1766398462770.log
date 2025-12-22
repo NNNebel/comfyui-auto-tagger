@@ -1,0 +1,17 @@
+plugin.js:1 plugin.js file has been loaded.
+plugin.js:4 DOMContentLoaded event fired. Initializing plugin logic.
+plugin.js:12 Attempting to load 'exifreader'...
+plugin.js:14 'exifreader' loaded successfully.
+plugin.js:32 UI Elements: Object
+plugin.js:165 Event listener for 'startButton' has been attached.
+plugin.js:171 Event listener for 'closeButton' has been attached.
+DevTools failed to load source map: Could not load content for eagleplugin://f4831c52-fee6-40b8-a48a-e4ec3a4c128a//E:/Project/comfyui-auto-tagger/exif-reader.js.map: System error: net::ERR_FILE_NOT_FOUND
+plugin.js:48 startTagging function called.
+plugin.js:41 処理を開始します...
+plugin.js:41 1個のアイテムを処理します。
+plugin.js:41 [処理中] 154417_hires_00001_
+plugin.js:41   - Cleaned JSON String (truncated): {"last_node_id": 230, "last_link_id": 403, "nodes": [{"id": 145, "type": "UpscaleModelLoader", "pos": [2580, 2830], "size": [315, 58], "flags": {}, "order": 0, "mode": 2, "inputs": [], "outputs": [{"name": "UPSCALE_MODEL", "type": "UPSCALE_MODEL", "links": [165], "slot_index": 0}], "properties": {"Node name for S&R": "UpscaleModelLoader"}, "widgets_values": ["RealESRGAN_x4plus_anime_6B.pth"]}, {"id": 147, "type": "ImageScaleBy", "pos": [2360, 3020], "size": [315, 82], "flags": {}, "order": 53, "...
+plugin.js:41   - Parsed Workflow Object (console.log below):
+plugin.js:99 {last_node_id: 230, last_link_id: 403, nodes: Array(80), links: Array(185), groups: Array(9), …}
+plugin.js:41 [情報] 154417_hires_00001_: 追加対象のタグ(Checkpoint/LoRA)が見つかりませんでした。
+plugin.js:41 全ての処理が完了しました。

@@ -1,0 +1,32 @@
+{
+    "id": "f4831c52-fee6-40b8-a48a-e4ec3a4c128a",
+    "version": "1.0.0",
+    "platform": "all",
+    "arch": "all",
+    "name": "comfyui-auto-tagger",
+    "logo": "logo.png",
+    "logo": "/logo.png",
+    "keywords": [],
+    "devTools": false,
+    "type": "window",
+    "main": {
+        "url": "index.html",
+        "width": 640,
+        "height": 480
+    },
+    "permissions": [
+        "filesystem",
+        "network"
+    ],
+    "app": {
+        "desktop": {
+            "contextMenu": [
+                {
+                    "label": "ComfyUIタグ生成 (Window)",
+                    "type": "window",
+                    "target": "image"
+                }
+            ]
+        }
+    }
+}
