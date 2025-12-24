@@ -6,7 +6,7 @@
     "name": "comfyui-auto-tagger",
     "logo": "logo.png",
     "keywords": ["comfyui", "webp", "tag", "exif", "metadata"],
-    "devTools": true,
+    "devTools": false,
 
     "type": "window",
     "main": {
