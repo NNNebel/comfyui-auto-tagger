@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const fs = require('fs');
+    const fsp = require('fs').promises;
     const path = require('path');
     let ExifReader;
 
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // UI要素の取得
     const startButton = document.getElementById('startButton');
     const deleteTagsButton = document.getElementById('deleteTagsButton');
     const cancelButton = document.getElementById('cancelButton');
@@ -26,9 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkLora = document.getElementById('chk-lora');
     const chkPositive = document.getElementById('chk-positive');
     const chkNegative = document.getElementById('chk-negative');
-    const chunkSizeInput = document.getElementById('chunk-size'); // 追加: チャンクサイズ入力要素
+    const chunkSizeInput = document.getElementById('chunk-size');
 
-    let isCancelled = false; // 中止フラグ
+    let isCancelled = false;
+    let logBuffer = [];
+    const MAX_LOG_LINES = 100;
 
     if (!startButton || !deleteTagsButton || !cancelButton || !logArea || !chkCheckpoint || !chkLora || !chkPositive || !chkNegative || !chunkSizeInput) {
         console.error("One or more UI elements could not be found. Aborting initialization.");
@@ -37,7 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function log(message) {
         console.log(message);
-        logArea.textContent += message + '\n';
+        logBuffer.push(message);
+        if (logBuffer.length > MAX_LOG_LINES) {
+            logBuffer.shift();
+        }
+        logArea.textContent = logBuffer.join('\n');
         logArea.scrollTop = logArea.scrollHeight;
     }
 
@@ -94,12 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function startTagging() {
-        // --- 初期化 ---
         startButton.disabled = true;
         deleteTagsButton.disabled = true;
         cancelButton.style.display = 'inline-block';
         cancelButton.disabled = false;
         isCancelled = false;
+        logBuffer = [];
         log('処理を開始します...');
 
         try {
@@ -111,16 +116,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             log(`${items.length}個のアイテムを処理します。`);
 
-            const chunkSize = parseInt(chunkSizeInput.value, 10) || 5; // Configから取得
+            const chunkSize = parseInt(chunkSizeInput.value, 10) || 5;
             let currentIndex = 0;
             let successCount = 0;
             let errorCount = 0;
 
             const processItem = async (item) => {
+                let buffer = null, exifTags = null, workflow = null;
                 try {
                     log(`[処理中] ${item.name}`);
-                    const buffer = fs.readFileSync(item.filePath);
-                    const exifTags = ExifReader.load(buffer);
+                    buffer = await fsp.readFile(item.filePath);
+                    exifTags = ExifReader.load(buffer);
                     let workflowJsonString = null;
                     if (exifTags['Model']?.description) workflowJsonString = exifTags['Model'].description.replace(/^prompt:/, '');
                     else if (exifTags['Make']?.description) workflowJsonString = exifTags['Make'].description.replace(/^workflow:/, '');
@@ -130,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     const cleanedJsonString = workflowJsonString.replace(/^UNICODE\u0000+/, '').trim();
-                    let workflow;
                     try {
                         workflow = JSON.parse(cleanedJsonString);
                     } catch (e) {
@@ -151,39 +156,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         log(`[情報] ${item.name}: 解析可能なノードが見つかりませんでした。`);
                         return;
                     }
-                                        const finalTags = item.tags ? [...item.tags] : [];
-                                        const addedTags = [];
-                    
-                                        const allCandidates = [
-                                            ...getCheckpointAndLoraTags(nodesToProcess),
-                                            ...getPromptTags(nodesToProcess, nodeObjectById)
-                                        ];
-                    
-                                        if (allCandidates.length === 0) {
-                                            log(`[情報] ${item.name}: チェックされた項目に該当するタグが見つかりませんでした。`);
-                                            return;
-                                        }
-                                        
-                                        for(const tag of allCandidates) {
-                                            if(!finalTags.includes(tag)){
-                                                finalTags.push(tag);
-                                                addedTags.push(tag);
-                                            }
-                                        }
-                    
-                                        if (addedTags.length > 0) {
-                                            log(`  -> 追加されたタグ (${addedTags.length}個): ${addedTags.join(', ')}`);
-                                            item.tags = finalTags;
-                                            await item.save();
-                                            log(`[成功] ${item.name}: タグを保存しました。`);
-                                            successCount++;
-                                        } else {
-                                            log(`[スキップ] ${item.name}: 抽出されたタグはすべて既に存在するため、更新は行いません。`);
-                                        }
-                } catch (error) {
+                    const finalTags = item.tags ? [...item.tags] : [];
+                    const finalTagSet = new Set(finalTags);
+                    const addedTags = [];
+                    const allCandidates = [...getCheckpointAndLoraTags(nodesToProcess), ...getPromptTags(nodesToProcess, nodeObjectById)];
+                    for (const tag of allCandidates) {
+                        if (!finalTagSet.has(tag)) {
+                            finalTags.push(tag);
+                            finalTagSet.add(tag);
+                            addedTags.push(tag);
+                        }
+                    }
+                    if (addedTags.length > 0) {
+                        log(`  -> 追加されたタグ (${addedTags.length}個): ${addedTags.join(', ')}`);
+                        item.tags = finalTags;
+                        await item.save();
+                        log(`[成功] ${item.name}: タグを保存しました。`);
+                        successCount++;
+                    } else {
+                        log(`[スキップ] ${item.name}: 抽出されたタグはすべて既に存在するため、更新は行いません。`);
+                    }
+} catch (error) {
                     log(`[致命的エラー] ${item.name}: ${error.message}`);
                     console.error(error);
                     errorCount++;
+                } finally {
+                    buffer = null;
+                    exifTags = null;
+                    workflow = null;
                 }
             };
 
@@ -231,11 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteTagsButton.disabled = true;
             cancelButton.style.display = 'inline-block';
             cancelButton.disabled = false;
-            isCancelled = false; // フラグをリセット
+            isCancelled = false;
 
+            logBuffer = [];
             log(`${items.length}個のアイテムのタグを削除します...`);
             
-            const chunkSize = parseInt(chunkSizeInput.value, 10) || 5; // Configから取得
+            const chunkSize = parseInt(chunkSizeInput.value, 10) || 5;
             let currentIndex = 0;
             let deletedCount = 0;
             let skippedCount = 0;

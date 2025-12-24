@@ -5,9 +5,9 @@
     "arch": "all",
     "name": "comfyui-auto-tagger",
     "logo": "logo.png",
-    "logo": "/logo.png",
-    "keywords": [],
-    "devTools": false,
+    "keywords": ["comfyui", "webp", "tag", "exif", "metadata"],
+    "devTools": true,
+
     "type": "window",
     "main": {
         "url": "index.html",
@@ -23,8 +23,8 @@
             "contextMenu": [
                 {
                     "label": "ComfyUIタグ生成 (Window)",
-                    "type": "window",
-                    "target": "image"
+                    "target": "image",
+                    "key": "comfyui-auto-tagger.open"
                 }
             ]
         }
