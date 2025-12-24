@@ -1,0 +1,60 @@
+{
+    "manifest": {
+        "name": "ComfyUI Auto Tagger",
+        "contextMenu_label": "ComfyUIタグ生成 (Window)"
+    },
+    "ui": {
+        "title": "ComfyUI Auto Tagger",
+        "option": {
+            "checkpoint": "Checkpoint",
+            "lora": "LoRA",
+            "positive": "ポジティブプロンプト",
+            "negative": "ネガティブプロンプト"
+        },
+        "config": {
+            "chunkSize": "一度に処理する数:"
+        },
+        "button": {
+            "start": "タグ付け開始",
+            "deleteAll": "全タグ削除 (試験用)",
+            "cancel": "処理を中止"
+        }
+    },
+    "log": {
+        "initial": "オプションを選択し、「タグ付け開始」ボタンを押してください。",
+        "start": "処理を開始します...",
+        "noItemSelected": "画像が選択されていません。",
+        "processingItems": "{{count}}個のアイテムを処理します。",
+        "processingItem": "[処理中] {{name}}",
+        "tagsAdded": "  -> 追加されたタグ ({{count}}個): {{tags}}",
+        "success": "[成功] {{name}}: タグを保存しました。",
+        "skip": "[スキップ] {{name}}: 抽出されたタグはすべて既に存在するため、更新は行いません。",
+        "progress": "... {{progress}} / {{total}} 件 処理完了 ...",
+        "cancelled": "処理が中止されました。 (完了: {{successCount}}, 失敗: {{errorCount}})",
+        "completed": "全ての処理が完了しました。 (成功: {{successCount}}, 失敗: {{errorCount}})",
+        "info": {
+            "noNodes": "[情報] {{name}}: 解析可能なノードが見つかりませんでした。"
+        },
+        "error": {
+            "noWorkflow": "[エラー] {{name}}: ComfyUIのWorkflow情報が見つかりませんでした。",
+            "jsonParse": "[エラー] {{name}}: WorkflowのJSONパースに失敗しました。",
+            "generic": "[致命的エラー] {{name}}: {{message}}",
+            "init": "[致命的エラー] 初期化中に問題が発生しました: {{message}}"
+        },
+        "delete": {
+            "cancelled": "タグの削除をキャンセルしました。",
+            "start": "{{count}}個のアイテムのタグを削除します...",
+            "deleting": "[削除中] {{name}} から {{count}}個のタグを削除します。",
+            "skipped": "[スキップ] {{name}} にはタグがありません。",
+            "completed": "選択されたアイテムのタグ削除が完了しました。 (削除: {{deletedCount}}, スキップ: {{skippedCount}})",
+            "cancelledMessage": "タグの削除が中止されました。"
+        },
+        "cancelling": "... 処理を中止しています ..."
+    },
+    "alert": {
+        "noItemSelected": "アイテムが選択されていません。"
+    },
+    "confirm": {
+        "deleteAll": "選択中の{{count}}個のアイテムから全てのタグを削除します。よろしいですか？"
+    }
+}

@@ -1,0 +1,60 @@
+{
+    "manifest": {
+        "name": "ComfyUI Auto Tagger",
+        "contextMenu_label": "ComfyUIタグ生成 (Window)"
+    },
+    "ui": {
+        "title": "ComfyUI Auto Tagger",
+        "option": {
+            "checkpoint": "Checkpoint",
+            "lora": "LoRA",
+            "positive": "Positive Prompt",
+            "negative": "Negative Prompt"
+        },
+        "config": {
+            "chunkSize": "Process Count:"
+        },
+        "button": {
+            "start": "Start Tagging",
+            "deleteAll": "Delete All Tags (Test)",
+            "cancel": "Cancel"
+        }
+    },
+    "log": {
+        "initial": "Select options and press the 'Start Tagging' button.",
+        "start": "Processing started...",
+        "noItemSelected": "No items selected.",
+        "processingItems": "Processing {{count}} items.",
+        "processingItem": "[Processing] {{name}}",
+        "tagsAdded": "  -> Added tags ({{count}}): {{tags}}",
+        "success": "[Success] {{name}}: Tags saved.",
+        "skip": "[Skip] {{name}}: All extracted tags already exist. No update performed.",
+        "progress": "... {{progress}} / {{total}} items processed ...",
+        "cancelled": "Process cancelled. (Success: {{successCount}}, Failed: {{errorCount}})",
+        "completed": "All processes completed. (Success: {{successCount}}, Failed: {{errorCount}})",
+        "info": {
+            "noNodes": "[Info] {{name}}: No parsable nodes found."
+        },
+        "error": {
+            "noWorkflow": "[Error] {{name}}: ComfyUI workflow information not found.",
+            "jsonParse": "[Error] {{name}}: Failed to parse workflow JSON.",
+            "generic": "[Fatal Error] {{name}}: {{message}}",
+            "init": "[Fatal Error] An issue occurred during initialization: {{message}}"
+        },
+        "delete": {
+            "cancelled": "Tag deletion cancelled.",
+            "start": "Deleting tags for {{count}} items...",
+            "deleting": "[Deleting] Deleting {{count}} tags from {{name}}.",
+            "skipped": "[Skip] {{name}} has no tags.",
+            "completed": "Tag deletion for selected items completed. (Deleted: {{deletedCount}}, Skipped: {{skippedCount}})",
+            "cancelledMessage": "Tag deletion was cancelled."
+        },
+        "cancelling": "... Cancelling process ..."
+    },
+    "alert": {
+        "noItemSelected": "No items selected."
+    },
+    "confirm": {
+        "deleteAll": "Are you sure you want to delete all tags from the {{count}} selected items?"
+    }
+}
