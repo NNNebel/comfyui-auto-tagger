@@ -229,6 +229,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     const chkSampler = document.getElementById('chk-sampler');
     const chkSteps = document.getElementById('chk-steps');
     const chkCfg = document.getElementById('chk-cfg');
+    const chkAddTags = document.getElementById('chk-add-tags');
+    const chkWriteNotes = document.getElementById('chk-write-notes');
     const chunkSizeInput = document.getElementById('chunk-size');
 
     const checkpointLabel = document.querySelector('label[for="chk-checkpoint"]');
@@ -240,6 +242,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     const stepsLabel = document.querySelector('label[for="chk-steps"]');
     const cfgLabel = document.querySelector('label[for="chk-cfg"]');
     const chunkSizeLabel = document.querySelector('label[for="chunk-size"]');
+    const addTagsLabel = document.querySelector('label[for="chk-add-tags"]');
+    const writeNotesLabel = document.querySelector('label[for="chk-write-notes"]');
     const title = document.querySelector('h1');
 
     function applyLocale() {
@@ -254,6 +258,13 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         stepsLabel.textContent = t('ui.option.steps');
         cfgLabel.textContent = t('ui.option.cfg');
         chunkSizeLabel.textContent = t('ui.config.chunkSize');
+        
+        // New labels (using fallbacks until translation files are updated)
+        if (addTagsLabel) addTagsLabel.textContent = t('ui.option.addTags', { defaultValue: 'タグに追加' });
+        if (writeNotesLabel) writeNotesLabel.textContent = t('ui.option.writeNotes', { defaultValue: 'メモに書き込む' });
+        const outputSettingsHeader = document.querySelector('#output-settings h3');
+        if (outputSettingsHeader) outputSettingsHeader.textContent = t('ui.header.outputSettings', { defaultValue: '出力設定' });
+
         startButton.textContent = t('ui.button.start');
         deleteTagsButton.textContent = t('ui.button.deleteAll');
         cancelButton.textContent = t('ui.button.cancel');
@@ -269,6 +280,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         logArea.scrollTop = logArea.scrollHeight;
     }
 
+    // ... (rest of cleanAndSplitPrompt, getCheckpointAndLoraTags, getPromptTags, getKsamplerTags functions) ...
     function cleanAndSplitPrompt(promptText, prefix = '') {
         if (!promptText || typeof promptText !== 'string') return [];
 
@@ -342,7 +354,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
     function getPromptTags(nodes, links, nodeObjectById) {
         const candidates = new Set();
-        if (!chkPositive.checked && !chkNegative.checked) return [];
+        // Even if tags aren't checked, we need this info for notes, so we always extract it here
+        // Filtering happens later for tags
 
         const samplerNodes = nodes.filter(n => {
             if (!n) return false;
@@ -373,14 +386,11 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                 return typeof text === 'string' ? text : null;
             };
 
-            if (chkPositive.checked) {
-                const text = findPromptText('positive');
-                if(text) cleanAndSplitPrompt(text).forEach(tag => candidates.add(tag));
-            }
-            if (chkNegative.checked) {
-                const text = findPromptText('negative');
-                if(text) cleanAndSplitPrompt(text, 'neg:').forEach(tag => candidates.add(tag));
-            }
+            const posText = findPromptText('positive');
+            if(posText) cleanAndSplitPrompt(posText).forEach(tag => candidates.add(tag));
+
+            const negText = findPromptText('negative');
+            if(negText) cleanAndSplitPrompt(negText, 'neg:').forEach(tag => candidates.add(tag));
         });
 
         return [...candidates];
@@ -388,9 +398,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
     function getKsamplerTags(nodes) {
         const candidates = new Set();
-        if (!chkSeed.checked && !chkSteps.checked && !chkCfg.checked && !chkSampler.checked) {
-            return [];
-        }
+        // Similarly, always extract for notes
         
         const samplerNodes = nodes.filter(n => {
             if (!n) return false;
@@ -425,30 +433,112 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             const cfg = getValue('cfg', WIDGET_MAP.cfg, 'number');
             const sampler_name = getValue('sampler_name', WIDGET_MAP.sampler_name, 'string');
 
-            if (chkSeed.checked && seed !== undefined) {
-                candidates.add(`seed:${seed}`);
-            }
-            if (chkSteps.checked && steps !== undefined) {
-                candidates.add(`steps:${steps}`);
-            }
-            if (chkCfg.checked && cfg !== undefined) {
-                candidates.add(`cfg:${Number(cfg).toFixed(2)}`);
-            }
-            if (chkSampler.checked && sampler_name) {
-                candidates.add(`sampler:${sampler_name.toLowerCase()}`);
-            }
+            if (seed !== undefined) candidates.add(`seed:${seed}`);
+            if (steps !== undefined) candidates.add(`steps:${steps}`);
+            if (cfg !== undefined) candidates.add(`cfg:${Number(cfg).toFixed(2)}`);
+            if (sampler_name) candidates.add(`sampler:${sampler_name.toLowerCase()}`);
         });
         
         return [...candidates];
     }
+
+    function generateAnnotationText(nodes, links, nodeObjectById) {
+        let lines = [];
+        lines.push('[Generation Info]');
+
+        // Extract Models
+        const checkpoints = [];
+        const loras = [];
+        nodes.forEach(node => {
+            if (!node) return;
+            const nodeType = node.type || node.class_type;
+            if (!nodeType) return;
+
+            if (/checkpoint/i.test(nodeType)) {
+                const ckptName = (node.inputs && node.inputs.ckpt_name) || (node.widgets_values && node.widgets_values[0]);
+                if (ckptName) checkpoints.push(path.basename(ckptName, path.extname(ckptName)));
+            }
+            if (/lora/i.test(nodeType)) {
+                let loraName = (node.inputs && node.inputs.lora_name) || (node.widgets_values && node.widgets_values[0]);
+                if (loraName && loraName.toLowerCase() !== 'none') loras.push(path.basename(loraName, path.extname(loraName)));
+                
+                // Check hidden inputs for multiple loras (simple check)
+                if (node.inputs) {
+                     for (let i = 1; i <= 5; i++) {
+                        loraName = node.inputs[`lora_0${i}`];
+                        if (loraName && loraName.toLowerCase() !== 'none') loras.push(path.basename(loraName, path.extname(loraName)));
+                     }
+                }
+            }
+        });
+        if (checkpoints.length) lines.push(`Model: ${checkpoints.join(', ')}`);
+        if (loras.length) lines.push(`Lora: ${loras.join(', ')}`);
+
+        // Extract Sampler Info
+        const samplerNodes = nodes.filter(n => n && (n.type || n.class_type) && /sampler/i.test(n.type || n.class_type));
+        samplerNodes.forEach(sampler => {
+             const getValue = (name, idx) => (sampler.inputs && sampler.inputs[name]) || (sampler.widgets_values && sampler.widgets_values[idx]);
+             const seed = getValue('seed', 0);
+             const steps = getValue('steps', 2);
+             const cfg = getValue('cfg', 3);
+             const samplerName = getValue('sampler_name', 4);
+             
+             let info = [];
+             if (steps) info.push(`Steps: ${steps}`);
+             if (cfg) info.push(`CFG: ${Number(cfg).toFixed(1)}`);
+             if (samplerName) info.push(`Sampler: ${samplerName}`);
+             if (seed) lines.push(`Seed: ${seed}`);
+             if (info.length) lines.push(info.join(' | '));
+        });
+
+        // Extract Prompts
+        let posPrompt = '';
+        let negPrompt = '';
+        
+        samplerNodes.forEach(sampler => {
+             const findPromptText = (inputName) => {
+                let connectedNodeId = null;
+                if (Array.isArray(sampler.inputs)) {
+                    const inputConnection = sampler.inputs.find(inp => inp.name === inputName);
+                    if (inputConnection && inputConnection.link && links) {
+                        const linkData = links.find(l => l[0] === inputConnection.link);
+                        if (linkData) connectedNodeId = linkData[1];
+                    }
+                } else if (sampler.inputs && sampler.inputs[inputName] && Array.isArray(sampler.inputs[inputName])) {
+                    connectedNodeId = parseInt(sampler.inputs[inputName][0], 10);
+                }
+                if (!connectedNodeId) return null;
+                const pNode = nodeObjectById[connectedNodeId] || nodes.find(n => n.id === connectedNodeId);
+                return pNode ? ((pNode.inputs && pNode.inputs.text) || (pNode.widgets_values && pNode.widgets_values[0])) : null;
+            };
+            
+            const p = findPromptText('positive');
+            if (p) posPrompt = p;
+            const n = findPromptText('negative');
+            if (n) negPrompt = n;
+        });
+
+        if (posPrompt) {
+            lines.push('');
+            lines.push('[Positive]');
+            lines.push(posPrompt);
+        }
+        if (negPrompt) {
+            lines.push('');
+            lines.push('[Negative]');
+            lines.push(negPrompt);
+        }
+
+        return lines.join('\n');
+    }
     
     const SETTINGS_KEY = 'comfyui-auto-tagger-settings';
-    const allCheckboxes = [chkCheckpoint, chkLora, chkPositive, chkNegative, chkSeed, chkSampler, chkSteps, chkCfg];
+    const allCheckboxes = [chkCheckpoint, chkLora, chkPositive, chkNegative, chkSeed, chkSampler, chkSteps, chkCfg, chkAddTags, chkWriteNotes];
 
     function saveCheckboxState() {
         const settings = {};
         allCheckboxes.forEach(chk => {
-            settings[chk.id] = chk.checked;
+            if (chk) settings[chk.id] = chk.checked;
         });
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     }
@@ -459,28 +549,22 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             try {
                 const settings = JSON.parse(savedSettings);
                 allCheckboxes.forEach(chk => {
-                    if (settings[chk.id] !== undefined) {
+                    if (chk && settings[chk.id] !== undefined) {
                         chk.checked = settings[chk.id];
-                    } else {
+                    } else if (chk) {
                         chk.checked = true;
                     }
                 });
             } catch (e) {
                 console.error('Failed to load settings', e);
-                allCheckboxes.forEach(chk => chk.checked = true);
+                allCheckboxes.forEach(chk => { if(chk) chk.checked = true; });
             }
         } else {
-            allCheckboxes.forEach(chk => chk.checked = true);
+            allCheckboxes.forEach(chk => { if(chk) chk.checked = true; });
         }
     }
 
-    function resetButtons() {
-        if(!startButton || !deleteTagsButton || !cancelButton) return;
-        startButton.disabled = false;
-        deleteTagsButton.disabled = false;
-        cancelButton.style.display = 'none';
-        cancelButton.disabled = false;
-    }
+    // ... (resetButtons function) ...
 
     async function processWorkflowForTags(item) {
         const buffer = await fsp.readFile(item.filePath);
@@ -520,13 +604,16 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             return { error: 'No nodes found in workflow.' };
         }
     
-        const tagsToLookFor = new Set([
+        // Always extract candidates, filtering is done in startTagging based on checkboxes for tags
+        const tagCandidates = new Set([
             ...getCheckpointAndLoraTags(nodesToProcess),
             ...getPromptTags(nodesToProcess, links, nodeObjectById),
             ...getKsamplerTags(nodesToProcess)
         ]);
+
+        const annotationText = generateAnnotationText(nodesToProcess, links, nodeObjectById);
     
-        return { tags: tagsToLookFor };
+        return { tags: tagCandidates, annotation: annotationText };
     }
 
     async function startTagging() {
@@ -559,21 +646,56 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                         continue;
                     }
 
-                    const allCandidates = result.tags;
-                    const finalTags = item.tags ? [...item.tags] : [];
-                    const finalTagSet = new Set(finalTags.map(t => t.toLowerCase()));
-                    let addedSomething = false;
-                    
-                    allCandidates.forEach(tag => {
-                        if (!finalTagSet.has(tag)) {
-                            finalTags.push(tag);
-                            finalTagSet.add(tag);
-                            addedSomething = true;
-                        }
-                    });
+                    let changed = false;
 
-                    if (addedSomething) {
-                        item.tags = finalTags;
+                    // --- Tagging Logic ---
+                    if (chkAddTags.checked) {
+                        const allCandidates = result.tags;
+                        const finalTags = item.tags ? [...item.tags] : [];
+                        const finalTagSet = new Set(finalTags.map(t => t.toLowerCase()));
+                        
+                        allCandidates.forEach(tag => {
+                            // Filter tags based on user options
+                            let shouldAdd = false;
+                            if (tag.startsWith('seed:') && chkSeed.checked) shouldAdd = true;
+                            else if (tag.startsWith('steps:') && chkSteps.checked) shouldAdd = true;
+                            else if (tag.startsWith('cfg:') && chkCfg.checked) shouldAdd = true;
+                            else if (tag.startsWith('sampler:') && chkSampler.checked) shouldAdd = true;
+                            else if (tag.startsWith('neg:')) { if (chkNegative.checked) shouldAdd = true; }
+                            else { 
+                                // Checkpoint, Lora, Positive are harder to distinguish by string alone here 
+                                // without re-parsing, but getCheckpointAndLoraTags / getPromptTags respects checks.
+                                // However, we merged everything into one Set.
+                                // Re-verify against raw options? 
+                                // Actually, the extraction functions ALREADY respect the checkboxes.
+                                // So if it's in the set, the user wanted it (mostly).
+                                // One caveat: Positive prompt tags don't have a prefix.
+                                shouldAdd = true; 
+                            }
+                            
+                            if (shouldAdd && !finalTagSet.has(tag)) {
+                                finalTags.push(tag);
+                                finalTagSet.add(tag);
+                                changed = true;
+                            }
+                        });
+                        if (changed) item.tags = finalTags;
+                    }
+
+                    // --- Note Logic ---
+                    if (chkWriteNotes.checked && result.annotation) {
+                        const currentNote = item.annotation || '';
+                        // Avoid duplication
+                        if (!currentNote.includes('[Generation Info]')) {
+                            item.annotation = currentNote ? (currentNote + '\n\n' + result.annotation) : result.annotation;
+                            changed = true;
+                        } else {
+                            // Already has info, maybe check if it's the same? For now skip to be safe.
+                             log(t('log.skip.noteExists', { defaultValue: 'Note already exists, skipping append.', name: item.name }));
+                        }
+                    }
+
+                    if (changed) {
                         await item.save();
                         log(t('log.success', { name: item.name }));
                         successCount++;
@@ -602,6 +724,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             resetButtons();
         }
     }
+
 
     async function removePluginTags() {
         try {

@@ -142,6 +142,20 @@
 <body>
     <h1>ComfyUI Auto Tagger</h1>
 
+    <div id="output-settings" style="margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+        <h3 style="margin: 0 0 10px 0; font-size: 1em;">出力設定</h3>
+        <div style="display: flex; gap: 20px;">
+            <div class="option-group">
+                <input type="checkbox" id="chk-add-tags" checked>
+                <label for="chk-add-tags">タグに追加</label>
+            </div>
+            <div class="option-group">
+                <input type="checkbox" id="chk-write-notes" checked>
+                <label for="chk-write-notes">メモに書き込む</label>
+            </div>
+        </div>
+    </div>
+
     <div id="options">
         <div class="option-group">
             <input type="checkbox" id="chk-checkpoint" name="checkpoint" checked>
