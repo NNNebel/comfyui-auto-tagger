@@ -23,14 +23,12 @@ const domReadyPromise = new Promise(resolve => {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', resolve);
     } else {
-        resolve(); // Already ready
+        resolve();
     }
 });
 
 Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     
-    // --- All code now lives inside the resolved promise ---
-
     function t(key, replacements = {}) {
         if (typeof i18next === 'undefined') {
             console.error('i18next is not defined!');
@@ -126,7 +124,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         }
         return candidates;
     }
-
+    
     function resetButtons() {
         if(!startButton || !deleteTagsButton || !cancelButton) return;
         startButton.disabled = false;
@@ -157,6 +155,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             let currentIndex = 0;
             let successCount = 0;
             let errorCount = 0;
+            let skippedCount = 0;
 
             const processItem = async (item) => {
                 let buffer = null, exifTags = null, workflow = null;
@@ -191,6 +190,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     }
                     if (nodesToProcess.length === 0) {
                         log(t('log.info.noNodes', { name: item.name }));
+                        skippedCount++;
                         return;
                     }
                     
@@ -226,9 +226,11 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     } else {
                         const allCandidates = [...cpLoraCandidates, ...promptCandidates];
                         if (allCandidates.length > 0) {
-                            log(t('log.skip', { name: item.name }));
+                            log(t('log.skip.allExist', { name: item.name }));
+                            skippedCount++;
                         } else {
                             log(t('log.info.noNodes', { name: item.name }));
+                            skippedCount++;
                         }
                     }
                 } catch (error) {
@@ -243,14 +245,14 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             const processChunk = async () => {
                 if (isCancelled) {
                     log('------------------------------------');
-                    log(t('log.cancelled', { successCount, errorCount }));
+                    log(t('log.cancelled', { successCount, skippedCount, errorCount }));
                     resetButtons();
                     return;
                 }
                 const chunk = items.slice(currentIndex, currentIndex + chunkSize);
                 if (chunk.length === 0) {
                     log('------------------------------------');
-                    log(t('log.completed', { successCount, errorCount }));
+                    log(t('log.completed', { successCount, skippedCount, errorCount }));
                     resetButtons();
                     return;
                 }
@@ -275,8 +277,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                 alert(t('alert.noItemSelected'));
                 return;
             }
-            if (!confirm(t('confirm.deleteAll', { count: items.length })))
-            {
+            if (!confirm(t('confirm.deleteAll', { count: items.length }))) {
                 log(t('log.delete.cancelled'));
                 return;
             }
@@ -291,6 +292,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             let currentIndex = 0;
             let removedCount = 0;
             let skippedCount = 0;
+            let errorCount = 0;
 
             const processItemForRemoval = async (item) => {
                 let buffer = null, exifTags = null, workflow = null;
@@ -300,9 +302,10 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     let workflowJsonString = null;
                     if (exifTags['Model']?.description) workflowJsonString = exifTags['Model'].description.replace(/^prompt:/, '');
                     else if (exifTags['Make']?.description) workflowJsonString = exifTags['Make'].description.replace(/^workflow:/, '');
+                    
                     if (!workflowJsonString) {
-                        log(t('log.delete.noCandidates', { name: item.name }));
-                        skippedCount++;
+                        log(t('log.error.noWorkflow', { name: item.name }));
+                        errorCount++;
                         return;
                     }
                     const cleanedJsonString = workflowJsonString.replace(/^UNICODE\u0000+/, '').trim();
@@ -310,7 +313,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                         workflow = JSON.parse(cleanedJsonString);
                     } catch (e) {
                         log(t('log.error.jsonParse', { name: item.name }));
-                        skippedCount++;
+                        errorCount++;
                         return;
                     }
                     let nodesToProcess = [], nodeObjectById = {};
@@ -355,7 +358,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                 } catch (error) {
                     log(t('log.error.generic', { name: item.name, message: error.message }));
                     console.error(error);
-                    skippedCount++;
+                    errorCount++;
                 } finally {
                     buffer = null; exifTags = null; workflow = null;
                 }
@@ -364,14 +367,14 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             const processChunkAndDelete = async () => {
                 if (isCancelled) {
                     log('------------------------------------');
-                    log(t('log.delete.cancelledMessage'));
+                    log(t('log.delete.cancelledMessage', { removedCount, skippedCount, errorCount })); 
                     resetButtons();
                     return;
                 }
                 const chunk = items.slice(currentIndex, currentIndex + chunkSize);
                 if (chunk.length === 0) {
                     log('------------------------------------');
-                    log(t('log.delete.completed', { removedCount, skippedCount }));
+                    log(t('log.delete.completed', { removedCount, skippedCount, errorCount })); 
                     resetButtons();
                     return;
                 }
@@ -388,7 +391,6 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         }
     }
     
-    // --- Final Initialization ---
     if (!isExifReaderLoaded) {
         log("Error: A critical library (ExifReader) failed to load.");
         return;

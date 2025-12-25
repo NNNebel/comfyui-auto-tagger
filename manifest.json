@@ -3,23 +3,17 @@
     "version": "1.2.0",
     "platform": "all",
     "arch": "all",
-    "fallbackLanguage": "ja_JP",
+    "fallbackLanguage": "en",
     "languages": ["en", "ja_JP"],
     "name": "{{manifest.name}}",
-    "default_locale": "en",
     "logo": "logo.png",
-    "keywords": ["comfyui", "webp", "tag", "exif", "metadata"],
+    "keywords": ["comfyui", "tag", "exif", "metadata"],
     "devTools": false,
-    "type": "window",
     "main": {
         "url": "index.html",
         "width": 640,
         "height": 480
     },
-    "permissions": [
-        "filesystem",
-        "network"
-    ],
     "app": {
         "desktop": {
             "contextMenu": [

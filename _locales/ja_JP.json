@@ -30,8 +30,8 @@
         "success": "[成功] {{name}}: タグを保存しました。",
         "skip": "[スキップ] {{name}}: 抽出されたタグはすべて既に存在するため、更新は行いません。",
         "progress": "... {{progress}} / {{total}} 件 処理完了 ...",
-        "cancelled": "処理が中止されました。 (完了: {{successCount}}, 失敗: {{errorCount}})",
-        "completed": "全ての処理が完了しました。 (成功: {{successCount}}, 失敗: {{errorCount}})",
+        "cancelled": "処理が中止されました。 (完了: {{successCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
+        "completed": "全ての処理が完了しました。 (成功: {{successCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
         "info": {
             "noNodes": "[情報] {{name}}: 解析可能なノードが見つかりませんでした。"
         },
@@ -48,8 +48,8 @@
             "removing": "[削除中] {{name}} から {{count}}個のプラグインタグを削除します。",
             "tagsRemoved": "  -> 削除されたタグ: {{tags}}",
             "noneFound": "[スキップ] {{name}}: 削除対象のプラグインタグは見つかりませんでした。",
-            "completed": "プラグインタグの削除が完了しました。 (削除: {{removedCount}}, スキップ: {{skippedCount}})",
-            "cancelledMessage": "タグの削除が中止されました。"
+            "completed": "プラグインタグの削除が完了しました。 (削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
+            "cancelledMessage": "タグの削除が中止されました。 (削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})"
         },
         "cancelling": "... 処理を中止しています ..."
     },

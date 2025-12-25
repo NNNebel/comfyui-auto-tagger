@@ -30,8 +30,8 @@
         "success": "[Success] {{name}}: Tags saved.",
         "skip": "[Skip] {{name}}: All extracted tags already exist. No update performed.",
         "progress": "... {{progress}} / {{total}} items processed ...",
-        "cancelled": "Process cancelled. (Success: {{successCount}}, Failed: {{errorCount}})",
-        "completed": "All processes completed. (Success: {{successCount}}, Failed: {{errorCount}})",
+        "cancelled": "Process cancelled. (Success: {{successCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
+        "completed": "All processes completed. (Success: {{successCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
         "info": {
             "noNodes": "[Info] {{name}}: No parsable nodes found."
         },
@@ -48,8 +48,8 @@
             "removing": "[Removing] {{name}}: Removing {{count}} plugin tags.",
             "tagsRemoved": "  -> Removed tags: {{tags}}",
             "noneFound": "[Skip] {{name}}: No plugin tags to remove were found on this item.",
-            "completed": "Plugin tag removal complete. (Removed: {{removedCount}}, Skipped: {{skippedCount}})",
-            "cancelledMessage": "Tag deletion was cancelled."
+            "completed": "Plugin tag removal complete. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
+            "cancelledMessage": "Tag deletion was cancelled. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})"
         },
         "cancelling": "... Cancelling process ..."
     },
