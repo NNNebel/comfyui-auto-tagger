@@ -9,7 +9,11 @@
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
             "positive": "Positive Prompt",
-            "negative": "Negative Prompt"
+            "negative": "Negative Prompt",
+            "seed": "Seed",
+            "sampler": "Sampler",
+            "steps": "Steps",
+            "cfg": "CFG Scale"
         },
         "config": {
             "chunkSize": "Process Count:"

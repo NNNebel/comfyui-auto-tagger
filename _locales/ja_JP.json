@@ -9,7 +9,11 @@
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
             "positive": "ポジティブプロンプト",
-            "negative": "ネガティブプロンプト"
+            "negative": "ネガティブプロンプト",
+            "seed": "Seed",
+            "sampler": "Sampler",
+            "steps": "Steps",
+            "cfg": "CFG Scale"
         },
         "config": {
             "chunkSize": "一度に処理する数:"

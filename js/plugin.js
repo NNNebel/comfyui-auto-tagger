@@ -53,11 +53,20 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     const chkLora = document.getElementById('chk-lora');
     const chkPositive = document.getElementById('chk-positive');
     const chkNegative = document.getElementById('chk-negative');
+    const chkSeed = document.getElementById('chk-seed');
+    const chkSampler = document.getElementById('chk-sampler');
+    const chkSteps = document.getElementById('chk-steps');
+    const chkCfg = document.getElementById('chk-cfg');
     const chunkSizeInput = document.getElementById('chunk-size');
+
     const checkpointLabel = document.querySelector('label[for="chk-checkpoint"]');
     const loraLabel = document.querySelector('label[for="chk-lora"]');
     const positiveLabel = document.querySelector('label[for="chk-positive"]');
     const negativeLabel = document.querySelector('label[for="chk-negative"]');
+    const seedLabel = document.querySelector('label[for="chk-seed"]');
+    const samplerLabel = document.querySelector('label[for="chk-sampler"]');
+    const stepsLabel = document.querySelector('label[for="chk-steps"]');
+    const cfgLabel = document.querySelector('label[for="chk-cfg"]');
     const chunkSizeLabel = document.querySelector('label[for="chunk-size"]');
     const title = document.querySelector('h1');
 
@@ -68,6 +77,10 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         loraLabel.textContent = t('ui.option.lora');
         positiveLabel.textContent = t('ui.option.positive');
         negativeLabel.textContent = t('ui.option.negative');
+        seedLabel.textContent = t('ui.option.seed');
+        samplerLabel.textContent = t('ui.option.sampler');
+        stepsLabel.textContent = t('ui.option.steps');
+        cfgLabel.textContent = t('ui.option.cfg');
         chunkSizeLabel.textContent = t('ui.config.chunkSize');
         startButton.textContent = t('ui.button.start');
         deleteTagsButton.textContent = t('ui.button.deleteAll');
@@ -109,9 +122,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
     function getPromptTags(nodes, nodeObjectById) {
         const candidates = [];
-        if (!chkPositive.checked && !chkNegative.checked) return candidates;
-        const ksampler = nodes.filter(node => node && node.class_type === 'KSampler').reverse()[0];
-        if (!ksampler) return candidates;
+                    if (!chkPositive.checked && !chkNegative.checked) return candidates;
+                    const ksampler = nodes.filter(node => node && node.class_type === 'KSampler')[0];        if (!ksampler) return candidates;
         if (chkPositive.checked) {
             const nodeId = ksampler.inputs?.positive?.[0];
             const promptNode = nodeObjectById[nodeId];
@@ -121,6 +133,31 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             const nodeId = ksampler.inputs?.negative?.[0];
             const promptNode = nodeObjectById[nodeId];
             if (promptNode && promptNode.inputs?.text) candidates.push(...cleanAndSplitPrompt(promptNode.inputs.text, 'neg:'));
+        }
+        return candidates;
+    }
+
+    function getKsamplerTags(nodes) {
+        const candidates = [];
+        if (!chkSeed.checked && !chkSteps.checked && !chkCfg.checked && !chkSampler.checked) {
+            return candidates;
+        }
+        const ksampler = nodes.filter(node => node && node.class_type === 'KSampler')[0];
+        if (!ksampler || !ksampler.inputs) {
+            return candidates;
+        }
+        const { seed, steps, cfg, sampler_name } = ksampler.inputs;
+        if (chkSeed.checked && seed !== undefined) {
+            candidates.push(`seed:${seed}`);
+        }
+        if (chkSteps.checked && steps !== undefined) {
+            candidates.push(`steps:${steps}`);
+        }
+        if (chkCfg.checked && cfg !== undefined) {
+            candidates.push(`cfg:${cfg}`);
+        }
+        if (chkSampler.checked && sampler_name) {
+            candidates.push(`sampler:${sampler_name}`);
         }
         return candidates;
     }
@@ -198,16 +235,13 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     const finalTagSet = new Set(finalTags);
                     let addedSomething = false;
 
-                    const cpLoraCandidates = getCheckpointAndLoraTags(nodesToProcess);
-                    for (const tag of cpLoraCandidates) {
-                        if (!finalTagSet.has(tag)) {
-                            finalTags.push(tag);
-                            finalTagSet.add(tag);
-                            addedSomething = true;
-                        }
-                    }
-                    const promptCandidates = getPromptTags(nodesToProcess, nodeObjectById);
-                    for (const tag of promptCandidates) {
+                    const allCandidates = [
+                        ...getCheckpointAndLoraTags(nodesToProcess),
+                        ...getPromptTags(nodesToProcess, nodeObjectById),
+                        ...getKsamplerTags(nodesToProcess)
+                    ];
+
+                    for (const tag of allCandidates) {
                         if (!finalTagSet.has(tag)) {
                             finalTags.push(tag);
                             finalTagSet.add(tag);
@@ -224,7 +258,6 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                         log(t('log.success', { name: item.name }));
                         successCount++;
                     } else {
-                        const allCandidates = [...cpLoraCandidates, ...promptCandidates];
                         if (allCandidates.length > 0) {
                             log(t('log.skip.allExist', { name: item.name }));
                             skippedCount++;
@@ -330,7 +363,11 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                         skippedCount++;
                         return;
                     }
-                    const tagsToLookFor = new Set([...getCheckpointAndLoraTags(nodesToProcess), ...getPromptTags(nodesToProcess, nodeObjectById)]);
+                    const tagsToLookFor = new Set([
+                        ...getCheckpointAndLoraTags(nodesToProcess),
+                        ...getPromptTags(nodesToProcess, nodeObjectById),
+                        ...getKsamplerTags(nodesToProcess)
+                    ]);
                     if (tagsToLookFor.size === 0) {
                         log(t('log.delete.noCandidates', { name: item.name }));
                         skippedCount++;
