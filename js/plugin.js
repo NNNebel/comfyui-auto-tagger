@@ -1,7 +1,191 @@
 const fsp = require('fs').promises;
 const path = require('path');
-const { ExifTool } = require('exiftool-vendored');
-const exiftool = new ExifTool();
+
+// --- ComfyUI/A1111 Fast Parser (Library-free & Robust) ---
+function getGenInfo(buffer, mimeType) {
+    if (mimeType === 'image/png') {
+        return parsePng(buffer);
+    } else if (mimeType === 'image/webp') {
+        return parseWebP(buffer);
+    }
+    return {};
+}
+
+// ---------------------------------------------------------
+// 1. PNG Parser (Same as before)
+// ---------------------------------------------------------
+function parsePng(buffer) {
+    const result = {};
+    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+
+    if (view.getUint32(0) !== 0x89504e47) return result;
+
+    let offset = 8;
+
+    while (offset < view.byteLength) {
+        if (offset + 4 > view.byteLength) break;
+        const length = view.getUint32(offset);
+        offset += 4;
+
+        if (offset + 4 > view.byteLength) break;
+        const type = getFourCC(view, offset);
+        offset += 4;
+
+        if (type === 'tEXt') {
+            const chunkData = buffer.slice(offset, offset + length);
+            const { keyword, text } = decodePngText(chunkData);
+
+            try {
+                if (keyword === 'workflow') {
+                    result.workflow = JSON.parse(text);
+                } else if (keyword === 'prompt') {
+                    result.prompt = JSON.parse(text);
+                } else if (keyword === 'parameters') {
+                    result.parameters = text;
+                }
+            } catch (e) {
+                console.error(`Error parsing JSON from ${keyword} chunk`, e);
+            }
+        }
+
+        offset += length + 4;
+    }
+    return result;
+}
+
+function decodePngText(data) {
+    let nullIndex = -1;
+    for (let i = 0; i < data.length; i++) {
+        if (data[i] === 0x00) {
+            nullIndex = i;
+            break;
+        }
+    }
+    if (nullIndex === -1) return { keyword: '', text: '' };
+    const decoder = new TextDecoder('utf-8');
+    const keyword = decoder.decode(data.slice(0, nullIndex));
+    const text = decoder.decode(data.slice(nullIndex + 1));
+    return { keyword, text };
+}
+
+// ---------------------------------------------------------
+// 2. WebP Parser (Robust binary scan)
+// ---------------------------------------------------------
+function parseWebP(buffer) {
+    const result = {};
+    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+
+    if (getFourCC(view, 0) !== 'RIFF' || getFourCC(view, 8) !== 'WEBP') return result;
+
+    let offset = 12;
+    while (offset < view.byteLength) {
+        if (offset + 8 > view.byteLength) break;
+
+        const chunkType = getFourCC(view, offset);
+        const chunkSize = view.getUint32(offset + 4, true);
+        const chunkDataOffset = offset + 8;
+
+        // ComfyUI may put data in EXIF or XMP
+        if (chunkType === 'EXIF' || chunkType === 'XMP ') {
+            const chunkData = buffer.slice(chunkDataOffset, chunkDataOffset + chunkSize);
+            extractFromBinary(chunkData, result);
+        }
+
+        offset += 8 + chunkSize + (chunkSize % 2);
+    }
+    return result;
+}
+
+/**
+ * Find JSON directly within binary data.
+ * Searches as byte sequence to avoid UTF-8 decoding corruption.
+ */
+function extractFromBinary(data, result) {
+    // iso-8859-1 maps byte values directly to characters, preventing corruption
+    const decoder = new TextDecoder('iso-8859-1');
+    const binaryString = decoder.decode(data);
+
+    // 1. Search for Workflow
+    const workflowIndex = binaryString.indexOf('Workflow:');
+    if (workflowIndex !== -1) {
+        // Find the first '{' after "Workflow:"
+        const jsonStart = binaryString.indexOf('{', workflowIndex);
+        if (jsonStart !== -1) {
+            const json = parseJsonFromPos(data, jsonStart);
+            if (json) result.workflow = json;
+        }
+    } 
+    // Fallback for cases without header but with JSON content
+    else if (binaryString.includes('nodes') && binaryString.includes('links')) {
+        const jsonStart = binaryString.indexOf('{');
+        if (jsonStart !== -1) {
+             const json = parseJsonFromPos(data, jsonStart);
+             if (json && json.nodes) result.workflow = json;
+        }
+    }
+
+    // 2. Search for Prompt
+    const promptIndex = binaryString.indexOf('Prompt:');
+    if (promptIndex !== -1) {
+        const jsonStart = binaryString.indexOf('{', promptIndex);
+        if (jsonStart !== -1) {
+            const json = parseJsonFromPos(data, jsonStart);
+            if (json) result.prompt = json;
+        }
+    }
+}
+
+/**
+ * Extract JSON starting from a specific byte position by counting braces.
+ */
+function parseJsonFromPos(fullBuffer, startPos) {
+    let braceCount = 0;
+    let inString = false;
+    let escape = false;
+    let endPos = -1;
+
+    for (let i = startPos; i < fullBuffer.length; i++) {
+        const byte = fullBuffer[i];
+        
+        if (escape) { escape = false; continue; }
+        if (byte === 0x5c) { escape = true; continue; } // Backslash
+        if (byte === 0x22) { inString = !inString; continue; } // Quote
+
+        if (!inString) {
+            if (byte === 0x7b) { // '{'
+                braceCount++;
+            } else if (byte === 0x7d) { // '}'
+                braceCount--;
+                if (braceCount === 0) {
+                    endPos = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (endPos !== -1) {
+        try {
+            // Only decode as UTF-8 once the range is determined (safe here)
+            const jsonBuffer = fullBuffer.slice(startPos, endPos + 1);
+            const jsonStr = new TextDecoder('utf-8').decode(jsonBuffer);
+            return JSON.parse(jsonStr);
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
+function getFourCC(view, offset) {
+    return String.fromCharCode(
+        view.getUint8(offset),
+        view.getUint8(offset + 1),
+        view.getUint8(offset + 2),
+        view.getUint8(offset + 3)
+    );
+}
+// --- End of Fast Parser ---
 
 const i18nReadyPromise = new Promise(resolve => {
     eagle.onPluginCreate(resolve);
@@ -122,7 +306,6 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             const nodeType = node.type || node.class_type;
             if (!nodeType) return;
 
-            // Checkpoint Loader
             if (chkCheckpoint.checked && /checkpoint/i.test(nodeType)) {
                 const ckptName = (node.inputs && node.inputs.ckpt_name) || (node.widgets_values && node.widgets_values[0]);
                 if (ckptName && typeof ckptName === 'string') {
@@ -130,27 +313,22 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                 }
             }
             
-            // LoRA Loader (including stacks)
             if (chkLora.checked && /lora/i.test(nodeType)) {
-                // Standard LoraLoader
                 let loraName = (node.inputs && node.inputs.lora_name) || (node.widgets_values && node.widgets_values[0]);
                 if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
                     candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
                 }
 
-                // For stack-style loaders like 'Lora Loader Stack (rgthree)'
-                // API-style inputs
                 if (node.inputs) {
-                    for (let i = 1; i <= 5; i++) { // Check for up to 5 loras in a stack
+                    for (let i = 1; i <= 5; i++) {
                         loraName = node.inputs[`lora_0${i}`];
                         if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
                             candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
                         }
                     }
                 }
-                // GUI-style widgets_values
                 if (node.widgets_values && Array.isArray(node.widgets_values)) {
-                     for (let i = 0; i < node.widgets_values.length; i += 2) { // LoRA name is often every 2nd widget
+                     for (let i = 0; i < node.widgets_values.length; i += 2) {
                         loraName = node.widgets_values[i];
                         if (typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
                             candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
@@ -284,7 +462,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     if (settings[chk.id] !== undefined) {
                         chk.checked = settings[chk.id];
                     } else {
-                        chk.checked = true; // Default to true if a new checkbox is added
+                        chk.checked = true;
                     }
                 });
             } catch (e) {
@@ -305,44 +483,18 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     }
 
     async function processWorkflowForTags(item) {
-        const tags = await exiftool.read(item.filePath);
+        const buffer = await fsp.readFile(item.filePath);
+        const fileExtension = item.filePath.split('.').pop().toLowerCase();
+        const mimeType = `image/${fileExtension}`;
+        const metadata = getGenInfo(buffer, mimeType);
     
-        const getTagValue = (tag) => {
-            if (!tag) return null;
-            if (typeof tag === 'string') return tag;
-            if (Array.isArray(tag)) return tag[0];
-            if (tag.value) {
-                if (Array.isArray(tag.value)) return tag.value[0];
-                return tag.value;
+        const workflow = metadata.prompt || metadata.workflow; 
+        
+        if (!workflow) {
+            if (metadata.parameters) {
+                return { error: 'A1111 parameters found, but parsing is not implemented.' };
             }
-            return null;
-        };
-    
-        let workflowJsonString = getTagValue(tags.Model); // API format is more reliable
-        if (!workflowJsonString) workflowJsonString = getTagValue(tags.Make); // Fallback to GUI format
-        if (!workflowJsonString) workflowJsonString = getTagValue(tags.UserComment);
-        if (!workflowJsonString) workflowJsonString = getTagValue(tags.ImageDescription);
-        if (!workflowJsonString) workflowJsonString = getTagValue(tags.XPComment);
-        if (!workflowJsonString) workflowJsonString = getTagValue(tags.XMPDescription);
-    
-        if (workflowJsonString) {
-            if (workflowJsonString.startsWith('prompt:')) {
-                workflowJsonString = workflowJsonString.substring('prompt:'.length);
-            } else if (workflowJsonString.startsWith('workflow:')) {
-                workflowJsonString = workflowJsonString.substring('workflow:'.length);
-            } else {
-                return { error: 'No prompt: or workflow: prefix found.' };
-            }
-        } else {
-            return { error: 'No workflow or prompt data found in Exif.' };
-        }
-    
-        let workflow;
-        try {
-            const cleanedJsonString = workflowJsonString.replace(/^UNICODE\u0000+/, '').trim();
-            workflow = JSON.parse(cleanedJsonString);
-        } catch (e) {
-            return { error: `JSON parse error: ${e.message}` };
+            return { error: 'No ComfyUI workflow or prompt data found.' };
         }
     
         let nodesToProcess = [], nodeObjectById = {}, links = [];
@@ -381,7 +533,6 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         startButton.disabled = true;
         deleteTagsButton.disabled = true;
         cancelButton.style.display = 'inline-block';
-        cancelButton.disabled = false;
         isCancelled = false;
         logBuffer = [];
         log(t('log.start'));
@@ -439,10 +590,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             }
 
             if (isCancelled) {
-                log('------------------------------------');
                 log(t('log.cancelled', { successCount, skippedCount, errorCount }));
             } else {
-                log('------------------------------------');
                 log(t('log.completed', { successCount, skippedCount, errorCount }));
             }
             resetButtons();
@@ -461,7 +610,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                 alert(t('alert.noItemSelected'));
                 return;
             }
-            if (!confirm(t('confirm.deleteAll', { count: items.length }))) {
+            if (!confirm(t('confirm.deleteAll', { count: items.length }))) { 
                 log(t('log.delete.cancelled'));
                 return;
             }
@@ -518,10 +667,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             }
             
             if (isCancelled) {
-                log('------------------------------------');
                 log(t('log.delete.cancelledMessage', { removedCount, skippedCount, errorCount })); 
             } else {
-                log('------------------------------------');
                 log(t('log.delete.completed', { removedCount, skippedCount, errorCount })); 
             }
             resetButtons();
@@ -549,11 +696,6 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
     allCheckboxes.forEach(chk => {
         chk.addEventListener('change', saveCheckboxState);
-    });
-
-    // Clean up exiftool process on exit
-    window.addEventListener('beforeunload', () => {
-        exiftool.end();
     });
 
     console.log("Plugin successfully initialized.");
