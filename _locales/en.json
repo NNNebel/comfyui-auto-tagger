@@ -16,7 +16,7 @@
         },
         "button": {
             "start": "Start Tagging",
-            "deleteAll": "Delete All Tags (Test)",
+            "deleteAll": "Delete Plugin Tags",
             "cancel": "Cancel"
         }
     },
@@ -43,10 +43,12 @@
         },
         "delete": {
             "cancelled": "Tag deletion cancelled.",
-            "start": "Deleting tags for {{count}} items...",
-            "deleting": "[Deleting] Deleting {{count}} tags from {{name}}.",
-            "skipped": "[Skip] {{name}} has no tags.",
-            "completed": "Tag deletion for selected items completed. (Deleted: {{deletedCount}}, Skipped: {{skippedCount}})",
+            "start": "Starting removal of plugin tags...",
+            "noCandidates": "[Skip] {{name}}: No parsable plugin tags found.",
+            "removing": "[Removing] {{name}}: Removing {{count}} plugin tags.",
+            "tagsRemoved": "  -> Removed tags: {{tags}}",
+            "noneFound": "[Skip] {{name}}: No plugin tags to remove were found on this item.",
+            "completed": "Plugin tag removal complete. (Removed: {{removedCount}}, Skipped: {{skippedCount}})",
             "cancelledMessage": "Tag deletion was cancelled."
         },
         "cancelling": "... Cancelling process ..."

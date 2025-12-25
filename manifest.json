@@ -1,13 +1,15 @@
 {
     "id": "f4831c52-fee6-40b8-a48a-e4ec3a4c128a",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "platform": "all",
     "arch": "all",
-    "name": "comfyui-auto-tagger",
+    "fallbackLanguage": "ja_JP",
+    "languages": ["en", "ja_JP"],
+    "name": "{{manifest.name}}",
+    "default_locale": "en",
     "logo": "logo.png",
     "keywords": ["comfyui", "webp", "tag", "exif", "metadata"],
     "devTools": false,
-
     "type": "window",
     "main": {
         "url": "index.html",
@@ -22,7 +24,7 @@
         "desktop": {
             "contextMenu": [
                 {
-                    "label": "ComfyUIタグ生成 (Window)",
+                    "label": "{{manifest.contextMenu_label}}",
                     "target": "image",
                     "key": "comfyui-auto-tagger.open"
                 }

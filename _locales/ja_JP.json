@@ -16,7 +16,7 @@
         },
         "button": {
             "start": "タグ付け開始",
-            "deleteAll": "全タグ削除 (試験用)",
+            "deleteAll": "プラグインタグを削除",
             "cancel": "処理を中止"
         }
     },
@@ -43,10 +43,12 @@
         },
         "delete": {
             "cancelled": "タグの削除をキャンセルしました。",
-            "start": "{{count}}個のアイテムのタグを削除します...",
-            "deleting": "[削除中] {{name}} から {{count}}個のタグを削除します。",
-            "skipped": "[スキップ] {{name}} にはタグがありません。",
-            "completed": "選択されたアイテムのタグ削除が完了しました。 (削除: {{deletedCount}}, スキップ: {{skippedCount}})",
+            "start": "プラグインタグの削除を開始します...",
+            "noCandidates": "[スキップ] {{name}}: 解析できるプラグインタグが見つかりませんでした。",
+            "removing": "[削除中] {{name}} から {{count}}個のプラグインタグを削除します。",
+            "tagsRemoved": "  -> 削除されたタグ: {{tags}}",
+            "noneFound": "[スキップ] {{name}}: 削除対象のプラグインタグは見つかりませんでした。",
+            "completed": "プラグインタグの削除が完了しました。 (削除: {{removedCount}}, スキップ: {{skippedCount}})",
             "cancelledMessage": "タグの削除が中止されました。"
         },
         "cancelling": "... 処理を中止しています ..."
