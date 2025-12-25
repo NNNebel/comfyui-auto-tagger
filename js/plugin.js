@@ -122,13 +122,41 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             const nodeType = node.type || node.class_type;
             if (!nodeType) return;
 
-            if (chkCheckpoint.checked && (nodeType === 'CheckpointLoader' || nodeType === 'CheckpointLoaderSimple')) {
+            // Checkpoint Loader
+            if (chkCheckpoint.checked && /checkpoint/i.test(nodeType)) {
                 const ckptName = (node.inputs && node.inputs.ckpt_name) || (node.widgets_values && node.widgets_values[0]);
-                if (ckptName) candidates.add(path.basename(ckptName, path.extname(ckptName)).toLowerCase());
+                if (ckptName && typeof ckptName === 'string') {
+                    candidates.add(path.basename(ckptName, path.extname(ckptName)).toLowerCase());
+                }
             }
-            if (chkLora.checked && (nodeType === 'LoraLoader')) {
-                const loraName = (node.inputs && node.inputs.lora_name) || (node.widgets_values && node.widgets_values[0]);
-                if (loraName) candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
+            
+            // LoRA Loader (including stacks)
+            if (chkLora.checked && /lora/i.test(nodeType)) {
+                // Standard LoraLoader
+                let loraName = (node.inputs && node.inputs.lora_name) || (node.widgets_values && node.widgets_values[0]);
+                if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
+                    candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
+                }
+
+                // For stack-style loaders like 'Lora Loader Stack (rgthree)'
+                // API-style inputs
+                if (node.inputs) {
+                    for (let i = 1; i <= 5; i++) { // Check for up to 5 loras in a stack
+                        loraName = node.inputs[`lora_0${i}`];
+                        if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
+                            candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
+                        }
+                    }
+                }
+                // GUI-style widgets_values
+                if (node.widgets_values && Array.isArray(node.widgets_values)) {
+                     for (let i = 0; i < node.widgets_values.length; i += 2) { // LoRA name is often every 2nd widget
+                        loraName = node.widgets_values[i];
+                        if (typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
+                            candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
+                        }
+                     }
+                }
             }
         });
         return [...candidates];
@@ -148,12 +176,11 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             const findPromptText = (inputName) => {
                 let connectedNodeId = null;
 
-                // Check if sampler.inputs is an array (GUI format) or an object (API format)
                 if (Array.isArray(sampler.inputs)) {
                     const inputConnection = sampler.inputs.find(inp => inp.name === inputName);
                     if (inputConnection && inputConnection.link && links && links.length > 0) {
                         const linkData = links.find(l => l[0] === inputConnection.link);
-                        if (linkData) connectedNodeId = linkData[1]; // from_node_id
+                        if (linkData) connectedNodeId = linkData[1];
                     }
                 } else if (sampler.inputs && typeof sampler.inputs === 'object' && sampler.inputs[inputName] && Array.isArray(sampler.inputs[inputName])) {
                     connectedNodeId = parseInt(sampler.inputs[inputName][0], 10);
@@ -237,6 +264,38 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         return [...candidates];
     }
     
+    const SETTINGS_KEY = 'comfyui-auto-tagger-settings';
+    const allCheckboxes = [chkCheckpoint, chkLora, chkPositive, chkNegative, chkSeed, chkSampler, chkSteps, chkCfg];
+
+    function saveCheckboxState() {
+        const settings = {};
+        allCheckboxes.forEach(chk => {
+            settings[chk.id] = chk.checked;
+        });
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+
+    function loadCheckboxState() {
+        const savedSettings = localStorage.getItem(SETTINGS_KEY);
+        if (savedSettings) {
+            try {
+                const settings = JSON.parse(savedSettings);
+                allCheckboxes.forEach(chk => {
+                    if (settings[chk.id] !== undefined) {
+                        chk.checked = settings[chk.id];
+                    } else {
+                        chk.checked = true; // Default to true if a new checkbox is added
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load settings', e);
+                allCheckboxes.forEach(chk => chk.checked = true);
+            }
+        } else {
+            allCheckboxes.forEach(chk => chk.checked = true);
+        }
+    }
+
     function resetButtons() {
         if(!startButton || !deleteTagsButton || !cancelButton) return;
         startButton.disabled = false;
@@ -473,8 +532,12 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     }
     
     applyLocale();
+    loadCheckboxState();
     
-    startButton.addEventListener('click', startTagging);
+    startButton.addEventListener('click', () => {
+        saveCheckboxState();
+        startTagging();
+    });
     deleteTagsButton.addEventListener('click', removePluginTags);
     cancelButton.addEventListener('click', () => {
         if (!isCancelled) {
@@ -482,6 +545,10 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             cancelButton.disabled = true;
             log(t('log.cancelling'));
         }
+    });
+
+    allCheckboxes.forEach(chk => {
+        chk.addEventListener('change', saveCheckboxState);
     });
 
     // Clean up exiftool process on exit
