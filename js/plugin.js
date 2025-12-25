@@ -99,67 +99,140 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
     function cleanAndSplitPrompt(promptText, prefix = '') {
         if (!promptText || typeof promptText !== 'string') return [];
-        const tags = promptText.replace(/\n/g, ',').split(',');
-        return tags.map(tag => (prefix + tag.trim()).toLowerCase()).filter(tag => tag.length > prefix.length);
+
+        let processedText = promptText;
+        const finalTags = new Set();
+
+        // Handle Dynamic Prompts syntax {A|B|C}
+        const dynamicPromptRegex = /\{([^}]+)\}/g;
+        let match;
+        while ((match = dynamicPromptRegex.exec(processedText)) !== null) {
+            const variants = match[1].split('|');
+            variants.forEach(variant => {
+                const trimmed = variant.trim();
+                if (trimmed) {
+                    finalTags.add((prefix + trimmed).toLowerCase());
+                }
+            });
+            // Replace the processed part with a comma to ensure separation
+            processedText = processedText.replace(match[0], ',');
+        }
+        
+        // Process the rest of the prompt
+        const remainingTags = processedText.replace(/\n/g, ',').split(',');
+        remainingTags.forEach(tag => {
+            const trimmed = tag.trim();
+            if (trimmed) {
+                finalTags.add((prefix + trimmed).toLowerCase());
+            }
+        });
+
+        return [...finalTags];
     }
 
     function getCheckpointAndLoraTags(nodes) {
-        const candidates = [];
-        if (chkCheckpoint.checked) {
-            nodes.filter(n => n && (n.class_type === 'CheckpointLoaderSimple' || n.class_type === 'CheckpointLoader')).forEach(n => {
-                const ckptName = n.inputs?.ckpt_name;
-                if (ckptName) candidates.push(path.basename(ckptName, path.extname(ckptName)));
-            });
-        }
-        if (chkLora.checked) {
-            nodes.filter(n => n && n.class_type === 'LoraLoader').forEach(n => {
-                const loraName = n.inputs?.lora_name;
-                if (loraName) candidates.push(path.basename(loraName, path.extname(loraName)));
-            });
-        }
-        return candidates;
+        const candidates = new Set();
+        nodes.forEach(node => {
+            if (!node) return;
+            const nodeType = node.type || node.class_type;
+            if (!nodeType) return;
+
+            if (chkCheckpoint.checked && (nodeType === 'CheckpointLoader' || nodeType === 'CheckpointLoaderSimple')) {
+                const ckptName = (node.inputs && node.inputs.ckpt_name) || (node.widgets_values && node.widgets_values[0]);
+                if (ckptName) candidates.add(path.basename(ckptName, path.extname(ckptName)));
+            }
+            if (chkLora.checked && (nodeType === 'LoraLoader')) {
+                const loraName = (node.inputs && node.inputs.lora_name) || (node.widgets_values && node.widgets_values[0]);
+                if (loraName) candidates.add(path.basename(loraName, path.extname(loraName)));
+            }
+        });
+        return [...candidates];
     }
 
-    function getPromptTags(nodes, nodeObjectById) {
-        const candidates = [];
-                    if (!chkPositive.checked && !chkNegative.checked) return candidates;
-                    const ksampler = nodes.filter(node => node && node.class_type === 'KSampler')[0];        if (!ksampler) return candidates;
-        if (chkPositive.checked) {
-            const nodeId = ksampler.inputs?.positive?.[0];
-            const promptNode = nodeObjectById[nodeId];
-            if (promptNode && promptNode.inputs?.text) candidates.push(...cleanAndSplitPrompt(promptNode.inputs.text));
-        }
-        if (chkNegative.checked) {
-            const nodeId = ksampler.inputs?.negative?.[0];
-            const promptNode = nodeObjectById[nodeId];
-            if (promptNode && promptNode.inputs?.text) candidates.push(...cleanAndSplitPrompt(promptNode.inputs.text, 'neg:'));
-        }
-        return candidates;
+    function getPromptTags(nodes, links, nodeObjectById) {
+        const candidates = new Set();
+        if (!chkPositive.checked && !chkNegative.checked) return [];
+
+        const samplerNodes = nodes.filter(n => {
+            if (!n) return false;
+            const nodeType = n.type || n.class_type;
+            return nodeType && /sampler/i.test(nodeType);
+        });
+
+        samplerNodes.forEach(sampler => {
+            const findPromptText = (inputName) => {
+                let connectedNodeId = null;
+                const inputConnection = sampler.inputs?.find(inp => inp.name === inputName);
+
+                if (inputConnection && inputConnection.link && links && links.length > 0) { // GUI Style
+                    const linkData = links.find(l => l[0] === inputConnection.link);
+                    if (linkData) connectedNodeId = linkData[1];
+                } else if (sampler.inputs?.[inputName] && Array.isArray(sampler.inputs[inputName])) { // API Style
+                    connectedNodeId = parseInt(sampler.inputs[inputName][0], 10);
+                }
+
+                if (connectedNodeId === null) return null;
+                const promptNode = nodeObjectById[connectedNodeId] || nodes.find(n => n.id === connectedNodeId);
+                if (!promptNode) return null;
+                
+                const text = (promptNode.inputs && promptNode.inputs.text) || (promptNode.widgets_values && promptNode.widgets_values[0]);
+                return typeof text === 'string' ? text : null;
+            };
+
+            if (chkPositive.checked) {
+                const text = findPromptText('positive');
+                if(text) cleanAndSplitPrompt(text).forEach(tag => candidates.add(tag));
+            }
+            if (chkNegative.checked) {
+                const text = findPromptText('negative');
+                if(text) cleanAndSplitPrompt(text, 'neg:').forEach(tag => candidates.add(tag));
+            }
+        });
+
+        return [...candidates];
     }
 
     function getKsamplerTags(nodes) {
-        const candidates = [];
+        const candidates = new Set();
         if (!chkSeed.checked && !chkSteps.checked && !chkCfg.checked && !chkSampler.checked) {
-            return candidates;
+            return [];
         }
-        const ksampler = nodes.filter(node => node && node.class_type === 'KSampler')[0];
-        if (!ksampler || !ksampler.inputs) {
-            return candidates;
-        }
-        const { seed, steps, cfg, sampler_name } = ksampler.inputs;
-        if (chkSeed.checked && seed !== undefined) {
-            candidates.push(`seed:${seed}`);
-        }
-        if (chkSteps.checked && steps !== undefined) {
-            candidates.push(`steps:${steps}`);
-        }
-        if (chkCfg.checked && cfg !== undefined) {
-            candidates.push(`cfg:${cfg}`);
-        }
-        if (chkSampler.checked && sampler_name) {
-            candidates.push(`sampler:${sampler_name}`);
-        }
-        return candidates;
+        
+        const samplerNodes = nodes.filter(n => {
+            if (!n) return false;
+            const nodeType = n.type || n.class_type;
+            return nodeType && /sampler/i.test(nodeType);
+        });
+
+        const WIDGET_MAP = { seed: 0, steps: 2, cfg: 3, sampler_name: 4 };
+
+        samplerNodes.forEach(sampler => {
+            const getValue = (name, index) => {
+                if (sampler.inputs && sampler.inputs[name] !== undefined) return sampler.inputs[name];
+                if (sampler.widgets_values && sampler.widgets_values.length > index) return sampler.widgets_values[index];
+                return undefined;
+            };
+
+            const seed = getValue('seed', WIDGET_MAP.seed);
+            const steps = getValue('steps', WIDGET_MAP.steps);
+            const cfg = getValue('cfg', WIDGET_MAP.cfg);
+            const sampler_name = getValue('sampler_name', WIDGET_MAP.sampler_name);
+
+            if (chkSeed.checked && seed !== undefined) {
+                candidates.add(`seed:${seed}`);
+            }
+            if (chkSteps.checked && steps !== undefined) {
+                candidates.add(`steps:${steps}`);
+            }
+            if (chkCfg.checked && cfg !== undefined) {
+                candidates.add(`cfg:${Number(cfg).toFixed(2)}`);
+            }
+            if (chkSampler.checked && sampler_name) {
+                candidates.add(`sampler:${sampler_name}`);
+            }
+        });
+        
+        return [...candidates];
     }
     
     function resetButtons() {
@@ -200,31 +273,57 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     log(t('log.processingItem', { name: item.name }));
                     buffer = await fsp.readFile(item.filePath);
                     exifTags = ExifReader.load(buffer);
+
                     let workflowJsonString = null;
-                    if (exifTags['Model']?.description) workflowJsonString = exifTags['Model'].description.replace(/^prompt:/, '');
-                    else if (exifTags['Make']?.description) workflowJsonString = exifTags['Make'].description.replace(/^workflow:/, '');
+                    if (exifTags['Make']?.description) workflowJsonString = exifTags['Make'].description.replace(/^workflow:/, '');
+                    else if (exifTags['Model']?.description) workflowJsonString = exifTags['Model'].description.replace(/^prompt:/, '');
+
                     if (!workflowJsonString) {
                         log(t('log.error.noWorkflow', { name: item.name }));
-                        errorCount++;
+                        skippedCount++;
                         return;
                     }
-                    const cleanedJsonString = workflowJsonString.replace(/^UNICODE\u0000+/, '').trim();
+
                     try {
+                        const cleanedJsonString = workflowJsonString.replace(/^UNICODE\u0000+/, '').trim();
                         workflow = JSON.parse(cleanedJsonString);
+                        
+                        // --- File Dump for Debugging ---
+                        const tempDir = 'C:\\Users\\elara\\.gemini\\tmp\\d06720aeff9f2d379bea69b4483174d300dcc0ceca1b6b485007065ab146ffe8';
+                        try {
+                            // We don't need to create this directory as it should exist.
+                            const sanitizedName = item.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                            const workflowDumpPath = path.join(tempDir, `${sanitizedName}_workflow.json`);
+                            await fsp.writeFile(workflowDumpPath, JSON.stringify(workflow, null, 2));
+                            log(`[DEBUG] Full workflow object saved to: ${workflowDumpPath}`);
+                        } catch (e) {
+                            log(`[ERROR] Failed to write debug file: ${e.message}`);
+                        }
+                        // --- End of File Dump ---
+
                     } catch (e) {
                         log(t('log.error.jsonParse', { name: item.name }));
                         errorCount++;
                         return;
                     }
-                    let nodesToProcess = [], nodeObjectById = {};
-                    if (workflow.nodes && Array.isArray(workflow.nodes)) {
+                    
+                    let nodesToProcess = [], nodeObjectById = {}, links = [];
+                    if (workflow.nodes && Array.isArray(workflow.nodes)) { // GUI-style
                         nodesToProcess = workflow.nodes;
-                        nodesToProcess.forEach(n => nodeObjectById[n.id] = n);
-                    } else if (workflow && typeof workflow === 'object') {
-                        Object.keys(workflow).forEach(id => { if(workflow[id] && typeof workflow[id] === 'object') workflow[id].id = id; });
+                        links = workflow.links || [];
+                        nodesToProcess.forEach(n => {
+                            if (n) nodeObjectById[n.id] = n;
+                        });
+                    } else if (workflow && typeof workflow === 'object') { // API-style
+                        Object.keys(workflow).forEach(id => { 
+                            if (workflow[id] && typeof workflow[id] === 'object') {
+                                workflow[id].id = parseInt(id, 10);
+                            }
+                         });
                         nodesToProcess = Object.values(workflow);
                         nodeObjectById = workflow;
                     }
+
                     if (nodesToProcess.length === 0) {
                         log(t('log.info.noNodes', { name: item.name }));
                         skippedCount++;
@@ -237,7 +336,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
                     const allCandidates = [
                         ...getCheckpointAndLoraTags(nodesToProcess),
-                        ...getPromptTags(nodesToProcess, nodeObjectById),
+                        ...getPromptTags(nodesToProcess, links, nodeObjectById),
                         ...getKsamplerTags(nodesToProcess)
                     ];
 
@@ -252,7 +351,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     if (addedSomething) {
                         const originalTagSet = new Set(item.tags || []);
                         const newAddedTags = finalTags.filter(tag => !originalTagSet.has(tag));
-                        log(t('log.tagsAdded', { count: newAddedTags.length, tags: newAddedTags.join(', ') }));
+                        log(t('log.tagsAdded', { count: newAddedTags.length, tags: `  -> ${newAddedTags.join(', ')}` }));
                         item.tags = finalTags;
                         await item.save();
                         log(t('log.success', { name: item.name }));
@@ -333,8 +432,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     buffer = await fsp.readFile(item.filePath);
                     exifTags = ExifReader.load(buffer);
                     let workflowJsonString = null;
-                    if (exifTags['Model']?.description) workflowJsonString = exifTags['Model'].description.replace(/^prompt:/, '');
-                    else if (exifTags['Make']?.description) workflowJsonString = exifTags['Make'].description.replace(/^workflow:/, '');
+                    if (exifTags['Make']?.description) workflowJsonString = exifTags['Make'].description.replace(/^workflow:/, '');
+                    else if (exifTags['Model']?.description) workflowJsonString = exifTags['Model'].description.replace(/^prompt:/, '');
                     
                     if (!workflowJsonString) {
                         log(t('log.error.noWorkflow', { name: item.name }));
@@ -349,25 +448,36 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                         errorCount++;
                         return;
                     }
-                    let nodesToProcess = [], nodeObjectById = {};
-                    if (workflow.nodes && Array.isArray(workflow.nodes)) {
+                    
+                    let nodesToProcess = [], nodeObjectById = {}, links = [];
+                    if (workflow.nodes && Array.isArray(workflow.nodes)) { // GUI-style
                         nodesToProcess = workflow.nodes;
-                        nodesToProcess.forEach(n => nodeObjectById[n.id] = n);
-                    } else if (workflow && typeof workflow === 'object') {
-                        Object.keys(workflow).forEach(id => { if (workflow[id] && typeof workflow[id] === 'object') workflow[id].id = id; });
+                        links = workflow.links || [];
+                        nodesToProcess.forEach(n => {
+                            if (n) nodeObjectById[n.id] = n;
+                        });
+                    } else if (workflow && typeof workflow === 'object') { // API-style
+                        Object.keys(workflow).forEach(id => { 
+                            if (workflow[id] && typeof workflow[id] === 'object') {
+                                workflow[id].id = parseInt(id, 10);
+                            }
+                         });
                         nodesToProcess = Object.values(workflow);
                         nodeObjectById = workflow;
                     }
+
                     if (nodesToProcess.length === 0) {
                         log(t('log.delete.noCandidates', { name: item.name }));
                         skippedCount++;
                         return;
                     }
+
                     const tagsToLookFor = new Set([
                         ...getCheckpointAndLoraTags(nodesToProcess),
-                        ...getPromptTags(nodesToProcess, nodeObjectById),
+                        ...getPromptTags(nodesToProcess, links, nodeObjectById),
                         ...getKsamplerTags(nodesToProcess)
                     ]);
+
                     if (tagsToLookFor.size === 0) {
                         log(t('log.delete.noCandidates', { name: item.name }));
                         skippedCount++;
@@ -376,7 +486,8 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                     const originalTags = item.tags ? [...item.tags] : [];
                     const tagsRemovedThisItem = [];
                     const newTags = originalTags.filter(tag => {
-                        if (tagsToLookFor.has(tag)) {
+                        const lowerCaseTag = tag.toLowerCase();
+                        if (tagsToLookFor.has(lowerCaseTag)) {
                             tagsRemovedThisItem.push(tag);
                             return false;
                         }
