@@ -142,7 +142,7 @@ function extractFromPrompt(promptData, metadata) {
         const node = promptData[id];
         if (!node.class_type) continue;
         if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) metadata.checkpoint = resolve(id, "ckpt_name");
-        if (node.class_type === "LoraLoader" && !metadata.loras) { const l = resolve(id, "lora_name"); if(l) metadata.loras=[l]; }
+        if (node.class_type.includes("LoraLoader") && !metadata.loras) { const l = resolve(id, "lora_name"); if(l) metadata.loras=[l]; }
         if (node.class_type.includes("KSampler")) {
             if(!metadata.seed) metadata.seed=resolve(id,"seed");
             if(!metadata.steps) metadata.steps=resolve(id,"steps");
@@ -186,6 +186,7 @@ function extractFromWorkflow(workflowData, metadata) {
 
 Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', r) : r())]).then(([plugin]) => {
     
+    // --- 翻訳システム (Eagle標準i18next利用) ---
     function t(key, r = {}) {
         return window.i18next ? window.i18next.t(key, r) : (r.defaultValue || key);
     }
@@ -388,7 +389,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                             else if(t.startsWith('cfg:') && checkboxes.cfg.checked) ok=true;
                             else if(t.startsWith('sampler:') && checkboxes.sampler.checked) ok=true;
                             
-                            if(ok && !currentTags.has(t)) { item.tags.push(t); currentTags.add(t); changed=true; } 
+                            if(ok && !currentTags.has(t)) { item.tags.push(t); currentTags.add(t); changed=true; }
                         });
                     }
                     
@@ -400,7 +401,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                         }
                     }
                     
-                    if(changed) { await item.save(); log('log.success', {name:item.name}); }
+                    if(changed) { await item.save(); log('log.success', {name:item.name}); } 
                     else log('log.skip', {name:item.name});
                     
                 } catch(e) {
@@ -414,14 +415,17 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
 
     async function removeInfo() {
         const items = await eagle.item.getSelected();
-        if(!items.length || !confirm(t('confirm.deleteAll', {count:items.length})))
-        return;
+        if(!items.length || !confirm(t('confirm.deleteAll', {count:items.length}))) return;
         
-        startButton.disabled = true; deleteButton.disabled = true;
+        startButton.disabled = true; deleteButton.disabled = true; cancelButton.style.display = 'inline-block';
+        isCancelled = false; // キャンセル状態をリセット
+        logBuffer = []; // ログバッファをクリア
+        log('log.delete.start'); // 削除開始ログ
         
         await debugLog(`REMOVE: ${items.length} items`);
 
         for(const item of items) {
+            if (isCancelled) break;
             try {
                 const ext = path.extname(item.filePath).toLowerCase();
                 const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
@@ -439,7 +443,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                     item.annotation = item.annotation.substring(0, item.annotation.indexOf('[Generation Info]')).trim();
                     changed = true;
                 }
-                if(changed) { await item.save(); log('log.delete.removing', {name: item.name, count: removeTags.size}); }
+                if(changed) { await item.save(); log('log.delete.removing', {name: item.name, count: removeTags.size}); } 
                 else log('log.delete.noneFound', {name: item.name});
             } catch(e) { log('log.error.generic', { name: item.name, message: e.message }); }
         }
@@ -465,6 +469,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
     }
 
     (async () => {
+        // Eagleのテーマ設定を適用
         if (typeof eagle !== 'undefined') {
             eagle.onThemeChanged((theme) => {
                 document.documentElement.setAttribute('data-theme', theme);
