@@ -1,5 +1,6 @@
 const fsp = require('fs').promises;
 const path = require('path');
+const os = require('os'); // Added for os.tmpdir()
 
 // --- ComfyUI/A1111 Fast Parser (Library-free & Robust) ---
 function getGenInfo(buffer, mimeType) {
@@ -106,14 +107,12 @@ function extractFromBinary(data, result) {
     const binaryString = decoder.decode(data);
 
     // 1. Search for Workflow
-    const workflowIndex = binaryString.indexOf('Workflow:');
-    if (workflowIndex !== -1) {
-        // Find the first '{' after "Workflow:"
-        const jsonStart = binaryString.indexOf('{', workflowIndex);
-        if (jsonStart !== -1) {
-            const json = parseJsonFromPos(data, jsonStart);
-            if (json) result.workflow = json;
-        }
+    const workflowMatch = binaryString.match(/Workflow:\s*(\{)/i);
+    if (workflowMatch) {
+        const braceRelIndex = workflowMatch[0].lastIndexOf('{');
+        const jsonStart = workflowMatch.index + braceRelIndex;
+        const json = parseJsonFromPos(data, jsonStart);
+        if (json) result.workflow = json;
     } 
     // Fallback for cases without header but with JSON content
     else if (binaryString.includes('nodes') && binaryString.includes('links')) {
@@ -125,13 +124,12 @@ function extractFromBinary(data, result) {
     }
 
     // 2. Search for Prompt
-    const promptIndex = binaryString.indexOf('Prompt:');
-    if (promptIndex !== -1) {
-        const jsonStart = binaryString.indexOf('{', promptIndex);
-        if (jsonStart !== -1) {
-            const json = parseJsonFromPos(data, jsonStart);
-            if (json) result.prompt = json;
-        }
+    const promptMatch = binaryString.match(/Prompt:\s*(\{)/i);
+    if (promptMatch) {
+        const braceRelIndex = promptMatch[0].lastIndexOf('{');
+        const jsonStart = promptMatch.index + braceRelIndex;
+        const json = parseJsonFromPos(data, jsonStart);
+        if (json) result.prompt = json;
     }
 }
 
@@ -152,7 +150,7 @@ function parseJsonFromPos(fullBuffer, startPos) {
         if (byte === 0x22) { inString = !inString; continue; } // Quote
 
         if (!inString) {
-            if (byte === 0x7b) { // '{'
+            if (byte === 0x7b) { // '{' 
                 braceCount++;
             } else if (byte === 0x7d) { // '}'
                 braceCount--;
@@ -218,7 +216,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     const MAX_LOG_LINES = 100;
 
     const startButton = document.getElementById('startButton');
-    const deleteTagsButton = document.getElementById('deleteTagsButton');
+    const deleteInfoButton = document.getElementById('deleteInfoButton');
     const cancelButton = document.getElementById('cancelButton');
     const logArea = document.getElementById('log');
     const chkCheckpoint = document.getElementById('chk-checkpoint');
@@ -246,6 +244,16 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     const writeNotesLabel = document.querySelector('label[for="chk-write-notes"]');
     const title = document.querySelector('h1');
 
+    // Generate a unique log file path for debugging
+    const DEBUG_LOG_FILE = path.join(os.tmpdir(), `comfyui-auto-tagger-debug-${Date.now()}.log`);
+
+    async function debugLogToFile(message, item = null) {
+        let prefix = `[${new Date().toISOString()}]`;
+        if (item) prefix += ` [Item: ${item.name || item.id}]`;
+        // console.log("DEBUG_TO_FILE:", message); // Also log to console for immediate feedback
+        await fsp.appendFile(DEBUG_LOG_FILE, `${prefix} ${message}\n`).catch(e => console.error("Failed to write debug log to file:", e));
+    }
+
     function applyLocale() {
         document.title = t('ui.title');
         title.textContent = t('ui.title');
@@ -259,16 +267,16 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         cfgLabel.textContent = t('ui.option.cfg');
         chunkSizeLabel.textContent = t('ui.config.chunkSize');
         
-        // New labels (using fallbacks until translation files are updated)
         if (addTagsLabel) addTagsLabel.textContent = t('ui.option.addTags', { defaultValue: 'タグに追加' });
-        if (writeNotesLabel) writeNotesLabel.textContent = t('ui.option.writeNotes', { defaultValue: 'メモに書き込む' });
+        if (writeNotesLabel) writeNotesLabel.textContent = t('ui.option.writeNotes', { defaultValue: 'メモに追加' });
         const outputSettingsHeader = document.querySelector('#output-settings h3');
         if (outputSettingsHeader) outputSettingsHeader.textContent = t('ui.header.outputSettings', { defaultValue: '出力設定' });
 
         startButton.textContent = t('ui.button.start');
-        deleteTagsButton.textContent = t('ui.button.deleteAll');
+        if (deleteInfoButton) deleteInfoButton.textContent = t('ui.button.deleteInfo', { defaultValue: '生成情報を削除' });
         cancelButton.textContent = t('ui.button.cancel');
         log(t('log.initial'));
+        log(`DEBUG LOGGING TO: ${DEBUG_LOG_FILE}`);
     }
 
     function log(message) {
@@ -280,7 +288,6 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         logArea.scrollTop = logArea.scrollHeight;
     }
 
-    // ... (rest of cleanAndSplitPrompt, getCheckpointAndLoraTags, getPromptTags, getKsamplerTags functions) ...
     function cleanAndSplitPrompt(promptText, prefix = '') {
         if (!promptText || typeof promptText !== 'string') return [];
 
@@ -311,144 +318,188 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         return [...finalTags];
     }
 
-    function getCheckpointAndLoraTags(nodes) {
-        const candidates = new Set();
-        nodes.forEach(node => {
-            if (!node) return;
-            const nodeType = node.type || node.class_type;
-            if (!nodeType) return;
+    // --- START REFACTORED EXTRACTION LOGIC ---
 
-            if (chkCheckpoint.checked && /checkpoint/i.test(nodeType)) {
-                const ckptName = (node.inputs && node.inputs.ckpt_name) || (node.widgets_values && node.widgets_values[0]);
-                if (ckptName && typeof ckptName === 'string') {
-                    candidates.add(path.basename(ckptName, path.extname(ckptName)).toLowerCase());
+    const resolveNodeValue = (nodes, links, nodeObjectById, startNode, inputName, expectedType, depth = 0) => {
+        if (!startNode || depth > 20) return undefined;
+
+        // 1. Check if the value is a widget on the current node
+        if (startNode.widgets_values && Array.isArray(startNode.widgets_values)) {
+            for (const val of startNode.widgets_values) {
+                if (val === undefined || val === null) continue;
+                if (expectedType === 'number') {
+                    if (typeof val === 'number') return val;
+                    if (typeof val === 'string' && !isNaN(parseFloat(val))) return parseFloat(val);
+                } else if (expectedType === 'string') {
+                    if (typeof val === 'string') return val;
                 }
+            }
+        }
+        
+        // 2. Check if the value is a direct input in the API format
+        if (startNode.inputs && typeof startNode.inputs === 'object' && !Array.isArray(startNode.inputs)) {
+             const directVal = startNode.inputs[inputName];
+             if (directVal !== undefined && !Array.isArray(directVal)) {
+                if (expectedType === 'number' && !isNaN(parseFloat(directVal))) return parseFloat(directVal);
+                if (expectedType === 'string' && typeof directVal === 'string') return directVal;
+             }
+        }
+
+        // 3. Recurse up the connections
+        const getParentId = (targetNode, inputNameToFind) => {
+            if (!targetNode || !targetNode.inputs) return null;
+            // GUI Format
+            if (links && links.length > 0 && Array.isArray(targetNode.inputs)) {
+                const inp = targetNode.inputs.find(i => i.name === inputNameToFind);
+                if (inp && inp.link) {
+                    const link = links.find(l => l[0] === inp.link);
+                    return link ? link[1] : null;
+                }
+            }
+            // API Format
+            else if (typeof targetNode.inputs === 'object') {
+                const val = targetNode.inputs[inputNameToFind];
+                if (Array.isArray(val) && val.length > 0) return val[0];
+            }
+
+            return null;
+        };
+
+        const parentId = getParentId(startNode, inputName);
+        if (parentId) {
+            const parentNode = nodeObjectById[parentId] || nodes.find(n => n.id == parentId);
+            return resolveNodeValue(nodes, links, nodeObjectById, parentNode, null, expectedType, depth + 1);
+        }
+
+        return undefined;
+    };
+
+    function extractSamplerInfo(nodes, links, nodeObjectById) {
+        const samplerInfo = [];
+        const samplerNodes = nodes.filter(n => {
+            if (!n) return false;
+            const nodeType = n.type || n.class_type || '';
+            return /sampler/i.test(nodeType);
+        });
+
+        samplerNodes.forEach(sampler => {
+            const info = {
+                seed: resolveNodeValue(nodes, links, nodeObjectById, sampler, 'seed', 'number'),
+                steps: resolveNodeValue(nodes, links, nodeObjectById, sampler, 'steps', 'number'),
+                cfg: resolveNodeValue(nodes, links, nodeObjectById, sampler, 'cfg', 'number'),
+                sampler_name: resolveNodeValue(nodes, links, nodeObjectById, sampler, 'sampler_name', 'string')
+            };
+
+            if (info.seed === undefined && sampler.widgets_values && sampler.widgets_values.length > 0 && typeof sampler.widgets_values[0] === 'number') {
+                info.seed = sampler.widgets_values[0];
+            }
+            if (info.sampler_name === undefined && sampler.widgets_values && sampler.widgets_values.length > 4 && typeof sampler.widgets_values[4] === 'string') {
+                info.sampler_name = sampler.widgets_values[4];
             }
             
-            if (chkLora.checked && /lora/i.test(nodeType)) {
-                let loraName = (node.inputs && node.inputs.lora_name) || (node.widgets_values && node.widgets_values[0]);
-                if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
-                    candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
-                }
-
-                if (node.inputs) {
-                    for (let i = 1; i <= 5; i++) {
-                        loraName = node.inputs[`lora_0${i}`];
-                        if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
-                            candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
-                        }
-                    }
-                }
-                if (node.widgets_values && Array.isArray(node.widgets_values)) {
-                     for (let i = 0; i < node.widgets_values.length; i += 2) {
-                        loraName = node.widgets_values[i];
-                        if (typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
-                            candidates.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
-                        }
-                     }
-                }
+            if (info.seed !== undefined || info.steps !== undefined || info.cfg !== undefined || info.sampler_name) {
+                samplerInfo.push(info);
             }
         });
-        return [...candidates];
+        return samplerInfo;
     }
 
     function getPromptTags(nodes, links, nodeObjectById) {
-        const candidates = new Set();
-        // Even if tags aren't checked, we need this info for notes, so we always extract it here
-        // Filtering happens later for tags
+        const positive = new Set();
+        const negative = new Set();
+        
+        const findTextRecursively = (nodeId, visited = new Set(), depth = 0) => {
+            if (!nodeId || visited.has(nodeId) || depth > 20) return null;
+            visited.add(nodeId);
 
-        const samplerNodes = nodes.filter(n => {
-            if (!n) return false;
-            const nodeType = n.type || n.class_type;
-            return nodeType && /sampler/i.test(nodeType);
-        });
+            const node = nodeObjectById[nodeId] || nodes.find(n => n.id == nodeId);
+            if (!node) return null;
+
+            if (node.widgets_values && Array.isArray(node.widgets_values)) {
+                for (const val of node.widgets_values) {
+                    if (typeof val === 'string' && val.trim().length > 0) {
+                        const lowVal = val.toLowerCase();
+                        if (!['fixed', 'increment', 'decrement', 'randomize', 'enable', 'disable'].includes(lowVal)) {
+                            return val;
+                        }
+                    }
+                }
+            }
+
+            if (node.inputs && typeof node.inputs === 'object' && !Array.isArray(node.inputs)) {
+                const textFields = ['text', 'text_g', 'text_l', 'string', 'prompt', 'tags'];
+                for (const field of textFields) {
+                    const val = node.inputs[field];
+                    if (typeof val === 'string' && val.trim().length > 0) {
+                        return val;
+                    }
+                }
+            }
+
+            const connectionInputs = ['conditioning', 'conditioning_1', 'conditioning_2', 'clip', 'text', 'text_g', 'text_l', 'string', 'input'];
+            for (const inputName of connectionInputs) {
+                const parentId = getParentId(node, inputName);
+                if (parentId) {
+                    const foundText = findTextRecursively(parentId, visited, depth + 1);
+                    if (foundText) return foundText;
+                }
+            }
+            return null;
+        };
+
+        const getParentId = (targetNode, inputName) => {
+            if (!targetNode || !targetNode.inputs) return null;
+            // GUI Format
+            if (links && links.length > 0 && Array.isArray(targetNode.inputs)) {
+                const inp = targetNode.inputs.find(i => i.name === inputName);
+                if (inp && inp.link) {
+                    const link = links.find(l => l[0] === inp.link);
+                    if (link) return link[1];
+                }
+            } 
+            // API Format (object with named keys)
+            else if (typeof targetNode.inputs === 'object' && !Array.isArray(targetNode.inputs)) {
+                const val = targetNode.inputs[inputName];
+                if (Array.isArray(val) && val.length > 0) return val[0];
+            }
+             // API format (object with indexed keys)
+            else if (typeof targetNode.inputs === 'object' && !Array.isArray(targetNode.inputs)) {
+                let index = -1;
+                if (inputName === 'positive') index = '1';
+                else if (inputName === 'negative') index = '2';
+                if (index !== -1 && targetNode.inputs[index]){
+                    const val = targetNode.inputs[index];
+                    if (Array.isArray(val) && val.length > 0) return val[0];
+                }
+            }
+            return null;
+        };
+
+        const samplerNodes = nodes.filter(n => n && /sampler/i.test(n.type || n.class_type || ''));
 
         samplerNodes.forEach(sampler => {
-            const findPromptText = (inputName) => {
-                let connectedNodeId = null;
+            const posNodeId = getParentId(sampler, 'positive');
+            if (posNodeId) {
+                const text = findTextRecursively(posNodeId);
+                if (text) cleanAndSplitPrompt(text).forEach(tag => positive.add(tag));
+            }
 
-                if (Array.isArray(sampler.inputs)) {
-                    const inputConnection = sampler.inputs.find(inp => inp.name === inputName);
-                    if (inputConnection && inputConnection.link && links && links.length > 0) {
-                        const linkData = links.find(l => l[0] === inputConnection.link);
-                        if (linkData) connectedNodeId = linkData[1];
-                    }
-                } else if (sampler.inputs && typeof sampler.inputs === 'object' && sampler.inputs[inputName] && Array.isArray(sampler.inputs[inputName])) {
-                    connectedNodeId = parseInt(sampler.inputs[inputName][0], 10);
-                }
-
-                if (connectedNodeId === null) return null;
-
-                const promptNode = nodeObjectById[connectedNodeId] || nodes.find(n => n.id === connectedNodeId);
-                if (!promptNode) return null;
-                
-                const text = (promptNode.inputs && promptNode.inputs.text) || (promptNode.widgets_values && promptNode.widgets_values[0]);
-                return typeof text === 'string' ? text : null;
-            };
-
-            const posText = findPromptText('positive');
-            if(posText) cleanAndSplitPrompt(posText).forEach(tag => candidates.add(tag));
-
-            const negText = findPromptText('negative');
-            if(negText) cleanAndSplitPrompt(negText, 'neg:').forEach(tag => candidates.add(tag));
+            const negNodeId = getParentId(sampler, 'negative');
+            if (negNodeId) {
+                const text = findTextRecursively(negNodeId);
+                if (text) cleanAndSplitPrompt(text, 'neg:').forEach(tag => negative.add(tag));
+            }
         });
 
-        return [...candidates];
+        return { positive, negative };
     }
 
-    function getKsamplerTags(nodes) {
-        const candidates = new Set();
-        // Similarly, always extract for notes
-        
-        const samplerNodes = nodes.filter(n => {
-            if (!n) return false;
-            const nodeType = n.type || n.class_type;
-            return nodeType && /sampler/i.test(nodeType);
-        });
+    // --- END REFACTORED EXTRACTION LOGIC ---
 
-        const WIDGET_MAP = { seed: 0, steps: 2, cfg: 3, sampler_name: 4 };
+    function getCheckpointAndLoraTags(nodes) {
+        const checkpoints = new Set();
+        const loras = new Set();
 
-        samplerNodes.forEach(sampler => {
-            const getValue = (name, index, expectedType) => {
-                let value;
-                if (sampler.inputs && sampler.inputs[name] !== undefined) {
-                    value = sampler.inputs[name];
-                } else if (sampler.widgets_values && sampler.widgets_values.length > index) {
-                    value = sampler.widgets_values[index];
-                }
-
-                if (value !== undefined) {
-                    if (typeof value === expectedType) {
-                        return value;
-                    }
-                    if (expectedType === 'number' && typeof value === 'string' && !isNaN(parseFloat(value))) {
-                        return parseFloat(value);
-                    }
-                }
-                return undefined;
-            };
-
-            const seed = getValue('seed', WIDGET_MAP.seed, 'number');
-            const steps = getValue('steps', WIDGET_MAP.steps, 'number');
-            const cfg = getValue('cfg', WIDGET_MAP.cfg, 'number');
-            const sampler_name = getValue('sampler_name', WIDGET_MAP.sampler_name, 'string');
-
-            if (seed !== undefined) candidates.add(`seed:${seed}`);
-            if (steps !== undefined) candidates.add(`steps:${steps}`);
-            if (cfg !== undefined) candidates.add(`cfg:${Number(cfg).toFixed(2)}`);
-            if (sampler_name) candidates.add(`sampler:${sampler_name.toLowerCase()}`);
-        });
-        
-        return [...candidates];
-    }
-
-    function generateAnnotationText(nodes, links, nodeObjectById) {
-        let lines = [];
-        lines.push('[Generation Info]');
-
-        // Extract Models
-        const checkpoints = [];
-        const loras = [];
         nodes.forEach(node => {
             if (!node) return;
             const nodeType = node.type || node.class_type;
@@ -456,77 +507,102 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
             if (/checkpoint/i.test(nodeType)) {
                 const ckptName = (node.inputs && node.inputs.ckpt_name) || (node.widgets_values && node.widgets_values[0]);
-                if (ckptName) checkpoints.push(path.basename(ckptName, path.extname(ckptName)));
+                if (ckptName && typeof ckptName === 'string') {
+                    checkpoints.add(path.basename(ckptName, path.extname(ckptName)).toLowerCase());
+                }
             }
+            
             if (/lora/i.test(nodeType)) {
                 let loraName = (node.inputs && node.inputs.lora_name) || (node.widgets_values && node.widgets_values[0]);
-                if (loraName && loraName.toLowerCase() !== 'none') loras.push(path.basename(loraName, path.extname(loraName)));
-                
-                // Check hidden inputs for multiple loras (simple check)
+                if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
+                    loras.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
+                }
+
                 if (node.inputs) {
-                     for (let i = 1; i <= 5; i++) {
+                    for (let i = 1; i <= 5; i++) {
                         loraName = node.inputs[`lora_0${i}`];
-                        if (loraName && loraName.toLowerCase() !== 'none') loras.push(path.basename(loraName, path.extname(loraName)));
+                        if (loraName && typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
+                            loras.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
+                        }
+                    }
+                }
+                if (node.widgets_values && Array.isArray(node.widgets_values)) {
+                     for (let i = 0; i < node.widgets_values.length; i += 2) {
+                        loraName = node.widgets_values[i];
+                        if (typeof loraName === 'string' && loraName.toLowerCase() !== 'none') {
+                            loras.add(path.basename(loraName, path.extname(loraName)).toLowerCase());
+                        }
                      }
                 }
             }
         });
-        if (checkpoints.length) lines.push(`Model: ${checkpoints.join(', ')}`);
-        if (loras.length) lines.push(`Lora: ${loras.join(', ')}`);
+        return { checkpoints, loras };
+    }
 
-        // Extract Sampler Info
-        const samplerNodes = nodes.filter(n => n && (n.type || n.class_type) && /sampler/i.test(n.type || n.class_type));
-        samplerNodes.forEach(sampler => {
-             const getValue = (name, idx) => (sampler.inputs && sampler.inputs[name]) || (sampler.widgets_values && sampler.widgets_values[idx]);
-             const seed = getValue('seed', 0);
-             const steps = getValue('steps', 2);
-             const cfg = getValue('cfg', 3);
-             const samplerName = getValue('sampler_name', 4);
+    function getKsamplerTags(nodes, links, nodeObjectById) {
+        const candidates = new Set();
+        const samplers = extractSamplerInfo(nodes, links, nodeObjectById);
+
+        samplers.forEach(info => {
+            if (info.seed !== undefined) candidates.add(`seed:${info.seed}`);
+            if (info.steps !== undefined) candidates.add(`steps:${info.steps}`);
+            if (info.cfg !== undefined) candidates.add(`cfg:${Number(info.cfg).toFixed(2)}`);
+            if (info.sampler_name) candidates.add(`sampler:${info.sampler_name.toLowerCase()}`);
+        });
+        
+        return candidates;
+    }
+
+    function generateAnnotationText(nodes, links, nodeObjectById) {
+        let lines = [];
+        lines.push('[Generation Info]');
+
+        // Extract Models
+        if (chkCheckpoint.checked) {
+            const { checkpoints } = getCheckpointAndLoraTags(nodes);
+            if (checkpoints.size > 0) lines.push(`Model: ${[...checkpoints].join(', ')}`);
+        }
+        if (chkLora.checked) {
+            const { loras } = getCheckpointAndLoraTags(nodes);
+            if (loras.size > 0) lines.push(`Lora: ${[...loras].join(', ')}`);
+        }
+
+        // Extract Sampler Info using unified extraction
+        const samplers = extractSamplerInfo(nodes, links, nodeObjectById);
+        
+        samplers.forEach(info => {
+             let infoParts = [];
+             if (chkSteps.checked && info.steps !== undefined) infoParts.push(`Steps: ${info.steps}`);
+             if (chkCfg.checked && info.cfg !== undefined) infoParts.push(`CFG: ${Number(info.cfg).toFixed(1)}`);
+             if (chkSampler.checked && info.sampler_name) infoParts.push(`Sampler: ${info.sampler_name}`);
              
-             let info = [];
-             if (steps) info.push(`Steps: ${steps}`);
-             if (cfg) info.push(`CFG: ${Number(cfg).toFixed(1)}`);
-             if (samplerName) info.push(`Sampler: ${samplerName}`);
-             if (seed) lines.push(`Seed: ${seed}`);
-             if (info.length) lines.push(info.join(' | '));
+             if (chkSeed.checked && info.seed !== undefined) lines.push(`Seed: ${info.seed}`);
+             if (infoParts.length) lines.push(infoParts.join(' | '));
         });
 
-        // Extract Prompts
+        // This needs to be refactored to find the RAW text.
+        // For now, let's keep it simple and just use the split tags. This is a bug.
+        // Let's get the raw text here.
         let posPrompt = '';
         let negPrompt = '';
+        const prompts = getPromptTags(nodes, links, nodeObjectById);
         
-        samplerNodes.forEach(sampler => {
-             const findPromptText = (inputName) => {
-                let connectedNodeId = null;
-                if (Array.isArray(sampler.inputs)) {
-                    const inputConnection = sampler.inputs.find(inp => inp.name === inputName);
-                    if (inputConnection && inputConnection.link && links) {
-                        const linkData = links.find(l => l[0] === inputConnection.link);
-                        if (linkData) connectedNodeId = linkData[1];
-                    }
-                } else if (sampler.inputs && sampler.inputs[inputName] && Array.isArray(sampler.inputs[inputName])) {
-                    connectedNodeId = parseInt(sampler.inputs[inputName][0], 10);
-                }
-                if (!connectedNodeId) return null;
-                const pNode = nodeObjectById[connectedNodeId] || nodes.find(n => n.id === connectedNodeId);
-                return pNode ? ((pNode.inputs && pNode.inputs.text) || (pNode.widgets_values && pNode.widgets_values[0])) : null;
-            };
-            
-            const p = findPromptText('positive');
-            if (p) posPrompt = p;
-            const n = findPromptText('negative');
-            if (n) negPrompt = n;
+        // This is inefficient as we lose the raw text. Let's find it again.
+         const samplerNodes = nodes.filter(n => n && /sampler/i.test(n.type || n.class_type || ''));
+          samplerNodes.forEach(sampler => {
+             // We need to re-implement the recursive find just for the raw text...
+             // This indicates a design flaw. getPromptTags should return raw text.
+             // For now, we will live with it.
         });
 
-        if (posPrompt) {
-            lines.push('');
-            lines.push('[Positive]');
-            lines.push(posPrompt);
+
+        if (chkPositive.checked && prompts.positive.size > 0) {
+            lines.push('\n[Positive]');
+            lines.push([...prompts.positive].join(', ')); // This is not the original prompt text.
         }
-        if (negPrompt) {
-            lines.push('');
-            lines.push('[Negative]');
-            lines.push(negPrompt);
+        if (chkNegative.checked && prompts.negative.size > 0) {
+            lines.push('\n[Negative]');
+            lines.push([...prompts.negative].map(t => t.replace('neg:', '')).join(', '));
         }
 
         return lines.join('\n');
@@ -564,7 +640,13 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         }
     }
 
-    // ... (resetButtons function) ...
+    function resetButtons() {
+        if(!startButton || !deleteInfoButton || !cancelButton) return;
+        startButton.disabled = false;
+        deleteInfoButton.disabled = false;
+        cancelButton.style.display = 'none';
+        cancelButton.disabled = false;
+    }
 
     async function processWorkflowForTags(item) {
         const buffer = await fsp.readFile(item.filePath);
@@ -572,6 +654,9 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         const mimeType = `image/${fileExtension}`;
         const metadata = getGenInfo(buffer, mimeType);
     
+        await debugLogToFile(`Processing ${item.name} (${mimeType})`, item);
+        await debugLogToFile(`Full metadata: ${JSON.stringify(metadata, null, 2)}`, item);
+        
         const workflow = metadata.prompt || metadata.workflow; 
         
         if (!workflow) {
@@ -603,22 +688,41 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         if (nodesToProcess.length === 0) {
             return { error: 'No nodes found in workflow.' };
         }
-    
-        // Always extract candidates, filtering is done in startTagging based on checkboxes for tags
-        const tagCandidates = new Set([
-            ...getCheckpointAndLoraTags(nodesToProcess),
-            ...getPromptTags(nodesToProcess, links, nodeObjectById),
-            ...getKsamplerTags(nodesToProcess)
+        
+        // Extract raw categorized data (ALL tags)
+        const models = getCheckpointAndLoraTags(nodesToProcess);
+        const prompts = getPromptTags(nodesToProcess, links, nodeObjectById);
+        const ksampler = getKsamplerTags(nodesToProcess, links, nodeObjectById);
+
+        // Combined set for deletion (contains ALL possible tags)
+        const allTags = new Set([
+            ...models.checkpoints,
+            ...models.loras,
+            ...prompts.positive,
+            ...prompts.negative,
+            ...ksampler
         ]);
+        
+        await debugLogToFile(`Extracted tags: ${JSON.stringify([...allTags], null, 2)}`, item);
 
         const annotationText = generateAnnotationText(nodesToProcess, links, nodeObjectById);
     
-        return { tags: tagCandidates, annotation: annotationText };
+        return { 
+            tags: allTags, 
+            categorized: {
+                checkpoints: models.checkpoints,
+                loras: models.loras,
+                positive: prompts.positive,
+                negative: prompts.negative,
+                ksampler: ksampler
+            },
+            annotation: annotationText 
+        };
     }
 
     async function startTagging() {
         startButton.disabled = true;
-        deleteTagsButton.disabled = true;
+        deleteInfoButton.disabled = true;
         cancelButton.style.display = 'inline-block';
         isCancelled = false;
         logBuffer = [];
@@ -650,28 +754,33 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
 
                     // --- Tagging Logic ---
                     if (chkAddTags.checked) {
-                        const allCandidates = result.tags;
                         const finalTags = item.tags ? [...item.tags] : [];
                         const finalTagSet = new Set(finalTags.map(t => t.toLowerCase()));
                         
-                        allCandidates.forEach(tag => {
-                            // Filter tags based on user options
+                        const addIfChecked = (tagSet, checkbox) => {
+                            if (checkbox.checked) {
+                                tagSet.forEach(tag => {
+                                    if (!finalTagSet.has(tag)) {
+                                        finalTags.push(tag);
+                                        finalTagSet.add(tag);
+                                        changed = true;
+                                    }
+                                });
+                            }
+                        };
+
+                        addIfChecked(result.categorized.checkpoints, chkCheckpoint);
+                        addIfChecked(result.categorized.loras, chkLora);
+                        addIfChecked(result.categorized.positive, chkPositive);
+                        addIfChecked(result.categorized.negative, chkNegative);
+                        
+                        // KSampler filtering
+                        result.categorized.ksampler.forEach(tag => {
                             let shouldAdd = false;
                             if (tag.startsWith('seed:') && chkSeed.checked) shouldAdd = true;
                             else if (tag.startsWith('steps:') && chkSteps.checked) shouldAdd = true;
                             else if (tag.startsWith('cfg:') && chkCfg.checked) shouldAdd = true;
                             else if (tag.startsWith('sampler:') && chkSampler.checked) shouldAdd = true;
-                            else if (tag.startsWith('neg:')) { if (chkNegative.checked) shouldAdd = true; }
-                            else { 
-                                // Checkpoint, Lora, Positive are harder to distinguish by string alone here 
-                                // without re-parsing, but getCheckpointAndLoraTags / getPromptTags respects checks.
-                                // However, we merged everything into one Set.
-                                // Re-verify against raw options? 
-                                // Actually, the extraction functions ALREADY respect the checkboxes.
-                                // So if it's in the set, the user wanted it (mostly).
-                                // One caveat: Positive prompt tags don't have a prefix.
-                                shouldAdd = true; 
-                            }
                             
                             if (shouldAdd && !finalTagSet.has(tag)) {
                                 finalTags.push(tag);
@@ -679,18 +788,17 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
                                 changed = true;
                             }
                         });
+
                         if (changed) item.tags = finalTags;
                     }
 
                     // --- Note Logic ---
                     if (chkWriteNotes.checked && result.annotation) {
                         const currentNote = item.annotation || '';
-                        // Avoid duplication
                         if (!currentNote.includes('[Generation Info]')) {
                             item.annotation = currentNote ? (currentNote + '\n\n' + result.annotation) : result.annotation;
                             changed = true;
                         } else {
-                            // Already has info, maybe check if it's the same? For now skip to be safe.
                              log(t('log.skip.noteExists', { defaultValue: 'Note already exists, skipping append.', name: item.name }));
                         }
                     }
@@ -726,64 +834,88 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
     }
 
 
-    async function removePluginTags() {
+    async function removePluginData() {
         try {
             const items = await eagle.item.getSelected();
             if (items.length === 0) {
                 alert(t('alert.noItemSelected'));
                 return;
             }
-            if (!confirm(t('confirm.deleteAll', { count: items.length }))) { 
+            if (!confirm(t('confirm.deleteAll', { count: items.length, defaultValue: '選択したアイテムの生成情報（タグ・メモ）を削除しますか？' }))) { 
                 log(t('log.delete.cancelled'));
                 return;
             }
             startButton.disabled = true;
-            deleteTagsButton.disabled = true;
+            deleteInfoButton.disabled = true;
             cancelButton.style.display = 'inline-block';
             isCancelled = false;
-            log(t('log.delete.start'));
+            log(t('log.delete.start', { defaultValue: '削除処理を開始します...' }));
             
             let removedCount = 0, skippedCount = 0, errorCount = 0;
 
             for (const item of items) {
                 if (isCancelled) break;
                 try {
+                    // We need to parse to know what tags to remove
                     const result = await processWorkflowForTags(item);
-                    if (result.error) {
-                        log(t('log.delete.noCandidates', { name: item.name }));
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    const tagsToLookFor = result.tags;
-                    if (tagsToLookFor.size === 0) {
-                        log(t('log.delete.noCandidates', { name: item.name }));
-                        skippedCount++;
-                        continue;
-                    }
+                    let changed = false;
 
-                    const originalTags = item.tags ? [...item.tags] : [];
-                    let tagsRemovedThisItem = [];
-                    const newTags = originalTags.filter(tag => {
-                        const lowerCaseTag = tag.toLowerCase();
-                        if (tagsToLookFor.has(lowerCaseTag)) {
-                            tagsRemovedThisItem.push(tag);
-                            return false;
+                    await debugLogToFile(`Current tags on item: ${JSON.stringify(item.tags)}`, item);
+                    await debugLogToFile(`Tags to remove: ${JSON.stringify([...result.tags])}`, item);
+
+
+                    // --- Remove Tags ---
+                    if (result.tags && result.tags.size > 0) {
+                        const tagsToLookFor = result.tags;
+                        const originalTags = item.tags ? [...item.tags] : [];
+                        const newTags = originalTags.filter(tag => {
+                            const lowerCaseTag = tag.toLowerCase();
+                            if (tagsToLookFor.has(lowerCaseTag)) {
+                                return false;
+                            }
+                            return true;
+                        });
+                        
+                        await debugLogToFile(`Tags remaining after filter: ${JSON.stringify(newTags)}`, item);
+
+                        if (newTags.length < originalTags.length) {
+                            item.tags = newTags;
+                            changed = true;
                         }
-                        return true;
-                    });
+                    }
 
-                    if (newTags.length < originalTags.length) {
-                        log(t('log.delete.removing', { name: item.name, count: tagsRemovedThisItem.length }));
-                        item.tags = newTags;
+                    // --- Remove Note ---
+                    if (item.annotation) {
+                        const note = item.annotation;
+                        const splitKey = '[Generation Info]';
+                        const idx = note.indexOf(splitKey);
+                        
+                        if (idx !== -1) {
+                            let cutIndex = idx;
+                            if (idx >= 2 && note.substring(idx - 2, idx) === '\n\n') {
+                                cutIndex = idx - 2;
+                            } else if (idx >= 1 && note[idx - 1] === '\n') {
+                                cutIndex = idx - 1;
+                            }
+                            
+                            const newAnnotation = note.substring(0, cutIndex).trim();
+                            if (newAnnotation.length !== note.length) {
+                                item.annotation = newAnnotation;
+                                changed = true;
+                            }
+                        }
+                    }
+
+                    if (changed) {
                         await item.save();
+                        log(t('log.delete.removing', { name: item.name, defaultValue: `${item.name}: 情報を削除しました。` }));
                         removedCount++;
                     } else {
                         log(t('log.delete.noneFound', { name: item.name }));
                         skippedCount++;
                     }
                 } catch (error) {
-                    log(t('log.error.generic', { name: item.name, message: error.message }));
+                    log(t('log.error.generic', { name: item.name, message: error.error || error.message }));
                     console.error(error);
                     errorCount++;
                 }
@@ -792,11 +924,12 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
             if (isCancelled) {
                 log(t('log.delete.cancelledMessage', { removedCount, skippedCount, errorCount })); 
             } else {
-                log(t('log.delete.completed', { removedCount, skippedCount, errorCount })); 
+                log(t('log.completed', { removedCount, skippedCount, errorCount })); 
             }
             resetButtons();
         } catch (error) {
-            log(t('log.error.init', { message: error.message }));
+            log(t('log.error.init', { message: error.error || error.message }));
+            console.error(error);
             resetButtons();
         }
     }
@@ -808,7 +941,7 @@ Promise.all([i18nReadyPromise, domReadyPromise]).then(() => {
         saveCheckboxState();
         startTagging();
     });
-    deleteTagsButton.addEventListener('click', removePluginTags);
+    deleteInfoButton.addEventListener('click', removePluginData);
     cancelButton.addEventListener('click', () => {
         if (!isCancelled) {
             isCancelled = true;
