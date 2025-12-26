@@ -2,13 +2,10 @@ const fsp = require('fs').promises;
 const path = require('path');
 const os = require('os');
 
-// --- ComfyUI/A1111 Fast Parser (Library-free & Robust) ---
+// --- 1. 画像解析 (Fast Parser) ---
 function getGenInfo(buffer, mimeType) {
-    if (mimeType === 'image/png') {
-        return parsePng(buffer);
-    } else if (mimeType === 'image/webp') {
-        return parseWebP(buffer);
-    }
+    if (mimeType === 'image/png') return parsePng(buffer);
+    if (mimeType === 'image/webp') return parseWebP(buffer);
     return {};
 }
 
@@ -33,9 +30,7 @@ function parsePng(buffer) {
                 } else {
                     result[keyword] = text;
                 }
-            } catch (e) {
-                console.error(`Error parsing JSON from ${keyword} chunk`, e);
-            }
+            } catch (e) {}
         }
         offset += length + 4;
     }
@@ -46,9 +41,10 @@ function decodePngText(data) {
     const nullIndex = data.indexOf(0x00);
     if (nullIndex === -1) return { keyword: '', text: '' };
     const decoder = new TextDecoder('utf-8');
-    const keyword = decoder.decode(data.slice(0, nullIndex));
-    const text = decoder.decode(data.slice(nullIndex + 1));
-    return { keyword, text };
+    return {
+        keyword: decoder.decode(data.slice(0, nullIndex)),
+        text: decoder.decode(data.slice(nullIndex + 1))
+    };
 }
 
 function parseWebP(buffer) {
@@ -58,12 +54,11 @@ function parseWebP(buffer) {
     let offset = 12;
     while (offset < view.byteLength) {
         if (offset + 8 > view.byteLength) break;
-        const chunkType = getFourCC(view, offset);
         const chunkSize = view.getUint32(offset + 4, true);
         const chunkDataOffset = offset + 8;
+        const chunkType = getFourCC(view, offset);
         if (chunkType === 'EXIF' || chunkType === 'XMP ') {
-            const chunkData = buffer.slice(chunkDataOffset, chunkDataOffset + chunkSize);
-            extractFromBinary(chunkData, result);
+            extractFromBinary(buffer.slice(chunkDataOffset, chunkDataOffset + chunkSize), result);
         }
         offset += 8 + chunkSize + (chunkSize % 2);
     }
@@ -73,28 +68,16 @@ function parseWebP(buffer) {
 function extractFromBinary(data, result) {
     const decoder = new TextDecoder('iso-8859-1');
     const binaryString = decoder.decode(data);
-
-    const parseJson = (key) => {
+    const parse = (key) => {
         const match = binaryString.match(new RegExp(`${key}:\s*(\{)`, 'i'));
         if (match) {
-            const braceRelIndex = match[0].lastIndexOf('{');
-            const jsonStart = match.index + braceRelIndex;
+            const jsonStart = match.index + match[0].lastIndexOf('{');
             const json = parseJsonFromPos(data, jsonStart);
-            if (json) {
-                result[key.toLowerCase()] = json;
-            }
+            if (json) result[key.toLowerCase()] = json;
         }
     };
-    parseJson('workflow');
-    parseJson('prompt');
-
-    if (!result.workflow && binaryString.includes('nodes') && binaryString.includes('links')) {
-        const jsonStart = binaryString.indexOf('{');
-        if (jsonStart !== -1) {
-             const json = parseJsonFromPos(data, jsonStart);
-             if (json && json.nodes) result.workflow = json;
-        }
-    }
+    parse('workflow');
+    parse('prompt');
 }
 
 function parseJsonFromPos(fullBuffer, startPos) {
@@ -111,51 +94,32 @@ function parseJsonFromPos(fullBuffer, startPos) {
             if (byte === 0x7b) braceCount++;
             else if (byte === 0x7d) {
                 braceCount--;
-                if (braceCount === 0) {
-                    endPos = i;
-                    break;
-                }
+                if (braceCount === 0) { endPos = i; break; }
             }
         }
     }
     if (endPos !== -1) {
         try {
-            const jsonBuffer = fullBuffer.slice(startPos, endPos + 1);
-            return JSON.parse(new TextDecoder('utf-8').decode(jsonBuffer));
+            return JSON.parse(new TextDecoder('utf-8').decode(fullBuffer.slice(startPos, endPos + 1)));
         } catch (e) { return null; }
     }
     return null;
 }
 
 function getFourCC(view, offset) {
-    return String.fromCharCode(
-        view.getUint8(offset), view.getUint8(offset + 1),
-        view.getUint8(offset + 2), view.getUint8(offset + 3)
-    );
+    return String.fromCharCode(view.getUint8(offset), view.getUint8(offset + 1), view.getUint8(offset + 2), view.getUint8(offset + 3));
 }
-// --- End of Fast Parser ---
 
-// --- START NEW METADATA EXTRACTION LOGIC ---
-
-/**
- * Extracts metadata from ComfyUI's execution graph (prompt) first,
- * then falls back to the UI graph (workflow).
- */
+// --- 2. ComfyUIメタデータ抽出 ---
 function extractComfyMetadata(json) {
     const metadata = {};
-
     if (json.prompt) {
-        try {
-            extractFromPrompt(json.prompt, metadata);
-        } catch (e) { console.error("Prompt parsing failed:", e); }
+        try { extractFromPrompt(json.prompt, metadata); } catch (e) { console.error("Prompt parsing failed:", e); }
     }
     
     if (json.workflow) {
-        try {
-            extractFromWorkflow(json.workflow, metadata);
-        } catch (e) { console.error("Workflow parsing failed:", e); }
+        try { extractFromWorkflow(json.workflow, metadata); } catch (e) { console.error("Workflow parsing failed:", e); }
     }
-
     return metadata;
 }
 
@@ -164,468 +128,361 @@ function extractFromPrompt(promptData, metadata) {
         const node = promptData[nodeId];
         if (!node || !node.inputs) return null;
         const val = node.inputs[inputKey];
-        
         if (Array.isArray(val) && val.length === 2 && typeof val[0] === 'string') {
-            const sourceNodeId = val[0];
-            const sourceNode = promptData[sourceNodeId];
-            if (!sourceNode) return null;
-
-            const classType = sourceNode.class_type;
-            if (sourceNode.inputs[inputKey] !== undefined) return resolve(sourceNodeId, inputKey);
-            
-            const commonKeys = ['value', 'int', 'float', 'text', 'string'];
-            for(const key of commonKeys) {
-                if (sourceNode.inputs[key] !== undefined) return resolve(sourceNodeId, key);
-            }
-            if (inputKey === 'seed' && sourceNode.inputs['seed'] !== undefined) return resolve(sourceNodeId, 'seed');
-            
+            const src = promptData[val[0]];
+            if (!src) return null;
+            if (src.inputs[inputKey] !== undefined) return resolve(val[0], inputKey);
+            for(const k of ['value','int','float','text','string']) if(src.inputs[k]!==undefined) return resolve(val[0], k);
+            if(inputKey === 'seed' && src.inputs['seed'] !== undefined) return resolve(val[0], 'seed');
             return null;
         }
         return val;
     };
-
     for (const id in promptData) {
         const node = promptData[id];
         if (!node.class_type) continue;
-
-        if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) {
-            metadata.checkpoint = resolve(id, "ckpt_name");
-        }
-        
-        if (node.class_type === "LoraLoader" && !metadata.loras) {
-             const loraName = resolve(id, "lora_name");
-             if (loraName) metadata.loras = [loraName];
-        }
-
+        if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) metadata.checkpoint = resolve(id, "ckpt_name");
+        if (node.class_type === "LoraLoader" && !metadata.loras) { const l = resolve(id, "lora_name"); if(l) metadata.loras=[l]; }
         if (node.class_type.includes("KSampler")) {
-            const props = {
-                steps: resolve(id, "steps"),
-                cfg: resolve(id, "cfg"),
-                seed: resolve(id, "seed"),
-                sampler: resolve(id, "sampler_name"),
-                scheduler: resolve(id, "scheduler"),
-                denoise: resolve(id, "denoise"),
-                positive: resolve(id, "positive"),
-                negative: resolve(id, "negative")
-            };
-            for(const key in props) {
-                if(props[key] !== null && metadata[key] === undefined) metadata[key] = props[key];
-            }
+            if(!metadata.seed) metadata.seed=resolve(id,"seed");
+            if(!metadata.steps) metadata.steps=resolve(id,"steps");
+            if(!metadata.cfg) metadata.cfg=resolve(id,"cfg");
+            if(!metadata.sampler) metadata.sampler=resolve(id,"sampler_name");
+            if(!metadata.positive) metadata.positive=resolve(id,"positive");
+            if(!metadata.negative) metadata.negative=resolve(id,"negative");
         }
     }
 }
 
 function extractFromWorkflow(workflowData, metadata) {
     if (!workflowData.nodes) return;
-
     const nodes = workflowData.nodes;
     const links = workflowData.links || [];
     const nodeById = {};
     nodes.forEach(n => nodeById[n.id] = n);
-
-    const resolveLink = (node, inputName, type) => {
-        if (!node || !node.inputs) return undefined;
-        
-        const input = node.inputs.find(i => i.name === inputName);
-        if (!input || input.link === null || input.link === undefined) return undefined;
-
+    
+    const resolveLink = (node, inputName) => {
+        const input = node.inputs?.find(i => i.name === inputName);
+        if (!input || !input.link) return undefined;
         const link = links.find(l => l[0] === input.link);
         if (!link) return undefined;
-
-        const sourceNodeId = link[1];
-        const sourceNode = nodeById[sourceNodeId];
-        if (!sourceNode) return undefined;
-
-        if (sourceNode.widgets_values && sourceNode.widgets_values.length > 0) {
-            return sourceNode.widgets_values[0];
-        }
-        return undefined;
+        const src = nodeById[link[1]];
+        return src?.widgets_values?.[0];
     };
 
     nodes.forEach(node => {
         const type = node.type || node.class_type || "";
-
-        if (type.includes("CheckpointLoader")) {
-            if (!metadata.checkpoint && node.widgets_values) {
-                metadata.checkpoint = path.basename(node.widgets_values[0]);
-            }
-        }
-        
-        if (type === "LoraLoader") {
-            if (!metadata.loras && node.widgets_values) {
-                metadata.loras = [path.basename(node.widgets_values[0])];
-            }
-        }
-
+        if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) metadata.checkpoint = path.basename(node.widgets_values[0]);
         if (type.includes("KSampler")) {
             const w = node.widgets_values || [];
-            if (!metadata.seed) metadata.seed = (w[0] !== undefined) ? w[0] : resolveLink(node, 'seed');
-            if (!metadata.steps) metadata.steps = (w[2] !== undefined) ? w[2] : resolveLink(node, 'steps');
-            if (!metadata.cfg) metadata.cfg = (w[3] !== undefined) ? w[3] : resolveLink(node, 'cfg');
-            if (!metadata.sampler) metadata.sampler = (w[4] !== undefined) ? w[4] : resolveLink(node, 'sampler_name');
-            if (!metadata.scheduler) metadata.scheduler = (w[5] !== undefined) ? w[5] : resolveLink(node, 'scheduler');
+            if (!metadata.seed) metadata.seed = (w[0]!==undefined)?w[0]:resolveLink(node,'seed');
+            if (!metadata.steps) metadata.steps = (w[2]!==undefined)?w[2]:resolveLink(node,'steps');
+            if (!metadata.cfg) metadata.cfg = (w[3]!==undefined)?w[3]:resolveLink(node,'cfg');
+            if (!metadata.sampler) metadata.sampler = (w[4]!==undefined)?w[4]:resolveLink(node,'sampler_name');
         }
     });
 }
-// --- END NEW METADATA EXTRACTION LOGIC ---
 
 
 Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', r) : r())]).then(([plugin]) => {
     
-    // ... (rest of the code is largely the same, but uses the new metadata object) ...
-
-    function t(key, replacements = {}) {
-        if (typeof i18next === 'undefined') {
-            console.error('i18next is not defined!');
-            let msg = key;
-            for (const rKey in replacements) {
-                msg = msg.replace(`{{${rKey}}}`, replacements[rKey]);
+    function t(key, r = {}) {
+        return window.i18next ? window.i18next.t(key, r) : (r.defaultValue || key);
+    }
+    
+    async function initI18n() {
+        try {
+            if (!window.i18next) {
+                console.error("i18next is not available. Please ensure it's loaded by Eagle.");
+                return;
             }
-            return msg;
+
+            const appLocale = eagle.app.locale;
+            const lang = (appLocale && appLocale.startsWith('ja')) ? 'ja' : 'en';
+            
+            const loadJson = async (filename) => {
+                const filePath = path.join(plugin.path, '_locales', filename);
+                try { return JSON.parse(await fsp.readFile(filePath, 'utf8')); } 
+                catch (e) { console.error(`Failed to load ${filename}`, e); return {}; } 
+            };
+            
+            await window.i18next.init({
+                lng: lang,
+                fallbackLng: 'en',
+                resources: {
+                    en: { translation: await loadJson('en.json') },
+                    ja: { translation: await loadJson('ja_JP.json') }
+                },
+                interpolation: { escapeValue: false }
+            });
+
+            updateUILabels();
+
+        } catch (e) {
+            console.error("[i18n] Initialization failed:", e);
         }
-        return i18next.t(key, replacements);
+    }
+
+    function updateUILabels() {
+        document.title = t('ui.title');
+        document.querySelector('h1').textContent = t('ui.title');
+        
+        const labelMap = {
+            'chk-checkpoint': 'ui.option.checkpoint', 'chk-lora': 'ui.option.lora',
+            'chk-positive': 'ui.option.positive', 'chk-negative': 'ui.option.negative',
+            'chk-seed': 'ui.option.seed', 'chk-sampler': 'ui.option.sampler',
+            'chk-steps': 'ui.option.steps', 'chk-cfg': 'ui.option.cfg',
+            'chk-add-tags': 'ui.option.addTags', 'chk-write-notes': 'ui.option.writeNotes',
+            'chk-debug-log': 'ui.option.debugMode'
+        };
+        for (const [id, key] of Object.entries(labelMap)) {
+            const label = document.querySelector(`label[for="${id}"]`);
+            if (label) label.textContent = t(key);
+        }
+        
+        const sectionTitles = document.querySelectorAll('.section-title');
+        if(sectionTitles[0]) sectionTitles[0].textContent = t('ui.outputSettings');
+        if(sectionTitles[1]) sectionTitles[1].textContent = t('ui.extractionTarget');
+
+        document.getElementById('startButton').textContent = t('ui.button.start');
+        document.getElementById('deleteInfoButton').textContent = t('ui.button.deleteInfo');
+        document.getElementById('cancelButton').textContent = t('ui.button.cancel');
     }
 
     let isCancelled = false;
     let logBuffer = [];
     const MAX_LOG_LINES = 100;
-
+    
+    // UI Elements
     const startButton = document.getElementById('startButton');
-    const deleteInfoButton = document.getElementById('deleteInfoButton');
+    const deleteButton = document.getElementById('deleteInfoButton');
     const cancelButton = document.getElementById('cancelButton');
     const logArea = document.getElementById('log');
-    const chkCheckpoint = document.getElementById('chk-checkpoint');
-    const chkLora = document.getElementById('chk-lora');
-    const chkPositive = document.getElementById('chk-positive');
-    const chkNegative = document.getElementById('chk-negative');
-    const chkSeed = document.getElementById('chk-seed');
-    const chkSampler = document.getElementById('chk-sampler');
-    const chkSteps = document.getElementById('chk-steps');
-    const chkCfg = document.getElementById('chk-cfg');
-    const chkAddTags = document.getElementById('chk-add-tags');
-    const chkWriteNotes = document.getElementById('chk-write-notes');
+    
+    const checkboxes = {
+        checkpoint: document.getElementById('chk-checkpoint'),
+        lora: document.getElementById('chk-lora'),
+        positive: document.getElementById('chk-positive'),
+        negative: document.getElementById('chk-negative'),
+        seed: document.getElementById('chk-seed'),
+        sampler: document.getElementById('chk-sampler'),
+        steps: document.getElementById('chk-steps'),
+        cfg: document.getElementById('chk-cfg'),
+        addTags: document.getElementById('chk-add-tags'),
+        writeNotes: document.getElementById('chk-write-notes'),
+        debug: document.getElementById('chk-debug-log')
+    };
 
-    const DEBUG_LOG_FILE = path.join(os.tmpdir(), `comfyui-auto-tagger-debug-${Date.now()}.log`);
+    // --- Logging ---
+    const LOG_DIR = path.join(os.tmpdir(), 'comfyui-auto-tagger');
+    let DEBUG_LOG_FILE = '';
+    
+    (async () => { 
+        try { 
+            await fsp.mkdir(LOG_DIR, { recursive: true }); 
+            DEBUG_LOG_FILE = path.join(LOG_DIR, `debug-${Date.now()}.log`);
+        } catch(e) { console.error(e); } 
+    })();
 
-    async function debugLogToFile(message, item = null) {
-        let prefix = `[${new Date().toISOString()}]`;
-        if (item) prefix += ` [Item: ${item.name || item.id}]`;
-        await fsp.appendFile(DEBUG_LOG_FILE, `${prefix} ${message}\n`).catch(e => console.error("Failed to write debug log to file:", e));
+    async function debugLog(msg, item = null) {
+        if (!checkboxes.debug || !checkboxes.debug.checked) return;
+        const line = `[${new Date().toISOString()}] ${item ? `[${item.name}] ` : ''}${msg}\n`;
+        console.log(msg);
+        try { if(DEBUG_LOG_FILE) await fsp.appendFile(DEBUG_LOG_FILE, line); } catch(e){}
     }
 
-    function applyLocale() {
-        document.title = t('ui.title');
-        document.querySelector('h1').textContent = t('ui.title');
-        document.querySelector('label[for="chk-checkpoint"]').textContent = t('ui.option.checkpoint');
-        document.querySelector('label[for="chk-lora"]').textContent = t('ui.option.lora');
-        document.querySelector('label[for="chk-positive"]').textContent = t('ui.option.positive');
-        document.querySelector('label[for="chk-negative"]').textContent = t('ui.option.negative');
-        document.querySelector('label[for="chk-seed"]').textContent = t('ui.option.seed');
-        document.querySelector('label[for="chk-sampler"]').textContent = t('ui.option.sampler');
-        document.querySelector('label[for="chk-steps"]').textContent = t('ui.option.steps');
-        document.querySelector('label[for="chk-cfg"]').textContent = t('ui.option.cfg');
-        document.querySelector('label[for="chk-add-tags"]').textContent = t('ui.option.addTags', { defaultValue: 'タグに追加' });
-        document.querySelector('label[for="chk-write-notes"]').textContent = t('ui.option.writeNotes', { defaultValue: 'メモに追加' });
-        document.querySelector('#output-settings h3').textContent = t('ui.header.outputSettings', { defaultValue: '出力設定' });
-
-        startButton.textContent = t('ui.button.start');
-        deleteInfoButton.textContent = t('ui.button.deleteInfo', { defaultValue: '生成情報を削除' });
-        cancelButton.textContent = t('ui.button.cancel');
-        log(t('log.initial'));
-        log(`DEBUG LOGGING TO: ${DEBUG_LOG_FILE}`);
-    }
-
-    function log(message) {
+    function log(key, replacements={}) {
         if (!logArea) return;
-        console.log(message);
-        logBuffer.push(message);
+        const translatedMsg = t(key, replacements);
+        logBuffer.push(translatedMsg);
         if (logBuffer.length > MAX_LOG_LINES) logBuffer.shift();
         logArea.textContent = logBuffer.join('\n');
         logArea.scrollTop = logArea.scrollHeight;
     }
 
-    function cleanAndSplitPrompt(promptText, prefix = '') {
-        if (!promptText || typeof promptText !== 'string') return [];
-        let processedText = promptText.replace(/\n/g, ',');
-        const finalTags = new Set();
-        processedText.split(',').forEach(tag => {
-            const trimmed = tag.trim();
-            if (trimmed) finalTags.add((prefix + trimmed).toLowerCase());
+    // --- Logic ---
+    function cleanPrompt(text, prefix='') {
+        if (!text || typeof text !== 'string') return [];
+        const tags = new Set();
+        text.replace(/\n/g, ',').split(',').forEach(t => {
+            const v = t.trim();
+            if (v) tags.add((prefix + v).toLowerCase());
         });
-        return [...finalTags];
+        return [...tags];
     }
 
-    function processExtractedMetadata(metadata) {
-        const categorized = {
-            checkpoints: new Set(),
-            loras: new Set(),
-            positive: new Set(),
-            negative: new Set(),
-            ksampler: new Set()
-        };
+    function processMetadata(meta) {
+        const cats = { cp: new Set(), lora: new Set(), pos: new Set(), neg: new Set(), param: new Set() };
+        
+        if (meta.checkpoint) cats.cp.add(path.basename(meta.checkpoint, path.extname(meta.checkpoint)).toLowerCase());
+        if (meta.loras) meta.loras.forEach(l => cats.lora.add(path.basename(l, path.extname(l)).toLowerCase()));
+        if (meta.positive) cleanPrompt(meta.positive).forEach(t => cats.pos.add(t));
+        if (meta.negative) cleanPrompt(meta.negative, 'neg:').forEach(t => cats.neg.add(t));
+        
+        if (meta.seed !== undefined) cats.param.add(`seed:${meta.seed}`);
+        if (meta.steps !== undefined) cats.param.add(`steps:${meta.steps}`);
+        if (meta.cfg !== undefined) cats.param.add(`cfg:${Number(meta.cfg).toFixed(2)}`);
+        if (meta.sampler) cats.param.add(`sampler:${String(meta.sampler).toLowerCase()}`);
 
-        if (metadata.checkpoint) categorized.checkpoints.add(path.basename(metadata.checkpoint, path.extname(metadata.checkpoint)).toLowerCase());
-        if (metadata.loras) metadata.loras.forEach(l => categorized.loras.add(path.basename(l, path.extname(l)).toLowerCase()));
+        const allTags = new Set([...cats.cp, ...cats.lora, ...cats.pos, ...cats.neg, ...cats.param]);
         
-        if (metadata.positive) cleanAndSplitPrompt(metadata.positive).forEach(t => categorized.positive.add(t));
-        if (metadata.negative) cleanAndSplitPrompt(metadata.negative, 'neg:').forEach(t => categorized.negative.add(t));
-
-        if (metadata.seed !== undefined) categorized.ksampler.add(`seed:${metadata.seed}`);
-        if (metadata.steps !== undefined) categorized.ksampler.add(`steps:${metadata.steps}`);
-        if (metadata.cfg !== undefined) categorized.ksampler.add(`cfg:${Number(metadata.cfg).toFixed(2)}`);
-        if (metadata.sampler) categorized.ksampler.add(`sampler:${metadata.sampler.toLowerCase()}`);
+        let lines = ['[Generation Info]'];
+        if (checkboxes.checkpoint.checked && meta.checkpoint) lines.push(`${t('ui.option.checkpoint')}: ${path.basename(meta.checkpoint, path.extname(meta.checkpoint))}`);
+        if (checkboxes.lora.checked && meta.loras) lines.push(`${t('ui.option.lora')}: ${meta.loras.map(l=>path.basename(l,path.extname(l))).join(', ')}`);
         
-        const allTags = new Set([...categorized.checkpoints, ...categorized.loras, ...categorized.positive, ...categorized.negative, ...categorized.ksampler]);
-
-        // Generate Annotation Text
-        let lines = [];
-        lines.push('[Generation Info]');
-        if (chkCheckpoint.checked && metadata.checkpoint) lines.push(`Model: ${path.basename(metadata.checkpoint, path.extname(metadata.checkpoint))}`);
-        if (chkLora.checked && metadata.loras) lines.push(`Lora: ${metadata.loras.map(l => path.basename(l, path.extname(l))).join(', ')}`);
+        let p = [];
+        if (checkboxes.steps.checked && meta.steps) p.push(`${t('ui.option.steps')}: ${meta.steps}`);
+        if (checkboxes.cfg.checked && meta.cfg) p.push(`CFG: ${Number(meta.cfg).toFixed(1)}`);
+        if (checkboxes.sampler.checked && meta.sampler) p.push(`Sampler: ${meta.sampler}`);
+        if (checkboxes.seed.checked && meta.seed !== undefined) lines.push(`Seed: ${meta.seed}`);
+        if (p.length) lines.push(p.join(' | '));
         
-        let infoParts = [];
-        if (chkSteps.checked && metadata.steps !== undefined) infoParts.push(`Steps: ${metadata.steps}`);
-        if (chkCfg.checked && metadata.cfg !== undefined) infoParts.push(`CFG: ${Number(metadata.cfg).toFixed(1)}`);
-        if (chkSampler.checked && metadata.sampler) infoParts.push(`Sampler: ${metadata.sampler}`);
-        if (chkSeed.checked && metadata.seed !== undefined) lines.push(`Seed: ${metadata.seed}`);
-        if (infoParts.length) lines.push(infoParts.join(' | '));
+        if (checkboxes.positive.checked && meta.positive) lines.push(`\n[${t('ui.option.positive')}]\n${meta.positive}`);
+        if (checkboxes.negative.checked && meta.negative) lines.push(`\n[${t('ui.option.negative')}]\n${meta.negative}`);
         
-        if (chkPositive.checked && metadata.positive) {
-            lines.push('\n[Positive]');
-            lines.push(metadata.positive);
-        }
-        if (chkNegative.checked && metadata.negative) {
-            lines.push('\n[Negative]');
-            lines.push(metadata.negative);
-        }
-        
-        const annotation = lines.length > 1 ? lines.join('\n') : '';
-
-        return { tags: allTags, categorized, annotation };
+        return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '' };
     }
 
     async function startTagging() {
-        startButton.disabled = true;
-        deleteInfoButton.disabled = true;
-        cancelButton.style.display = 'inline-block';
+        startButton.disabled = true; deleteButton.disabled = true; cancelButton.style.display = 'inline-block';
         isCancelled = false;
         logBuffer = [];
-        log(t('log.start'));
-
+        log('log.start');
+        
         try {
             const items = await eagle.item.getSelected();
-            if (items.length === 0) {
-                log(t('log.noItemSelected'));
-                resetButtons();
-                return;
-            }
-            log(t('log.processingItems', { count: items.length }));
-            await debugLogToFile(`\n--- START TAGGING RUN: ${items.length} items ---`);
-
+            if (!items.length) { log('log.noItemSelected'); resetUI(); return; }
+            
+            if (checkboxes.debug.checked) log(`[Debug] Log file: ${DEBUG_LOG_FILE}`);
+            await debugLog(`START: ${items.length} items`);
 
             for (const item of items) {
                 if (isCancelled) break;
                 try {
-                    log(t('log.processingItem', { name: item.name }));
-                    
+                    log('log.processingItem', {name: item.name});
                     const ext = path.extname(item.filePath).toLowerCase();
-                    let mimeType = '';
-                    if (ext === '.png') mimeType = 'image/png';
-                    else if (ext === '.webp') mimeType = 'image/webp';
-
-                    const rawMetadata = getGenInfo(await fsp.readFile(item.filePath), mimeType);
-                    await debugLogToFile(`Full raw metadata: ${JSON.stringify(rawMetadata, null, 2)}`, item);
-
-                    const extracted = extractComfyMetadata(rawMetadata);
-                    const result = processExtractedMetadata(extracted);
+                    const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
+                    
+                    const raw = getGenInfo(await fsp.readFile(item.filePath), mime);
+                    await debugLog(`Raw: ${JSON.stringify(raw)}`, item);
+                    
+                    const meta = extractComfyMetadata(raw);
+                    const res = processMetadata(meta);
                     
                     let changed = false;
-                    
-                    if (chkAddTags.checked) {
-                        const finalTags = item.tags ? [...item.tags] : [];
-                        const finalTagSet = new Set(finalTags.map(t => t.toLowerCase()));
-                        
-                        const addIfChecked = (tagSet, checkbox) => {
-                            if (checkbox.checked) {
-                                tagSet.forEach(tag => {
-                                    if (!finalTagSet.has(tag)) {
-                                        finalTags.push(tag);
-                                        finalTagSet.add(tag);
-                                        changed = true;
-                                    }
-                                });
-                            }
+                    if (checkboxes.addTags.checked) {
+                        const currentTags = new Set((item.tags || []).map(t => t.toLowerCase()));
+                        item.tags = item.tags || [];
+                        const add = (set, chk) => {
+                            if(chk.checked) set.forEach(t => { if(!currentTags.has(t)){ item.tags.push(t); currentTags.add(t); changed=true; } });
                         };
-
-                        addIfChecked(result.categorized.checkpoints, chkCheckpoint);
-                        addIfChecked(result.categorized.loras, chkLora);
-                        addIfChecked(result.categorized.positive, chkPositive);
-                        addIfChecked(result.categorized.negative, chkNegative);
+                        add(res.cats.cp, checkboxes.checkpoint);
+                        add(res.cats.lora, checkboxes.lora);
+                        add(res.cats.pos, checkboxes.positive);
+                        add(res.cats.neg, checkboxes.negative);
                         
-                        result.categorized.ksampler.forEach(tag => {
-                            let shouldAdd = false;
-                            if (tag.startsWith('seed:') && chkSeed.checked) shouldAdd = true;
-                            else if (tag.startsWith('steps:') && chkSteps.checked) shouldAdd = true;
-                            else if (tag.startsWith('cfg:') && chkCfg.checked) shouldAdd = true;
-                            else if (tag.startsWith('sampler:') && chkSampler.checked) shouldAdd = true;
+                        res.cats.param.forEach(t => {
+                            let ok = false;
+                            if(t.startsWith('seed:') && checkboxes.seed.checked) ok=true;
+                            else if(t.startsWith('steps:') && checkboxes.steps.checked) ok=true;
+                            else if(t.startsWith('cfg:') && checkboxes.cfg.checked) ok=true;
+                            else if(t.startsWith('sampler:') && checkboxes.sampler.checked) ok=true;
                             
-                            if (shouldAdd && !finalTagSet.has(tag)) {
-                                finalTags.push(tag);
-                                finalTagSet.add(tag);
-                                changed = true;
-                            }
+                            if(ok && !currentTags.has(t)) { item.tags.push(t); currentTags.add(t); changed=true; } 
                         });
-
-                        if (changed) item.tags = finalTags;
                     }
-
-                    if (chkWriteNotes.checked && result.annotation) {
-                        const currentNote = item.annotation || '';
-                        if (!currentNote.includes('[Generation Info]')) {
-                            item.annotation = currentNote ? (currentNote + '\n\n' + result.annotation) : result.annotation;
-                            changed = true;
-                        }
-                    }
-
-                    if (changed) {
-                        await item.save();
-                        log(t('log.success', { name: item.name }));
-                    } else {
-                         log(t('log.skip.allExist', { name: item.name }));
-                    }
-
-                } catch (error) {
-                    log(t('log.error.generic', { name: item.name, message: error.message }));
-                    console.error(error);
-                }
-            }
-            resetButtons();
-
-        } catch (e) {
-            log(t('log.error.init', { message: e.message }));
-            resetButtons();
-        }
-    }
-
-    async function removePluginData() {
-        try {
-            const items = await eagle.item.getSelected();
-            if (items.length === 0) return;
-            if (!confirm(t('confirm.deleteAll', { count: items.length, defaultValue: `選択した${items.length}個のアイテムから、このプラグインが生成した可能性のある全ての情報を削除しますか？` }))) { 
-                return;
-            }
-            
-            startButton.disabled = true;
-            deleteInfoButton.disabled = true;
-            
-            await debugLogToFile(`\n--- REMOVE DATA RUN: ${items.length} items ---`);
-
-            for (const item of items) {
-                if (isCancelled) break;
-                try {
-                    const ext = path.extname(item.filePath).toLowerCase();
-                    let mimeType = '';
-                    if (ext === '.png') mimeType = 'image/png';
-                    else if (ext === '.webp') mimeType = 'image/webp';
-
-                    const rawMetadata = getGenInfo(await fsp.readFile(item.filePath), mimeType);
-                    const extracted = extractComfyMetadata(rawMetadata);
-                    const { tags: tagsToRemove } = processExtractedMetadata(extracted);
                     
-                    let changed = false;
-
-                    await debugLogToFile(`Current tags: ${JSON.stringify(item.tags)}`, item);
-                    await debugLogToFile(`Tags to remove: ${JSON.stringify([...tagsToRemove])}`, item);
-
-                    if (tagsToRemove.size > 0 && item.tags && item.tags.length > 0) {
-                        const originalTagCount = item.tags.length;
-                        item.tags = item.tags.filter(tag => !tagsToRemove.has(tag.toLowerCase()));
-                        if (item.tags.length < originalTagCount) {
+                    if (checkboxes.writeNotes.checked && res.annotation) {
+                        const note = item.annotation || '';
+                        if (!note.includes('[Generation Info]')) {
+                            item.annotation = note ? (note + '\n\n' + res.annotation) : res.annotation;
                             changed = true;
                         }
                     }
-
-                    if (item.annotation && item.annotation.includes('[Generation Info]')) {
-                        item.annotation = item.annotation.substring(0, item.annotation.indexOf('[Generation Info]')).trim();
-                        changed = true;
-                    }
-
-                    if (changed) {
-                        await item.save();
-                        log(`[${item.name}] 情報を削除しました。`);
-                    } else {
-                         log(`[${item.name}] 削除対象の情報は見つかりませんでした。`);
-                    }
-                } catch (error) {
-                    log(t('log.error.generic', { name: item.name, message: error.message }));
+                    
+                    if(changed) { await item.save(); log('log.success', {name:item.name}); }
+                    else log('log.skip', {name:item.name});
+                    
+                } catch(e) {
+                    log('log.error.generic', { name: item.name, message: e.message });
+                    await debugLog(e.stack, item);
                 }
             }
-            resetButtons();
-        } catch (error) {
-            log(t('log.error.init', { message: error.message }));
-            resetButtons();
-        }
+        } catch(e) { log('log.error.init', { message: e.message }); }
+        resetUI();
     }
 
-    function resetButtons() {
-        if(!startButton || !deleteInfoButton || !cancelButton) return;
-        startButton.disabled = false;
-        deleteInfoButton.disabled = false;
-        cancelButton.style.display = 'none';
+    async function removeInfo() {
+        const items = await eagle.item.getSelected();
+        if(!items.length || !confirm(t('confirm.deleteAll', {count:items.length})))
+        return;
+        
+        startButton.disabled = true; deleteButton.disabled = true;
+        
+        await debugLog(`REMOVE: ${items.length} items`);
+
+        for(const item of items) {
+            try {
+                const ext = path.extname(item.filePath).toLowerCase();
+                const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
+                const raw = getGenInfo(await fsp.readFile(item.filePath), mime);
+                const meta = extractComfyMetadata(raw);
+                const { tags: removeTags } = processMetadata(meta);
+                
+                let changed = false;
+                if(item.tags && item.tags.length) {
+                    const before = item.tags.length;
+                    item.tags = item.tags.filter(t => !removeTags.has(t.toLowerCase()));
+                    if(item.tags.length < before) changed = true;
+                }
+                if(item.annotation && item.annotation.includes('[Generation Info]')) {
+                    item.annotation = item.annotation.substring(0, item.annotation.indexOf('[Generation Info]')).trim();
+                    changed = true;
+                }
+                if(changed) { await item.save(); log('log.delete.removing', {name: item.name, count: removeTags.size}); }
+                else log('log.delete.noneFound', {name: item.name});
+            } catch(e) { log('log.error.generic', { name: item.name, message: e.message }); }
+        }
+        resetUI();
+    }
+
+    function resetUI() {
+        startButton.disabled = false; deleteButton.disabled = false; cancelButton.style.display = 'none';
         cancelButton.disabled = false;
     }
-    
+
     const SETTINGS_KEY = 'comfyui-auto-tagger-settings';
-    const allCheckboxes = [chkCheckpoint, chkLora, chkPositive, chkNegative, chkSeed, chkSampler, chkSteps, chkCfg, chkAddTags, chkWriteNotes];
-
-    function saveCheckboxState() {
-        const settings = {};
-        allCheckboxes.forEach(chk => {
-            if (chk) settings[chk.id] = chk.checked;
-        });
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    function saveSettings() {
+        const s = {};
+        for(const k in checkboxes) if(checkboxes[k]) s[k] = checkboxes[k].checked;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    }
+    function loadSettings() {
+        try {
+            const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+            if(s) for(const k in checkboxes) if(checkboxes[k]) checkboxes[k].checked = s[k];
+        } catch(e){}
     }
 
-    function loadCheckboxState() {
-        const savedSettings = localStorage.getItem(SETTINGS_KEY);
-        if (savedSettings) {
-            try {
-                const settings = JSON.parse(savedSettings);
-                allCheckboxes.forEach(chk => {
-                    if (chk && settings[chk.id] !== undefined) {
-                        chk.checked = settings[chk.id];
-                    } else if (chk) {
-                        chk.checked = true;
-                    }
-                });
-            } catch (e) {
-                console.error('Failed to load settings', e);
-                allCheckboxes.forEach(chk => { if(chk) chk.checked = true; });
-            }
-        } else {
-            allCheckboxes.forEach(chk => { if(chk) chk.checked = true; });
+    (async () => {
+        if (typeof eagle !== 'undefined') {
+            eagle.onThemeChanged((theme) => {
+                document.documentElement.setAttribute('data-theme', theme);
+                document.body.setAttribute('data-theme', theme);
+            });
+            const currentTheme = eagle.app.theme;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            document.body.setAttribute('data-theme', currentTheme);
         }
-    }
-    
-    applyLocale();
-    loadCheckboxState();
-    
-    startButton.addEventListener('click', () => {
-        saveCheckboxState();
-        startTagging();
-    });
-    deleteInfoButton.addEventListener('click', removePluginData);
-    cancelButton.addEventListener('click', () => {
-        if (!isCancelled) {
-            isCancelled = true;
-            cancelButton.disabled = true;
-            log(t('log.cancelling'));
-        }
-    });
 
-    allCheckboxes.forEach(chk => {
-        chk.addEventListener('change', saveCheckboxState);
-    });
+        await initI18n();
+        loadSettings();
+    })();
 
-    console.log("Plugin successfully initialized.");
+    startButton.onclick = () => { saveSettings(); startTagging(); };
+    deleteButton.onclick = removeInfo;
+    cancelButton.onclick = () => { if(!isCancelled) { isCancelled=true; cancelButton.disabled=true; log('log.cancelling'); }};
+    for(const k in checkboxes) if(checkboxes[k]) checkboxes[k].onchange = saveSettings;
+
+    console.log("Initialized.");
 });
