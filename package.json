@@ -10,8 +10,5 @@
     "webp"
   ],
   "author": "Gemini",
-  "license": "MIT",
-  "dependencies": {
-    "exifreader": "^4.13.0"
-  }
+  "license": "MIT"
 }
