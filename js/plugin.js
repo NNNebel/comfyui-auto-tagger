@@ -2,7 +2,7 @@ const fsp = require('fs').promises;
 const path = require('path');
 const os = require('os');
 
-// --- 1. 画像解析 (Fast Parser) ---
+// --- 1. 画像解析 (Fast Parser) --- 
 function getGenInfo(buffer, mimeType) {
     if (mimeType === 'image/png') return parsePng(buffer);
     if (mimeType === 'image/webp') return parseWebP(buffer);
@@ -68,16 +68,19 @@ function parseWebP(buffer) {
 function extractFromBinary(data, result) {
     const decoder = new TextDecoder('iso-8859-1');
     const binaryString = decoder.decode(data);
-    const parse = (key) => {
+
+    const parseJson = (key) => {
         const match = binaryString.match(new RegExp(`${key}:\s*(\{)`, 'i'));
         if (match) {
             const jsonStart = match.index + match[0].lastIndexOf('{');
             const json = parseJsonFromPos(data, jsonStart);
-            if (json) result[key.toLowerCase()] = json;
+            if (json) {
+                result[key.toLowerCase()] = json;
+            }
         }
     };
-    parse('workflow');
-    parse('prompt');
+    parseJson('workflow');
+    parseJson('prompt');
 }
 
 function parseJsonFromPos(fullBuffer, startPos) {
@@ -110,7 +113,7 @@ function getFourCC(view, offset) {
     return String.fromCharCode(view.getUint8(offset), view.getUint8(offset + 1), view.getUint8(offset + 2), view.getUint8(offset + 3));
 }
 
-// --- 2. ComfyUIメタデータ抽出 ---
+// --- 2. ComfyUIメタデータ抽出 --- 
 function extractComfyMetadata(json) {
     const metadata = {};
     if (json.prompt) {
@@ -172,7 +175,7 @@ function extractFromWorkflow(workflowData, metadata) {
 
     nodes.forEach(node => {
         const type = node.type || node.class_type || "";
-        if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) metadata.checkpoint = path.basename(node.widgets_values[0]);
+        if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) metadata.checkpoint = path.basename(node.widgets_values?.[0] || '');
         if (type.includes("KSampler")) {
             const w = node.widgets_values || [];
             if (!metadata.seed) metadata.seed = (w[0]!==undefined)?w[0]:resolveLink(node,'seed');
@@ -186,7 +189,7 @@ function extractFromWorkflow(workflowData, metadata) {
 
 Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', r) : r())]).then(([plugin]) => {
     
-    // --- 翻訳システム (Eagle標準i18next利用) ---
+    // --- 翻訳システム (Eagle標準i18next利用) --- 
     function t(key, r = {}) {
         return window.i18next ? window.i18next.t(key, r) : (r.defaultValue || key);
     }
@@ -254,11 +257,14 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
     let logBuffer = [];
     const MAX_LOG_LINES = 100;
     
-    // UI Elements
     const startButton = document.getElementById('startButton');
     const deleteButton = document.getElementById('deleteInfoButton');
     const cancelButton = document.getElementById('cancelButton');
     const logArea = document.getElementById('log');
+    const chunkSizeInput = document.getElementById('chunk-size');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
     
     const checkboxes = {
         checkpoint: document.getElementById('chk-checkpoint'),
@@ -274,7 +280,6 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         debug: document.getElementById('chk-debug-log')
     };
 
-    // --- Logging ---
     const LOG_DIR = path.join(os.tmpdir(), 'comfyui-auto-tagger');
     let DEBUG_LOG_FILE = '';
     
@@ -301,7 +306,6 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         logArea.scrollTop = logArea.scrollHeight;
     }
 
-    // --- Logic ---
     function cleanPrompt(text, prefix='') {
         if (!text || typeof text !== 'string') return [];
         const tags = new Set();
@@ -344,21 +348,64 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '' };
     }
 
+    // --- CHUNK PROCESSING LOGIC --- 
+    async function processItemsInChunks(items, processFn) {
+        const chunkSize = parseInt(chunkSizeInput.value, 10) || 5;
+        let successCount = 0;
+        let errorCount = 0;
+        let skippedCount = 0;
+        let processedCount = 0;
+
+        progressContainer.style.display = 'block';
+        updateProgress(0, items.length);
+
+        for (let i = 0; i < items.length; i += chunkSize) {
+            if (isCancelled) break;
+            const chunk = items.slice(i, i + chunkSize);
+            
+            const results = await Promise.allSettled(chunk.map(item => processFn(item)));
+
+            results.forEach(result => {
+                if (result.status === 'fulfilled') {
+                    const status = result.value;
+                    if (status === 'success') successCount++;
+                    else if (status === 'skipped') skippedCount++;
+                    else {
+                        // If no specific status is returned, but it didn't fail, treat as skipped.
+                        skippedCount++;
+                    }
+                } else {
+                    errorCount++;
+                }
+            });
+            processedCount = Math.min(i + chunkSize, items.length);
+            updateProgress(processedCount, items.length);
+        }
+        return { successCount, errorCount, skippedCount };
+    }
+
+    function updateProgress(current, total) {
+        const percentage = total > 0 ? (current / total) * 100 : 0;
+        progressBar.style.width = `${percentage}%`;
+        progressText.textContent = `${current} / ${total}`;
+    }
+
+
     async function startTagging() {
         startButton.disabled = true; deleteButton.disabled = true; cancelButton.style.display = 'inline-block';
         isCancelled = false;
-        logBuffer = [];
+        logBuffer = []; // ここでログバッファをクリア
         log('log.start');
         
         try {
             const items = await eagle.item.getSelected();
             if (!items.length) { log('log.noItemSelected'); resetUI(); return; }
             
+            log('log.processingItems', { count: items.length });
             if (checkboxes.debug.checked) log(`[Debug] Log file: ${DEBUG_LOG_FILE}`);
             await debugLog(`START: ${items.length} items`);
 
-            for (const item of items) {
-                if (isCancelled) break;
+            const processSingleItem = async (item) => {
                 try {
                     log('log.processingItem', {name: item.name});
                     const ext = path.extname(item.filePath).toLowerCase();
@@ -368,19 +415,24 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                     await debugLog(`Raw: ${JSON.stringify(raw)}`, item);
                     
                     const meta = extractComfyMetadata(raw);
+                    if (Object.keys(meta).length === 0) {
+                        log('log.skip.noMetadata', { name: item.name });
+                        return 'skipped';
+                    }
                     const res = processMetadata(meta);
                     
                     let changed = false;
-                    if (checkboxes.addTags.checked) {
+                    if (checkboxes.addTags.checked && res.tags.size > 0) {
                         const currentTags = new Set((item.tags || []).map(t => t.toLowerCase()));
-                        item.tags = item.tags || [];
-                        const add = (set, chk) => {
-                            if(chk.checked) set.forEach(t => { if(!currentTags.has(t)){ item.tags.push(t); currentTags.add(t); changed=true; } });
+                        const tagsToAdd = [];
+                        
+                        const addIfChecked = (set, chk) => {
+                            if(chk.checked) set.forEach(t => { if(!currentTags.has(t)) tagsToAdd.push(t); });
                         };
-                        add(res.cats.cp, checkboxes.checkpoint);
-                        add(res.cats.lora, checkboxes.lora);
-                        add(res.cats.pos, checkboxes.positive);
-                        add(res.cats.neg, checkboxes.negative);
+                        addIfChecked(res.cats.cp, checkboxes.checkpoint);
+                        addIfChecked(res.cats.lora, checkboxes.lora);
+                        addIfChecked(res.cats.pos, checkboxes.positive);
+                        addIfChecked(res.cats.neg, checkboxes.negative);
                         
                         res.cats.param.forEach(t => {
                             let ok = false;
@@ -388,9 +440,13 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                             else if(t.startsWith('steps:') && checkboxes.steps.checked) ok=true;
                             else if(t.startsWith('cfg:') && checkboxes.cfg.checked) ok=true;
                             else if(t.startsWith('sampler:') && checkboxes.sampler.checked) ok=true;
-                            
-                            if(ok && !currentTags.has(t)) { item.tags.push(t); currentTags.add(t); changed=true; }
+                            if(ok && !currentTags.has(t)) tagsToAdd.push(t);
                         });
+
+                        if (tagsToAdd.length > 0) {
+                            item.tags = [...(item.tags || []), ...tagsToAdd];
+                            changed = true;
+                        }
                     }
                     
                     if (checkboxes.writeNotes.checked && res.annotation) {
@@ -401,36 +457,49 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                         }
                     }
                     
-                    if(changed) { await item.save(); log('log.success', {name:item.name}); } 
-                    else log('log.skip', {name:item.name});
-                    
-                } catch(e) {
+                    if(changed) { await item.save(); log('log.success', {name:item.name}); return 'success'; } 
+                    else { log('log.skip', {name:item.name}); return 'skipped'; }
+                } catch (e) {
                     log('log.error.generic', { name: item.name, message: e.message });
                     await debugLog(e.stack, item);
+                    return 'error';
                 }
-            }
+            };
+
+            const { successCount, errorCount, skippedCount } = await processItemsInChunks(items, processSingleItem);
+
+            if(isCancelled) log('log.cancelled', { successCount, skippedCount, errorCount });
+            else log('log.completed', { successCount, skippedCount, errorCount });
+
         } catch(e) { log('log.error.init', { message: e.message }); }
         resetUI();
     }
 
     async function removeInfo() {
-        const items = await eagle.item.getSelected();
-        if(!items.length || !confirm(t('confirm.deleteAll', {count:items.length}))) return;
-        
         startButton.disabled = true; deleteButton.disabled = true; cancelButton.style.display = 'inline-block';
         isCancelled = false; // キャンセル状態をリセット
         logBuffer = []; // ログバッファをクリア
         log('log.delete.start'); // 削除開始ログ
+
+        const items = await eagle.item.getSelected();
+        if(!items.length || !confirm(t('confirm.deleteAll', {count:items.length}))) {
+            resetUI();
+            return;
+        }
         
         await debugLog(`REMOVE: ${items.length} items`);
 
-        for(const item of items) {
-            if (isCancelled) break;
+        const processSingleItem = async (item) => {
+            if (isCancelled) return 'skipped'; // Return a status
             try {
                 const ext = path.extname(item.filePath).toLowerCase();
                 const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
                 const raw = getGenInfo(await fsp.readFile(item.filePath), mime);
                 const meta = extractComfyMetadata(raw);
+                if (Object.keys(meta).length === 0) {
+                    log('log.delete.noneFound', {name: item.name});
+                    return 'skipped';
+                }
                 const { tags: removeTags } = processMetadata(meta);
                 
                 let changed = false;
@@ -443,16 +512,27 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                     item.annotation = item.annotation.substring(0, item.annotation.indexOf('[Generation Info]')).trim();
                     changed = true;
                 }
-                if(changed) { await item.save(); log('log.delete.removing', {name: item.name, count: removeTags.size}); } 
-                else log('log.delete.noneFound', {name: item.name});
-            } catch(e) { log('log.error.generic', { name: item.name, message: e.message }); }
-        }
+                if(changed) { await item.save(); log('log.delete.removing', {name: item.name, count: removeTags.size}); return 'success'; } 
+                else { log('log.delete.noneFound', {name: item.name}); return 'skipped'; }
+            } catch(e) {
+                log('log.error.generic', { name: item.name, message: e.message });
+                return 'error';
+            }
+        };
+        
+        const { successCount, errorCount, skippedCount } = await processItemsInChunks(items, processSingleItem);
+        
+        if(isCancelled) log('log.delete.cancelledMessage', { removedCount: successCount, skippedCount, errorCount });
+        else log('log.delete.completed', { removedCount: successCount, skippedCount, errorCount });
+
         resetUI();
     }
 
     function resetUI() {
         startButton.disabled = false; deleteButton.disabled = false; cancelButton.style.display = 'none';
         cancelButton.disabled = false;
+        progressContainer.style.display = 'none'; // Hide progress bar on reset
+        updateProgress(0, 0); // Reset progress bar text
     }
 
     const SETTINGS_KEY = 'comfyui-auto-tagger-settings';
@@ -469,7 +549,6 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
     }
 
     (async () => {
-        // Eagleのテーマ設定を適用
         if (typeof eagle !== 'undefined') {
             eagle.onThemeChanged((theme) => {
                 document.documentElement.setAttribute('data-theme', theme);
