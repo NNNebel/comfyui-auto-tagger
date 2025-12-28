@@ -1,15 +1,39 @@
-# Node.js dependencies
+# Node.js
 node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+.history/
+tmp/
 
 # Build artifacts
-*.zip
+dist/
+build/
+coverage/
+
+# Misc
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.next/
+out/
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Git specific (though .git itself is usually ignored by default)
+.git/
+.gitkeep
+
+# Eagle Plugin specific
 *.eagleplugin
-
-# Log files
-*.log
-
-# Local resources (not for repository)
-.Resources/
-
-# Gemini CLI agent state file
-AGENTS.md
