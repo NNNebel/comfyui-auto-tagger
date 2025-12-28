@@ -20,6 +20,9 @@
             "writeNotes": "メモに追加",
             "debugMode": "デバッグモード"
         },
+        "config": {
+            "chunkSize": "一度に処理する数:"
+        },
         "button": {
             "start": "タグ付け開始",
             "deleteInfo": "情報を削除",

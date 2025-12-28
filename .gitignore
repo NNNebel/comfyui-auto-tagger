@@ -14,6 +14,10 @@ lerna-debug.log*
 .history/
 tmp/
 
+# Eagle Plugin specific resources
+.Resources/
+*.eagleplugin
+
 # Build artifacts
 dist/
 build/
@@ -27,13 +31,5 @@ coverage/
 .env.production.local
 .next/
 out/
-.DS_Store
 *.sublime-project
 *.sublime-workspace
-
-# Git specific (though .git itself is usually ignored by default)
-.git/
-.gitkeep
-
-# Eagle Plugin specific
-*.eagleplugin

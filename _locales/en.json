@@ -20,6 +20,9 @@
             "writeNotes": "Add to Notes",
             "debugMode": "Debug Mode"
         },
+        "config": {
+            "chunkSize": "Process Items per Batch:"
+        },
         "button": {
             "start": "Start Tagging",
             "deleteInfo": "Delete Info",

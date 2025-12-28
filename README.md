@@ -30,9 +30,9 @@ It supports both **PNG** and **WebP** formats and allows you to filter which inf
 
 ### 📸 Screenshots
 
-<p align="center">
-  <img src="image_overview.png" alt="ComfyUI Auto Tagger Overview" width="800">
-</p>
+| Output Result | Settings UI |
+| :---: | :---: |
+| <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Settings Window"> |
 
 ### 📦 Installation
 
@@ -84,9 +84,9 @@ ComfyUIで生成された画像（PNG/WebP）に含まれるメタデータ（Wo
 
 ### 📸 スクリーンショット
 
-<p align="center">
-  <img src="image_overview.png" alt="ComfyUI Auto Tagger スクリーンショット" width="800">
-</p>
+| 実行結果イメージ | 設定画面 |
+| :---: | :---: |
+| <img src="assets/preview-result.png" width="400" alt="実行結果"> | <img src="assets/preview-settings.png" width="400" alt="設定画面"> |
 
 ### 📦 インストール方法
 

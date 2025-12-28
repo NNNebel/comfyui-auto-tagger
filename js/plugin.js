@@ -248,6 +248,9 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         if(sectionTitles[0]) sectionTitles[0].textContent = t('ui.outputSettings');
         if(sectionTitles[1]) sectionTitles[1].textContent = t('ui.extractionTarget');
 
+        const chunkSizeLabel = document.querySelector('label[for="chunk-size"]');
+        if (chunkSizeLabel) chunkSizeLabel.textContent = t('ui.config.chunkSize');
+
         document.getElementById('startButton').textContent = t('ui.button.start');
         document.getElementById('deleteInfoButton').textContent = t('ui.button.deleteInfo');
         document.getElementById('cancelButton').textContent = t('ui.button.cancel');
