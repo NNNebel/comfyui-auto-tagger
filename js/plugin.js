@@ -2,7 +2,7 @@ const fsp = require('fs').promises;
 const path = require('path');
 const os = require('os');
 
-// --- 1. 画像解析 (Fast Parser) ---
+// --- 1. 画像解析 (Fast Parser) --- 
 function getGenInfo(buffer, mimeType) {
     if (mimeType === 'image/png') return parsePng(buffer);
     if (mimeType === 'image/webp') return parseWebP(buffer);
@@ -113,7 +113,7 @@ function getFourCC(view, offset) {
     return String.fromCharCode(view.getUint8(offset), view.getUint8(offset + 1), view.getUint8(offset + 2), view.getUint8(offset + 3));
 }
 
-// --- 2. ComfyUIメタデータ抽出 ---
+// --- 2. ComfyUIメタデータ抽出 --- 
 function extractComfyMetadata(json) {
     const metadata = {};
     if (json.prompt) {
@@ -189,7 +189,7 @@ function extractFromWorkflow(workflowData, metadata) {
 
 Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', r) : r())]).then(([plugin]) => {
     
-    // --- 翻訳システム (Eagle標準i18next利用) ---
+    // --- 翻訳システム (Eagle標準i18next利用) --- 
     function t(key, r = {}) {
         return window.i18next ? window.i18next.t(key, r) : (r.defaultValue || key);
     }
@@ -341,17 +341,17 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         let p = [];
         if (checkboxes.steps.checked && meta.steps) p.push(`${t('ui.option.steps')}: ${meta.steps}`);
         if (checkboxes.cfg.checked && meta.cfg) p.push(`CFG: ${Number(meta.cfg).toFixed(1)}`);
-        if (checkboxes.sampler.checked && meta.sampler) p.push(`Sampler: ${meta.sampler}`);
-        if (checkboxes.seed.checked && meta.seed !== undefined) lines.push(`Seed: ${meta.seed}`);
+        if (checkboxes.sampler.checked && meta.sampler) p.push(`${t('ui.option.sampler')}: ${meta.sampler}`);
+        if (checkboxes.seed.checked && meta.seed !== undefined) lines.push(`${t('ui.option.seed')}: ${meta.seed}`);
         if (p.length) lines.push(p.join(' | '));
         
-        if (checkboxes.positive.checked && meta.positive) lines.push(`\n[${t('ui.option.positive')}]\n${meta.positive}`);
-        if (checkboxes.negative.checked && meta.negative) lines.push(`\n[${t('ui.option.negative')}]\n${meta.negative}`);
+        if (checkboxes.positive.checked && meta.positive) lines.push(`\n[Positive Prompt]\n${meta.positive}`);
+        if (checkboxes.negative.checked && meta.negative) lines.push(`\n[Negative Prompt]\n${meta.negative}`);
         
         return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '' };
     }
 
-    // --- CHUNK PROCESSING LOGIC ---
+    // --- CHUNK PROCESSING LOGIC --- 
     async function processItemsInChunks(items, processFn) {
         const chunkSize = parseInt(chunkSizeInput.value, 10) || 5;
         let successCount = 0;
@@ -408,8 +408,8 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
             await debugLog(`START: ${items.length} items`);
 
             const processSingleItem = async (item) => {
-                log('log.processingItem', {name: item.name}); // 個別の処理中ログ
                 try {
+                    log('log.processingItem', {name: item.name});
                     const ext = path.extname(item.filePath).toLowerCase();
                     const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
                     
@@ -506,7 +506,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         const processSingleItem = async (item) => {
             if (isCancelled) return 'skipped';
             try {
-                log('log.processingItem', {name: item.name}); // 個別の処理中ログ
+                log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
                 const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
                 const raw = getGenInfo(await fsp.readFile(item.filePath), mime);

@@ -20,21 +20,21 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 15px 20px; /* 上下のpaddingを少し減らすか、全体で調整 */
             font-size: 13px;
         }
 
         h1 {
             font-size: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 15px; /* マージンを調整 */
             border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
+            padding-bottom: 8px; /* パディングを調整 */
             margin-top: 0;
         }
 
         .debug-option {
             position: absolute;
-            top: 20px;
+            top: 15px; /* 上の位置を調整 */
             right: 20px;
             font-size: 11px;
             display: flex;
@@ -49,7 +49,7 @@
 
         .section-title {
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 6px; /* マージンを調整 */
             font-size: 13px;
             border-bottom: 1px dashed var(--border-color);
             padding-bottom: 4px;
@@ -60,12 +60,13 @@
         .option-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 6px; /* ギャップを調整 */
         }
 
         .option-group {
             display: flex;
             align-items: center;
+            margin-bottom: 4px; /* オプショングループ間のマージン */
         }
 
         .option-group input[type="checkbox"] {
@@ -88,8 +89,8 @@
         }
 
         #controls {
-            margin-top: 20px;
-            padding-top: 15px;
+            margin-top: 15px; /* マージンを調整 */
+            padding-top: 10px; /* パディングを調整 */
             border-top: 1px solid var(--border-color);
             display: flex;
             gap: 10px;
@@ -117,7 +118,7 @@
             background-color: var(--log-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            margin-top: 15px;
+            margin-top: 10px; /* マージンを調整 */
             height: 24px;
             position: relative;
             display: none;
@@ -149,7 +150,7 @@
             background-color: var(--log-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            height: 200px; /* 縦幅を増やす */
+            height: 130px; /* ログエリアの高さは維持 */
             overflow-y: auto;
             white-space: pre-wrap;
             font-family: monospace;

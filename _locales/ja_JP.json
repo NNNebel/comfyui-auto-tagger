@@ -10,8 +10,8 @@
         "option": {
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
-            "positive": "ポジティブ",
-            "negative": "ネガティブ",
+            "positive": "ポジティブプロンプト",
+            "negative": "ネガティブプロンプト",
             "seed": "Seed",
             "sampler": "Sampler",
             "steps": "Steps",

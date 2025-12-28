@@ -10,8 +10,8 @@
         "option": {
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
-            "positive": "Positive",
-            "negative": "Negative",
+            "positive": "Positive Prompt",
+            "negative": "Negative Prompt",
             "seed": "Seed",
             "sampler": "Sampler",
             "steps": "Steps",
