@@ -1,26 +1,28 @@
 {
     "manifest": {
         "name": "ComfyUI Auto Tagger",
-        "contextMenu_label": "ComfyUIタグ生成 (Window)"
+        "contextMenu_label": "ComfyUI Tag Generation (Window)"
     },
     "ui": {
         "title": "ComfyUI Auto Tagger",
+        "outputSettings": "Output Settings",
+        "extractionTarget": "Extraction Target",
         "option": {
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
-            "positive": "Positive Prompt",
-            "negative": "Negative Prompt",
+            "positive": "Positive",
+            "negative": "Negative",
             "seed": "Seed",
             "sampler": "Sampler",
             "steps": "Steps",
-            "cfg": "CFG Scale"
-        },
-        "config": {
-            "chunkSize": "Process Count:"
+            "cfg": "CFG",
+            "addTags": "Add to Tags",
+            "writeNotes": "Add to Notes",
+            "debugMode": "Debug Mode"
         },
         "button": {
             "start": "Start Tagging",
-            "deleteAll": "Delete Plugin Tags",
+            "deleteInfo": "Delete Info",
             "cancel": "Cancel"
         }
     },
@@ -30,30 +32,21 @@
         "noItemSelected": "No items selected.",
         "processingItems": "Processing {{count}} items.",
         "processingItem": "[Processing] {{name}}",
-        "tagsAdded": "  -> Added tags ({{count}}): {{tags}}",
-        "success": "[Success] {{name}}: Tags saved.",
-        "skip": "[Skip] {{name}}: All extracted tags already exist. No update performed.",
         "progress": "... {{progress}} / {{total}} items processed ...",
+        "success": "[Success] {{name}}",
+        "skip": "[Skip] {{name}}: No updates to perform.",
         "cancelled": "Process cancelled. (Success: {{successCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
         "completed": "All processes completed. (Success: {{successCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
-        "info": {
-            "noNodes": "[Info] {{name}}: No parsable nodes found."
-        },
         "error": {
-            "noWorkflow": "[Error] {{name}}: ComfyUI workflow information not found.",
-            "jsonParse": "[Error] {{name}}: Failed to parse workflow JSON.",
-            "generic": "[Fatal Error] {{name}}: {{message}}",
+            "generic": "[Error] {{name}}: {{message}}",
             "init": "[Fatal Error] An issue occurred during initialization: {{message}}"
         },
         "delete": {
-            "cancelled": "Tag deletion cancelled.",
-            "start": "Starting removal of plugin tags...",
-            "noCandidates": "[Skip] {{name}}: No parsable plugin tags found.",
-            "removing": "[Removing] {{name}}: Removing {{count}} plugin tags.",
-            "tagsRemoved": "  -> Removed tags: {{tags}}",
-            "noneFound": "[Skip] {{name}}: No plugin tags to remove were found on this item.",
-            "completed": "Plugin tag removal complete. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
-            "cancelledMessage": "Tag deletion was cancelled. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})"
+            "start": "Starting removal of plugin-generated info...",
+            "removing": "[Removing] {{name}} info deleted.",
+            "noneFound": "[Skip] {{name}}: No info to remove was found.",
+            "completed": "Removal complete. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
+            "cancelledMessage": "Removal cancelled. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})"
         },
         "cancelling": "... Cancelling process ..."
     },
@@ -61,6 +54,6 @@
         "noItemSelected": "No items selected."
     },
     "confirm": {
-        "deleteAll": "Are you sure you want to delete all tags from the {{count}} selected items?"
+        "deleteAll": "Are you sure you want to delete all plugin-generated info from {{count}} items?"
     }
 }

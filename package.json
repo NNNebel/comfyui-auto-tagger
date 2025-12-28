@@ -1,14 +1,8 @@
 {
   "name": "comfyui-auto-tagger",
-  "version": "1.0.0",
-  "description": "A window plugin for Eagle to automatically tag images with ComfyUI metadata.",
-  "main": "js/plugin.js",
-  "keywords": [
-    "eagle-plugin",
-    "comfyui",
-    "tagging",
-    "webp"
-  ],
-  "author": "Gemini",
+  "version": "1.2.0",
+  "description": "Eagle plugin to automatically tag images with ComfyUI generation metadata.",
+  "main": "index.js",
+  "author": "Nebel",
   "license": "MIT"
 }

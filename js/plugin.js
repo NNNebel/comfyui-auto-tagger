@@ -2,7 +2,7 @@ const fsp = require('fs').promises;
 const path = require('path');
 const os = require('os');
 
-// --- 1. 画像解析 (Fast Parser) --- 
+// --- 1. 画像解析 (Fast Parser) ---
 function getGenInfo(buffer, mimeType) {
     if (mimeType === 'image/png') return parsePng(buffer);
     if (mimeType === 'image/webp') return parseWebP(buffer);
@@ -113,7 +113,7 @@ function getFourCC(view, offset) {
     return String.fromCharCode(view.getUint8(offset), view.getUint8(offset + 1), view.getUint8(offset + 2), view.getUint8(offset + 3));
 }
 
-// --- 2. ComfyUIメタデータ抽出 --- 
+// --- 2. ComfyUIメタデータ抽出 ---
 function extractComfyMetadata(json) {
     const metadata = {};
     if (json.prompt) {
@@ -189,7 +189,7 @@ function extractFromWorkflow(workflowData, metadata) {
 
 Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', r) : r())]).then(([plugin]) => {
     
-    // --- 翻訳システム (Eagle標準i18next利用) --- 
+    // --- 翻訳システム (Eagle標準i18next利用) ---
     function t(key, r = {}) {
         return window.i18next ? window.i18next.t(key, r) : (r.defaultValue || key);
     }
@@ -348,7 +348,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '' };
     }
 
-    // --- CHUNK PROCESSING LOGIC --- 
+    // --- CHUNK PROCESSING LOGIC ---
     async function processItemsInChunks(items, processFn) {
         const chunkSize = parseInt(chunkSizeInput.value, 10) || 5;
         let successCount = 0;
@@ -366,24 +366,23 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
             const results = await Promise.allSettled(chunk.map(item => processFn(item)));
 
             results.forEach(result => {
+                processedCount++;
                 if (result.status === 'fulfilled') {
                     const status = result.value;
                     if (status === 'success') successCount++;
                     else if (status === 'skipped') skippedCount++;
                     else {
-                        // If no specific status is returned, but it didn't fail, treat as skipped.
                         skippedCount++;
                     }
                 } else {
                     errorCount++;
                 }
             });
-            processedCount = Math.min(i + chunkSize, items.length);
             updateProgress(processedCount, items.length);
         }
         return { successCount, errorCount, skippedCount };
     }
-
+    
     function updateProgress(current, total) {
         const percentage = total > 0 ? (current / total) * 100 : 0;
         progressBar.style.width = `${percentage}%`;
@@ -406,8 +405,8 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
             await debugLog(`START: ${items.length} items`);
 
             const processSingleItem = async (item) => {
+                log('log.processingItem', {name: item.name}); // 個別の処理中ログ
                 try {
-                    log('log.processingItem', {name: item.name});
                     const ext = path.extname(item.filePath).toLowerCase();
                     const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
                     
@@ -415,10 +414,6 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                     await debugLog(`Raw: ${JSON.stringify(raw)}`, item);
                     
                     const meta = extractComfyMetadata(raw);
-                    if (Object.keys(meta).length === 0) {
-                        log('log.skip.noMetadata', { name: item.name });
-                        return 'skipped';
-                    }
                     const res = processMetadata(meta);
                     
                     let changed = false;
@@ -449,11 +444,27 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                         }
                     }
                     
-                    if (checkboxes.writeNotes.checked && res.annotation) {
-                        const note = item.annotation || '';
-                        if (!note.includes('[Generation Info]')) {
-                            item.annotation = note ? (note + '\n\n' + res.annotation) : res.annotation;
-                            changed = true;
+                    if (checkboxes.writeNotes.checked) {
+                        const currentAnnotation = item.annotation || '';
+                        const genInfoBlock = res.annotation;
+                        
+                        if (genInfoBlock) {
+                            const genInfoMarker = '[Generation Info]';
+                            const markerIndex = currentAnnotation.indexOf(genInfoMarker);
+
+                            let newAnnotation;
+
+                            if (markerIndex !== -1) {
+                                const userText = currentAnnotation.substring(0, markerIndex).trim();
+                                newAnnotation = userText ? `${userText}\n\n${genInfoBlock}` : genInfoBlock;
+                            } else {
+                                newAnnotation = currentAnnotation ? `${currentAnnotation}\n\n${genInfoBlock}` : genInfoBlock;
+                            }
+
+                            if (newAnnotation !== currentAnnotation) {
+                                item.annotation = newAnnotation;
+                                changed = true;
+                            }
                         }
                     }
                     
@@ -462,7 +473,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                 } catch (e) {
                     log('log.error.generic', { name: item.name, message: e.message });
                     await debugLog(e.stack, item);
-                    return 'error';
+                    throw e; // Re-throw to be caught by Promise.allSettled
                 }
             };
 
@@ -490,16 +501,13 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
         await debugLog(`REMOVE: ${items.length} items`);
 
         const processSingleItem = async (item) => {
-            if (isCancelled) return 'skipped'; // Return a status
+            if (isCancelled) return 'skipped';
             try {
+                log('log.processingItem', {name: item.name}); // 個別の処理中ログ
                 const ext = path.extname(item.filePath).toLowerCase();
                 const mime = (ext === '.png') ? 'image/png' : (ext === '.webp') ? 'image/webp' : '';
                 const raw = getGenInfo(await fsp.readFile(item.filePath), mime);
                 const meta = extractComfyMetadata(raw);
-                if (Object.keys(meta).length === 0) {
-                    log('log.delete.noneFound', {name: item.name});
-                    return 'skipped';
-                }
                 const { tags: removeTags } = processMetadata(meta);
                 
                 let changed = false;
@@ -516,7 +524,7 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
                 else { log('log.delete.noneFound', {name: item.name}); return 'skipped'; }
             } catch(e) {
                 log('log.error.generic', { name: item.name, message: e.message });
-                return 'error';
+                throw e; // Re-throw
             }
         };
         
@@ -544,11 +552,11 @@ Promise.all([new Promise(r => eagle.onPluginCreate(r)), new Promise(r => documen
     function loadSettings() {
         try {
             const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-            if(s) for(const k in checkboxes) if(checkboxes[k]) checkboxes[k].checked = s[k];
+            if(s) for(const k in checkboxes) if(checkboxes[k] && s[k] !== undefined) checkboxes[k].checked = s[k];
         } catch(e){}
     }
 
-    (async () => {
+    (async () => { 
         if (typeof eagle !== 'undefined') {
             eagle.onThemeChanged((theme) => {
                 document.documentElement.setAttribute('data-theme', theme);

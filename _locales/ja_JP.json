@@ -5,23 +5,25 @@
     },
     "ui": {
         "title": "ComfyUI Auto Tagger",
+        "outputSettings": "出力設定",
+        "extractionTarget": "取得対象",
         "option": {
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
-            "positive": "ポジティブプロンプト",
-            "negative": "ネガティブプロンプト",
+            "positive": "ポジティブ",
+            "negative": "ネガティブ",
             "seed": "Seed",
             "sampler": "Sampler",
             "steps": "Steps",
-            "cfg": "CFG Scale"
-        },
-        "config": {
-            "chunkSize": "一度に処理する数:"
+            "cfg": "CFG",
+            "addTags": "タグに追加",
+            "writeNotes": "メモに追加",
+            "debugMode": "デバッグモード"
         },
         "button": {
             "start": "タグ付け開始",
-            "deleteAll": "プラグインタグを削除",
-            "cancel": "処理を中止"
+            "deleteInfo": "情報を削除",
+            "cancel": "キャンセル"
         }
     },
     "log": {
@@ -30,30 +32,19 @@
         "noItemSelected": "画像が選択されていません。",
         "processingItems": "{{count}}個のアイテムを処理します。",
         "processingItem": "[処理中] {{name}}",
-        "tagsAdded": "  -> 追加されたタグ ({{count}}個): {{tags}}",
-        "success": "[成功] {{name}}: タグを保存しました。",
-        "skip": "[スキップ] {{name}}: 抽出されたタグはすべて既に存在するため、更新は行いません。",
         "progress": "... {{progress}} / {{total}} 件 処理完了 ...",
+        "success": "[成功] {{name}}",
+        "skip": "[スキップ] {{name}}: 更新する情報はありません。",
         "cancelled": "処理が中止されました。 (完了: {{successCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
         "completed": "全ての処理が完了しました。 (成功: {{successCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
-        "info": {
-            "noNodes": "[情報] {{name}}: 解析可能なノードが見つかりませんでした。"
-        },
         "error": {
-            "noWorkflow": "[エラー] {{name}}: ComfyUIのWorkflow情報が見つかりませんでした。",
-            "jsonParse": "[エラー] {{name}}: WorkflowのJSONパースに失敗しました。",
-            "generic": "[致命的エラー] {{name}}: {{message}}",
+            "generic": "[エラー] {{name}}: {{message}}",
             "init": "[致命的エラー] 初期化中に問題が発生しました: {{message}}"
         },
         "delete": {
-            "cancelled": "タグの削除をキャンセルしました。",
-            "start": "プラグインタグの削除を開始します...",
-            "noCandidates": "[スキップ] {{name}}: 解析できるプラグインタグが見つかりませんでした。",
-            "removing": "[削除中] {{name}} から {{count}}個のプラグインタグを削除します。",
-            "tagsRemoved": "  -> 削除されたタグ: {{tags}}",
-            "noneFound": "[スキップ] {{name}}: 削除対象のプラグインタグは見つかりませんでした。",
-            "completed": "プラグインタグの削除が完了しました。 (削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
-            "cancelledMessage": "タグの削除が中止されました。 (削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})"
+            "start": "プラグインが生成した情報の削除を開始します...",
+            "removing": "[削除中] {{name}} の情報を削除しました。",
+            "noneFound": "[スキップ] {{name}}: 削除対象の情報は見つかりませんでした。"
         },
         "cancelling": "... 処理を中止しています ..."
     },
@@ -61,6 +52,6 @@
         "noItemSelected": "アイテムが選択されていません。"
     },
     "confirm": {
-        "deleteAll": "選択中の{{count}}個のアイテムから全てのタグを削除します。よろしいですか？"
+        "deleteAll": "選択中の{{count}} 件のアイテムから、このプラグインが生成したタグとメモを削除します。よろしいですか？"
     }
 }
