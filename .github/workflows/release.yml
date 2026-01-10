@@ -22,25 +22,28 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci # package-lock.json に基づいた厳密なインストール
+        run: npm ci
 
       - name: Run Tests
-        run: npm test # Vitestを実行し、失敗した場合はビルドを中止する
+        run: npm test
+
+      - name: Extract Release Notes
+        run: |
+          # CHANGELOG.md から最新の [##] セクションを抽出して RELEASE_NOTES.md に保存
+          # 最初の ## から、次の ## の直前までを切り出す
+          sed -n '/^## \[[0-9.]*\]/,/^## \[[0-9.]*\]/p' CHANGELOG.md | sed '$d' > RELEASE_NOTES.md
 
       - name: Create Eagle Plugin Package
         run: |
-          # バージョン名を取得 (タグ名から)
           TAG_NAME=${GITHUB_REF#refs/tags/}
           FILENAME="ComfyUI-Auto-Tagger-${TAG_NAME}.eagleplugin"
 
-          # 実行に必要な最小限のファイルだけを一時フォルダに集める
           mkdir -p dist/js dist/_locales
 
           cp index.html manifest.json logo.png LICENSE dist/
           cp js/core.js js/plugin.js dist/js/
           cp _locales/*.json dist/_locales/
 
-          # 一時フォルダの中身をZIP圧縮し、拡張子を .eagleplugin に変更
           cd dist
           zip -r "../${FILENAME}" ./*
           cd ..
@@ -51,8 +54,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.RELEASE_FILENAME }}
-          generate_release_notes: true
-          body: "ComfyUI Auto Tagger Release ${{ github.ref_name }}"
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false
           draft: false
           prerelease: false
         env:
