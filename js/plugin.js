@@ -40,7 +40,8 @@ Promise.all([
             'chk-positive': 'ui.option.positive', 'chk-negative': 'ui.option.negative',
             'chk-seed': 'ui.option.seed', 'chk-sampler': 'ui.option.sampler',
             'chk-steps': 'ui.option.steps', 'chk-cfg': 'ui.option.cfg',
-            'chk-add-tags': 'ui.option.addTags', 'chk-write-notes': 'ui.option.writeNotes'
+            'chk-add-tags': 'ui.option.addTags', 'chk-write-notes': 'ui.option.writeNotes',
+            'chk-debug-log': 'ui.option.debugMode'
         };
         document.querySelector('h1').textContent = t('ui.title');
         for (const [id, key] of Object.entries(labelMap)) {
@@ -48,12 +49,10 @@ Promise.all([
             if (label) label.textContent = t(key);
         }
         
-        // セクションタイトルの翻訳
         const sectionTitles = document.querySelectorAll('.section-title');
         if(sectionTitles[0]) sectionTitles[0].textContent = t('ui.outputSettings');
         if(sectionTitles[1]) sectionTitles[1].textContent = t('ui.extractionTarget');
 
-        // チャンクサイズラベルの翻訳
         const chunkSizeLabel = document.querySelector('label[for="chunk-size"]');
         if (chunkSizeLabel) chunkSizeLabel.textContent = t('ui.config.chunkSize');
 
@@ -81,12 +80,31 @@ Promise.all([
         steps: document.getElementById('chk-steps'),
         cfg: document.getElementById('chk-cfg'),
         addTags: document.getElementById('chk-add-tags'),
-        writeNotes: document.getElementById('chk-write-notes')
+        writeNotes: document.getElementById('chk-write-notes'),
+        debug: document.getElementById('chk-debug-log')
     };
+
+    // --- 2.1 Debug Logging ---
+    const LOG_DIR = path.join(os.tmpdir(), 'comfyui-auto-tagger');
+    let DEBUG_LOG_FILE = '';
+    
+    (async () => { 
+        try { 
+            await fsp.mkdir(LOG_DIR, { recursive: true }); 
+            DEBUG_LOG_FILE = path.join(LOG_DIR, `debug-${Date.now()}.log`);
+        } catch(e) { console.error(e); } 
+    })();
+
+    async function debugLog(msg, item = null) {
+        if (!checkboxes.debug || !checkboxes.debug.checked) return;
+        const line = `[${new Date().toISOString()}] ${item ? `[${item.name}] ` : ''}${msg}\n`;
+        console.log(msg);
+        try { if(DEBUG_LOG_FILE) await fsp.appendFile(DEBUG_LOG_FILE, line); } catch(e){}
+    }
 
     function getSettings() {
         const s = {};
-        for(const k in checkboxes) s[k] = checkboxes[k].checked;
+        for(const k in checkboxes) if(checkboxes[k]) s[k] = checkboxes[k].checked;
         return s;
     }
 
@@ -172,6 +190,9 @@ Promise.all([
 
         setUIState(true); // UIロック & プログレスバー表示
         const settings = getSettings();
+        
+        if (checkboxes.debug.checked) log(`[Debug] Log file: ${DEBUG_LOG_FILE}`);
+        await debugLog(`START: ${items.length} items`);
 
         // 個別のアイテム処理関数
         const processItem = async (item) => {
@@ -181,6 +202,8 @@ Promise.all([
                 const buffer = await fsp.readFile(item.filePath);
                 
                 const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
+                await debugLog(`Raw: ${JSON.stringify(raw)}`, item);
+
                 const meta = extractComfyMetadata(raw);
                 const res = processMetadata(meta, settings, t);
                 
@@ -210,6 +233,7 @@ Promise.all([
                 }
             } catch (e) { 
                 log('log.error.generic', { name: item.name, message: e.message });
+                await debugLog(e.stack, item);
                 return 'error';
             }
         };
@@ -229,11 +253,14 @@ Promise.all([
         if (!confirm(t('confirm.deleteAll', {count: items.length}))) return;
 
         setUIState(true); // UIロック
+        // 全ての設定をONにして、生成されうる全タグを取得対象とする
         const allSettingsOn = {
             checkpoint: true, lora: true, positive: true, negative: true,
             seed: true, sampler: true, steps: true, cfg: true,
             addTags: true, writeNotes: true
         };
+        
+        await debugLog(`REMOVE: ${items.length} items`);
 
         const processItem = async (item) => {
             try {
@@ -286,7 +313,6 @@ Promise.all([
         setUIState(false); // UIロック解除
     }
 
-    
     // --- 6. 設定保存・復元 ---
     const SETTINGS_KEY = 'comfyui-auto-tagger-settings';
     function saveSettings() {
@@ -307,6 +333,16 @@ Promise.all([
 
     // --- 7. 初期化 ---
     (async () => {
+        if (typeof eagle !== 'undefined') {
+            eagle.onThemeChanged((theme) => {
+                document.documentElement.setAttribute('data-theme', theme);
+                document.body.setAttribute('data-theme', theme);
+            });
+            const currentTheme = eagle.app.theme;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            document.body.setAttribute('data-theme', currentTheme);
+        }
+
         await initI18n();
         loadSettings();
     })();
@@ -319,4 +355,6 @@ Promise.all([
     for(const k in checkboxes) {
         if(checkboxes[k]) checkboxes[k].onchange = saveSettings;
     }
+    
+    console.log("Initialized.");
 });
