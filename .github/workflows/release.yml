@@ -22,7 +22,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci # package-lock.json に基づいた厳密なインストール
 
       - name: Run Tests
         run: npm test # Vitestを実行し、失敗した場合はビルドを中止する
@@ -33,13 +33,12 @@ jobs:
           TAG_NAME=${GITHUB_REF#refs/tags/}
           FILENAME="ComfyUI-Auto-Tagger-${TAG_NAME}.eagleplugin"
 
-          # 必要なファイルだけを一時フォルダに集める (クリーンなパッケージングのため)
-          mkdir -p dist/js dist/_locales dist/assets
+          # 実行に必要な最小限のファイルだけを一時フォルダに集める
+          mkdir -p dist/js dist/_locales
 
-          cp index.html manifest.json logo.png LICENSE README.md dist/
+          cp index.html manifest.json logo.png LICENSE dist/
           cp js/core.js js/plugin.js dist/js/
           cp _locales/*.json dist/_locales/
-          cp assets/* dist/assets/
 
           # 一時フォルダの中身をZIP圧縮し、拡張子を .eagleplugin に変更
           cd dist
