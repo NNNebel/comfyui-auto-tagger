@@ -286,13 +286,37 @@ Promise.all([
         setUIState(false); // UIロック解除
     }
 
-    // --- 6. 初期化 ---
+    
+    // --- 6. 設定保存・復元 ---
+    const SETTINGS_KEY = 'comfyui-auto-tagger-settings';
+    function saveSettings() {
+        const s = {};
+        for(const k in checkboxes) if(checkboxes[k]) s[k] = checkboxes[k].checked;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    }
+    function loadSettings() {
+        try {
+            const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+            if(s) {
+                for(const k in checkboxes) {
+                    if(checkboxes[k] && s[k] !== undefined) checkboxes[k].checked = s[k];
+                }
+            }
+        } catch(e) { console.error("Failed to load settings", e); }
+    }
+
+    // --- 7. 初期化 ---
     (async () => {
         await initI18n();
-        // localStorageからの設定読み込み等は省略
+        loadSettings();
     })();
 
-    document.getElementById('startButton').onclick = startTagging;
+    document.getElementById('startButton').onclick = () => { saveSettings(); startTagging(); };
     document.getElementById('deleteInfoButton').onclick = removeInfo;
     document.getElementById('cancelButton').onclick = () => isCancelled = true;
+    
+    // チェックボックス変更時にも保存
+    for(const k in checkboxes) {
+        if(checkboxes[k]) checkboxes[k].onchange = saveSettings;
+    }
 });
