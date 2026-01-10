@@ -32,20 +32,20 @@ jobs:
           # バージョン名を取得 (タグ名から)
           TAG_NAME=${GITHUB_REF#refs/tags/}
           FILENAME="ComfyUI-Auto-Tagger-${TAG_NAME}.eagleplugin"
-          
+
           # 必要なファイルだけを一時フォルダに集める (クリーンなパッケージングのため)
           mkdir -p dist/js dist/_locales dist/assets
-          
+
           cp index.html manifest.json logo.png LICENSE README.md dist/
           cp js/core.js js/plugin.js dist/js/
           cp _locales/*.json dist/_locales/
           cp assets/* dist/assets/
-          
+
           # 一時フォルダの中身をZIP圧縮し、拡張子を .eagleplugin に変更
           cd dist
           zip -r "../${FILENAME}" ./*
           cd ..
-          
+
           echo "RELEASE_FILENAME=${FILENAME}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
