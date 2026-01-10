@@ -80,5 +80,37 @@ describe('Core Logic Tests', () => {
             const result = processMetadata(mockMeta, settings, mockT);
             expect(result.tags.size).toBe(0);
         });
+
+        it('should generate annotation with all info when settings are enabled', () => {
+            const settings = {
+                checkpoint: true, lora: true, positive: true, negative: true,
+                seed: true, steps: true, cfg: true, sampler: true,
+                addTags: true, writeNotes: true
+            };
+            const result = processMetadata(mockMeta, settings, mockT);
+            
+            expect(result.annotation).toContain('ui.option.checkpoint: sd_xl_base_1.0');
+            expect(result.annotation).toContain('ui.option.lora: lora1');
+            expect(result.annotation).toContain('ui.option.steps: 20');
+            expect(result.annotation).toContain('ui.option.seed: 12345');
+            expect(result.annotation).toContain('[Positive Prompt]');
+            expect(result.annotation).toContain('cat, cute');
+        });
+
+        it('should exclude disabled info from annotation', () => {
+            const settings = {
+                checkpoint: true, lora: false, positive: true, negative: false,
+                seed: false, steps: true, cfg: true, sampler: false,
+                addTags: true, writeNotes: true
+            };
+            const result = processMetadata(mockMeta, settings, mockT);
+            
+            expect(result.annotation).toContain('ui.option.checkpoint: sd_xl_base_1.0');
+            expect(result.annotation).not.toContain('ui.option.lora');
+            expect(result.annotation).toContain('ui.option.steps: 20');
+            expect(result.annotation).not.toContain('ui.option.seed');
+            expect(result.annotation).toContain('[Positive Prompt]');
+            expect(result.annotation).not.toContain('[Negative Prompt]');
+        });
     });
 });
