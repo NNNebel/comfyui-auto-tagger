@@ -231,12 +231,23 @@ ${meta.negative}`);
     return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '' };
 }
 
+function removeAnnotation(text) {
+    if (!text) return text;
+    const marker = '[Generation Info]';
+    const idx = text.indexOf(marker);
+    if (idx !== -1) {
+        return text.substring(0, idx).trim();
+    }
+    return text;
+}
+
 // --- Node.js環境(Vitest)向けのエクスポート ---
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         getGenInfo,
         extractComfyMetadata,
         processMetadata,
-        cleanPrompt
+        cleanPrompt,
+        removeAnnotation
     };
 }

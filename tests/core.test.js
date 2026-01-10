@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractComfyMetadata, cleanPrompt, processMetadata } from '../js/core.js';
+import { extractComfyMetadata, cleanPrompt, processMetadata, removeAnnotation } from '../js/core.js';
 
 describe('Core Logic Tests', () => {
     it('should extract checkpoint name correctly', () => {
@@ -111,6 +111,28 @@ describe('Core Logic Tests', () => {
             expect(result.annotation).not.toContain('ui.option.seed');
             expect(result.annotation).toContain('[Positive Prompt]');
             expect(result.annotation).not.toContain('[Negative Prompt]');
+        });
+    });
+
+    describe('removeAnnotation', () => {
+        it('should remove generation info block', () => {
+            const input = "User Note\n\n[Generation Info]\nCheckpoint: model.safetensors";
+            const expected = "User Note";
+            expect(removeAnnotation(input)).toBe(expected);
+        });
+
+        it('should return original text if marker is not found', () => {
+            const input = "Just a user note";
+            expect(removeAnnotation(input)).toBe(input);
+        });
+
+        it('should handle empty string', () => {
+            expect(removeAnnotation("")).toBe("");
+        });
+
+        it('should handle text starting with marker', () => {
+            const input = "[Generation Info]\nSome info";
+            expect(removeAnnotation(input)).toBe("");
         });
     });
 });

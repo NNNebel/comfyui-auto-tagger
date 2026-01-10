@@ -279,15 +279,12 @@ Promise.all([
                     if (item.tags.length < beforeCount) changed = true;
                 }
 
+                // アノテーション削除
                 if (item.annotation) {
-                    const marker = '[Generation Info]';
-                    const idx = item.annotation.indexOf(marker);
-                    if (idx !== -1) {
-                        const newAnnotation = item.annotation.substring(0, idx).trim();
-                        if (newAnnotation !== item.annotation) {
-                            item.annotation = newAnnotation;
-                            changed = true;
-                        }
+                    const newAnnotation = removeAnnotation(item.annotation);
+                    if (newAnnotation !== item.annotation) {
+                        item.annotation = newAnnotation;
+                        changed = true;
                     }
                 }
 
