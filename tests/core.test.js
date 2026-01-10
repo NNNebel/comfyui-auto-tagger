@@ -15,6 +15,43 @@ describe('Core Logic Tests', () => {
         expect(result.checkpoint).toBe("sd_xl_base_1.0.safetensors");
     });
 
+    it('should handle Windows-style path in checkpoint name', () => {
+        const mockJson = {
+            prompt: {
+                "4": { 
+                    class_type: "CheckpointLoaderSimple", 
+                    inputs: { ckpt_name: "folder\\subfolder\\model.safetensors" } 
+                }
+            }
+        };
+        const meta = extractComfyMetadata(mockJson);
+        const settings = { checkpoint: true };
+        const mockT = (key) => key;
+        const result = processMetadata(meta, settings, mockT);
+        
+        expect(result.tags.has("model")).toBe(true);
+        expect(result.annotation).toContain("model");
+        expect(result.annotation).not.toContain("folder");
+    });
+
+    it('should handle Linux-style path in checkpoint name', () => {
+        const mockJson = {
+            prompt: {
+                "4": { 
+                    class_type: "CheckpointLoaderSimple", 
+                    inputs: { ckpt_name: "folder/subfolder/linux_model.safetensors" } 
+                }
+            }
+        };
+        const meta = extractComfyMetadata(mockJson);
+        const settings = { checkpoint: true };
+        const mockT = (key) => key;
+        const result = processMetadata(meta, settings, mockT);
+        
+        expect(result.tags.has("linux_model")).toBe(true);
+        expect(result.annotation).toContain("linux_model");
+    });
+
     it('should extract sampler parameters correctly', () => {
         const mockJson = {
             prompt: {

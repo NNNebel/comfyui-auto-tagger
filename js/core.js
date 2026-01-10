@@ -161,7 +161,7 @@ function extractFromWorkflow(workflowData, metadata) {
         if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) {
             // Widget値からファイル名のみを抽出
             const fullPath = node.widgets_values?.[0] || '';
-            metadata.checkpoint = fullPath.split(/[\/]/).pop();
+            metadata.checkpoint = fullPath.split(/[/\\]/).pop();
         }
     });
 }
@@ -184,7 +184,7 @@ function cleanPrompt(text, prefix='') {
  */
 function processMetadata(meta, settings, t) {
     const cats = { cp: new Set(), lora: new Set(), pos: new Set(), neg: new Set(), param: new Set() };
-    const getBaseName = (p) => p ? p.split(/[\/]/).pop().replace(/\.[^/.]+$/, "") : "";
+    const getBaseName = (p) => p ? p.split(/[/\\]/).pop().replace(/\.[^/\\.]+$/, "") : "";
 
     if (meta.checkpoint) cats.cp.add(getBaseName(meta.checkpoint).toLowerCase());
     if (meta.loras) meta.loras.forEach(l => cats.lora.add(getBaseName(l).toLowerCase()));

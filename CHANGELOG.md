@@ -6,9 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### 🇬🇧 English
 - Fixed an issue where some labels were not translated when English was selected.
+- Fixed a bug where checkpoint names were extracted as file paths (e.g., `epsilon\model`) instead of just the filename.
 
 ### 🇯🇵 日本語
 - 英語表示時に一部表記が翻訳されない問題を修正。
+- チェックポイント名がファイルパス（例：`epsilon\model`）として抽出されてしまうバグを修正。
+
 
 ## [1.3.0] - 2024-12-28
 
