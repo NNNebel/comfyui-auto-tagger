@@ -244,14 +244,21 @@ Promise.all([
         eagle.item.trigger("update", items);
     }
 
-    async function removeInfo() {
+    async function removeInfo(event) {
         isCancelled = false;
         logBuffer = [];
         log('log.delete.start');
 
+        const isForceMode = event && event.shiftKey;
+
         const items = await eagle.item.getSelected();
         if (!items.length) { log('log.noItemSelected'); return; }
-        if (!confirm(t('confirm.deleteAll', {count: items.length}))) return;
+        
+        const confirmMsg = isForceMode 
+            ? t('confirm.forceDeleteAll', {count: items.length}) 
+            : t('confirm.deleteAll', {count: items.length});
+
+        if (!confirm(confirmMsg)) return;
 
         setUIState(true); // UIロック
         // 全ての設定をONにして、生成されうる全タグを取得対象とする
@@ -261,31 +268,48 @@ Promise.all([
             addTags: true, writeNotes: true
         };
         
-        await debugLog(`REMOVE: ${items.length} items`);
+        await debugLog(`REMOVE (Force: ${isForceMode}): ${items.length} items`);
 
         const processItem = async (item) => {
             try {
                 log('log.processingItem', {name: item.name});
-                const ext = path.extname(item.filePath).toLowerCase();
-                const buffer = await fsp.readFile(item.filePath);
-                
-                const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
-                const meta = extractComfyMetadata(raw);
-                const res = processMetadata(meta, allSettingsOn, t);
-                
                 let changed = false;
-                if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
-                    const beforeCount = item.tags.length;
-                    item.tags = item.tags.filter(tag => !res.tags.has(tag.toLowerCase()));
-                    if (item.tags.length < beforeCount) changed = true;
-                }
 
-                // アノテーション削除
-                if (item.annotation) {
-                    const newAnnotation = removeAnnotation(item.annotation);
-                    if (newAnnotation !== item.annotation) {
-                        item.annotation = newAnnotation;
+                if (isForceMode) {
+                    // --- Force Delete Mode ---
+                    if (item.tags && item.tags.length > 0) {
+                        item.tags = [];
                         changed = true;
+                    }
+                    if (item.annotation) {
+                        const newAnnotation = removeAnnotation(item.annotation);
+                        if (newAnnotation !== item.annotation) {
+                            item.annotation = newAnnotation;
+                            changed = true;
+                        }
+                    }
+                } else {
+                    // --- Normal Mode ---
+                    const ext = path.extname(item.filePath).toLowerCase();
+                    const buffer = await fsp.readFile(item.filePath);
+                    
+                    const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
+                    const meta = extractComfyMetadata(raw);
+                    const res = processMetadata(meta, allSettingsOn, t);
+                    
+                    if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
+                        const beforeCount = item.tags.length;
+                        item.tags = item.tags.filter(tag => !res.tags.has(tag.toLowerCase()));
+                        if (item.tags.length < beforeCount) changed = true;
+                    }
+
+                    // アノテーション削除
+                    if (item.annotation) {
+                        const newAnnotation = removeAnnotation(item.annotation);
+                        if (newAnnotation !== item.annotation) {
+                            item.annotation = newAnnotation;
+                            changed = true;
+                        }
                     }
                 }
 

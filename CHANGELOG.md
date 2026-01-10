@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2] - Unreleased
+
+### 🇬🇧 English
+- **New Feature**: Added "Force Delete Mode" (Shift + Click on "Delete Info") to remove all tags from selected images without metadata analysis. Useful for cleaning up malformed tags.
+
+### 🇯🇵 日本語
+- **新機能**: 「情報を削除」ボタンをShiftキーを押しながらクリックすると、メタデータ解析を行わずに選択画像の全てのタグを削除する「強制削除モード」を追加しました。不正なタグを一括削除する際に便利です。
+
 ## [1.3.1] - 2024-XX-XX
 
 ### 🇬🇧 English

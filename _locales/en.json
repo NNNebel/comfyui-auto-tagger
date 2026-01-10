@@ -57,6 +57,7 @@
         "noItemSelected": "No items selected."
     },
     "confirm": {
-        "deleteAll": "Are you sure you want to delete all plugin-generated info from {{count}} items?"
+        "deleteAll": "Are you sure you want to delete all plugin-generated info from {{count}} items?",
+        "forceDeleteAll": "[FORCE DELETE MODE] This will delete ALL tags from {{count}} items without analysis. Are you sure?"
     }
 }
