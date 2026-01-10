@@ -103,6 +103,9 @@ Promise.all([
         if (!items.length) { log('log.noItemSelected'); return; }
 
         const settings = getSettings();
+        let successCount = 0;
+        let skippedCount = 0;
+        let errorCount = 0;
 
         for (const item of items) {
             if (isCancelled) break;
@@ -133,11 +136,20 @@ Promise.all([
                     item.annotation = idx !== -1 ? current.substring(0, idx).trim() + '\n\n' + res.annotation : (current ? current + '\n\n' : '') + res.annotation;
                     changed = true;
                 }
-                if (changed) { await item.save(); log('log.success', {name: item.name}); }
-                else log('log.skip', {name: item.name});
-            } catch (e) { log('log.error.generic', { name: item.name, message: e.message }); }
+                if (changed) { 
+                    await item.save(); 
+                    log('log.success', {name: item.name});
+                    successCount++;
+                } else { 
+                    log('log.skip', {name: item.name});
+                    skippedCount++;
+                }
+            } catch (e) { 
+                log('log.error.generic', { name: item.name, message: e.message }); 
+                errorCount++;
+            }
         }
-        log(isCancelled ? 'log.cancelled' : 'log.completed');
+        log(isCancelled ? 'log.cancelled' : 'log.completed', { successCount, skippedCount, errorCount });
     }
 
     async function removeInfo() {
