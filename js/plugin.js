@@ -66,6 +66,11 @@ Promise.all([
     let isCancelled = false;
     let logBuffer = [];
     const logArea = document.getElementById('log');
+    const chunkSizeInput = document.getElementById('chunk-size');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    
     const checkboxes = {
         checkpoint: document.getElementById('chk-checkpoint'),
         lora: document.getElementById('chk-lora'),
@@ -93,7 +98,70 @@ Promise.all([
         logArea.scrollTop = logArea.scrollHeight;
     }
 
-    // --- 3. メインアクション ---
+    // --- 3. UI Helper Functions ---
+    function updateProgress(current, total) {
+        const percentage = total > 0 ? (current / total) * 100 : 0;
+        progressBar.style.width = `${percentage}%`;
+        progressText.textContent = `${current} / ${total}`;
+    }
+
+    function setUIState(processing) {
+        const startBtn = document.getElementById('startButton');
+        const deleteBtn = document.getElementById('deleteInfoButton');
+        const cancelBtn = document.getElementById('cancelButton');
+        
+        if (processing) {
+            startBtn.disabled = true;
+            deleteBtn.disabled = true;
+            cancelBtn.style.display = 'inline-block';
+            cancelBtn.disabled = false;
+            progressContainer.style.display = 'block';
+        } else {
+            startBtn.disabled = false;
+            deleteBtn.disabled = false;
+            cancelBtn.style.display = 'none';
+            progressContainer.style.display = 'none';
+            updateProgress(0, 0);
+        }
+    }
+
+    // --- 4. Chunk Processing Logic ---
+    async function processItemsInChunks(items, processFn) {
+        const chunkSize = parseInt(chunkSizeInput.value, 10) || 5;
+        let successCount = 0;
+        let skippedCount = 0;
+        let errorCount = 0;
+        let processedCount = 0;
+
+        updateProgress(0, items.length);
+
+        for (let i = 0; i < items.length; i += chunkSize) {
+            if (isCancelled) break;
+            const chunk = items.slice(i, i + chunkSize);
+            
+            // 並列処理だが、UIスレッドをブロックしないようPromise.allSettled待機
+            const results = await Promise.allSettled(chunk.map(processFn));
+
+            results.forEach(result => {
+                processedCount++;
+                if (result.status === 'fulfilled') {
+                    const status = result.value; // 'success', 'skipped', 'error'
+                    if (status === 'success') successCount++;
+                    else if (status === 'skipped') skippedCount++;
+                    else errorCount++;
+                } else {
+                    errorCount++;
+                }
+            });
+            updateProgress(processedCount, items.length);
+            
+            // UI更新のための微小なウェイト
+            await new Promise(r => setTimeout(r, 10));
+        }
+        return { successCount, skippedCount, errorCount };
+    }
+
+    // --- 5. メインアクション ---
     async function startTagging() {
         isCancelled = false;
         logBuffer = [];
@@ -102,19 +170,16 @@ Promise.all([
         const items = await eagle.item.getSelected();
         if (!items.length) { log('log.noItemSelected'); return; }
 
+        setUIState(true); // UIロック & プログレスバー表示
         const settings = getSettings();
-        let successCount = 0;
-        let skippedCount = 0;
-        let errorCount = 0;
 
-        for (const item of items) {
-            if (isCancelled) break;
+        // 個別のアイテム処理関数
+        const processItem = async (item) => {
             try {
                 log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
                 const buffer = await fsp.readFile(item.filePath);
                 
-                // core.js の関数を呼び出し
                 const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
                 const meta = extractComfyMetadata(raw);
                 const res = processMetadata(meta, settings, t);
@@ -129,7 +194,6 @@ Promise.all([
                     }
                 }
                 if (settings.writeNotes && res.annotation) {
-                    // 既存のノートを保持しつつ更新
                     const marker = '[Generation Info]';
                     const current = item.annotation || '';
                     const idx = current.indexOf(marker);
@@ -139,17 +203,20 @@ Promise.all([
                 if (changed) { 
                     await item.save(); 
                     log('log.success', {name: item.name});
-                    successCount++;
+                    return 'success';
                 } else { 
                     log('log.skip', {name: item.name});
-                    skippedCount++;
+                    return 'skipped';
                 }
             } catch (e) { 
-                log('log.error.generic', { name: item.name, message: e.message }); 
-                errorCount++;
+                log('log.error.generic', { name: item.name, message: e.message });
+                return 'error';
             }
-        }
-        log(isCancelled ? 'log.cancelled' : 'log.completed', { successCount, skippedCount, errorCount });
+        };
+
+        const result = await processItemsInChunks(items, processItem);
+        log(isCancelled ? 'log.cancelled' : 'log.completed', result);
+        setUIState(false); // UIロック解除
     }
 
     async function removeInfo() {
@@ -161,19 +228,14 @@ Promise.all([
         if (!items.length) { log('log.noItemSelected'); return; }
         if (!confirm(t('confirm.deleteAll', {count: items.length}))) return;
 
-        // 全ての設定をONにして、生成されうる全タグを取得対象とする
+        setUIState(true); // UIロック
         const allSettingsOn = {
             checkpoint: true, lora: true, positive: true, negative: true,
             seed: true, sampler: true, steps: true, cfg: true,
             addTags: true, writeNotes: true
         };
 
-        let removedCount = 0;
-        let skippedCount = 0;
-        let errorCount = 0;
-
-        for (const item of items) {
-            if (isCancelled) break;
+        const processItem = async (item) => {
             try {
                 log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
@@ -181,25 +243,19 @@ Promise.all([
                 
                 const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
                 const meta = extractComfyMetadata(raw);
-                // 全てのタグ・アノテーションを抽出対象とするため、全設定ONで呼び出す
                 const res = processMetadata(meta, allSettingsOn, t);
                 
                 let changed = false;
-                
-                // タグ削除
                 if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
                     const beforeCount = item.tags.length;
-                    // 大文字小文字を区別せず削除
                     item.tags = item.tags.filter(tag => !res.tags.has(tag.toLowerCase()));
                     if (item.tags.length < beforeCount) changed = true;
                 }
 
-                // アノテーション削除
                 if (item.annotation) {
                     const marker = '[Generation Info]';
                     const idx = item.annotation.indexOf(marker);
                     if (idx !== -1) {
-                        // マーカーより前だけ残す（トリミング含む）
                         const newAnnotation = item.annotation.substring(0, idx).trim();
                         if (newAnnotation !== item.annotation) {
                             item.annotation = newAnnotation;
@@ -211,22 +267,26 @@ Promise.all([
                 if (changed) { 
                     await item.save(); 
                     log('log.delete.removing', {name: item.name});
-                    removedCount++;
+                    return 'success';
                 } else { 
                     log('log.delete.noneFound', {name: item.name});
-                    skippedCount++;
+                    return 'skipped';
                 }
             } catch (e) { 
                 log('log.error.generic', { name: item.name, message: e.message });
-                errorCount++;
+                return 'error';
             }
-        }
+        };
         
-        if (isCancelled) log('log.delete.cancelledMessage', { removedCount, skippedCount, errorCount });
-        else log('log.delete.completed', { removedCount, skippedCount, errorCount });
+        const result = await processItemsInChunks(items, processItem);
+        
+        if (isCancelled) log('log.delete.cancelledMessage', { removedCount: result.successCount, skippedCount: result.skippedCount, errorCount: result.errorCount });
+        else log('log.delete.completed', { removedCount: result.successCount, skippedCount: result.skippedCount, errorCount: result.errorCount });
+        
+        setUIState(false); // UIロック解除
     }
 
-    // --- 4. 初期化 ---
+    // --- 6. 初期化 ---
     (async () => {
         await initI18n();
         // localStorageからの設定読み込み等は省略
