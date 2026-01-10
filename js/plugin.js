@@ -241,6 +241,7 @@ Promise.all([
         const result = await processItemsInChunks(items, processItem);
         log(isCancelled ? 'log.cancelled' : 'log.completed', result);
         setUIState(false); // UIロック解除
+        eagle.item.trigger("update", items);
     }
 
     async function removeInfo() {
@@ -308,6 +309,7 @@ Promise.all([
         else log('log.delete.completed', { removedCount: result.successCount, skippedCount: result.skippedCount, errorCount: result.errorCount });
         
         setUIState(false); // UIロック解除
+        eagle.item.trigger("update", items);
     }
 
     // --- 6. 設定保存・復元 ---
