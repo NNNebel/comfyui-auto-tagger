@@ -1,0 +1,60 @@
+name: Build and Release Eagle Plugin
+
+on:
+  push:
+    tags:
+      - 'v*' # v1.3.0 などのタグがPushされた時に実行
+
+jobs:
+  test_and_build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # リリースへの書き込み権限
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm test # Vitestを実行し、失敗した場合はビルドを中止する
+
+      - name: Create Eagle Plugin Package
+        run: |
+          # バージョン名を取得 (タグ名から)
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          FILENAME="ComfyUI-Auto-Tagger-${TAG_NAME}.eagleplugin"
+          
+          # 必要なファイルだけを一時フォルダに集める (クリーンなパッケージングのため)
+          mkdir -p dist/js dist/_locales dist/assets
+          
+          cp index.html manifest.json logo.png LICENSE README.md dist/
+          cp js/core.js js/plugin.js dist/js/
+          cp _locales/*.json dist/_locales/
+          cp assets/* dist/assets/
+          
+          # 一時フォルダの中身をZIP圧縮し、拡張子を .eagleplugin に変更
+          cd dist
+          zip -r "../${FILENAME}" ./*
+          cd ..
+          
+          echo "RELEASE_FILENAME=${FILENAME}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.RELEASE_FILENAME }}
+          generate_release_notes: true
+          body: "ComfyUI Auto Tagger Release ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
