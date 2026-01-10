@@ -4,5 +4,11 @@
   "description": "Eagle plugin to automatically tag images with ComfyUI generation metadata.",
   "main": "index.js",
   "author": "Nebel",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.16"
+  }
 }

@@ -47,7 +47,9 @@
         "delete": {
             "start": "プラグインが生成した情報の削除を開始します...",
             "removing": "[削除中] {{name}} の情報を削除しました。",
-            "noneFound": "[スキップ] {{name}}: 削除対象の情報は見つかりませんでした。"
+            "noneFound": "[スキップ] {{name}}: 削除対象の情報は見つかりませんでした。",
+            "completed": "削除完了。(削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
+            "cancelledMessage": "削除中止。(削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})"
         },
         "cancelling": "... 処理を中止しています ..."
     },
