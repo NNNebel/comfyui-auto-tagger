@@ -38,8 +38,12 @@
         "progress": "... {{progress}} / {{total}} items processed ...",
         "success": "[Success] {{name}}",
         "skip": "[Skip] {{name}}: No updates to perform.",
-        "cancelled": "Process cancelled. (Success: {{successCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
-        "completed": "All processes completed. (Success: {{successCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
+        "cancelled": "Process cancelled. (Success: {{successCount}}, Caution: {{cautionCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
+        "completed": "All processes completed. (Success: {{successCount}}, Caution: {{cautionCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
+        "caution": {
+            "sampler_fallback": "Base Sampler could not be determined. Used the oldest node ID as fallback.",
+            "sampler_fallback_item": "[Caution] {{name}}: Base Sampler was determined by fallback (Min ID)."
+        },
         "error": {
             "generic": "[Error] {{name}}: {{message}}",
             "init": "[Fatal Error] An issue occurred during initialization: {{message}}"

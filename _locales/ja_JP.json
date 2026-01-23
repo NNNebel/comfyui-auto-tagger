@@ -38,8 +38,12 @@
         "progress": "... {{progress}} / {{total}} 件 処理完了 ...",
         "success": "[成功] {{name}}",
         "skip": "[スキップ] {{name}}: 更新する情報はありません。",
-        "cancelled": "処理が中止されました。 (完了: {{successCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
-        "completed": "全ての処理が完了しました。 (成功: {{successCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
+        "cancelled": "処理が中止されました。 (成功: {{successCount}}, 要確認: {{cautionCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
+        "completed": "全ての処理が完了しました。 (成功: {{successCount}}, 要確認: {{cautionCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
+        "caution": {
+            "sampler_fallback": "Base Samplerを特定できなかったため、最小IDのノードを採用しました。",
+            "sampler_fallback_item": "[要確認] {{name}}: Base Samplerを特定できず、最小IDで代用しました。"
+        },
         "error": {
             "generic": "[エラー] {{name}}: {{message}}",
             "init": "[致命的エラー] 初期化中に問題が発生しました: {{message}}"

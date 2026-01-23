@@ -124,33 +124,138 @@ function extractComfyMetadata(json) {
 }
 
 function extractFromPrompt(promptData, metadata) {
-    const resolve = (nodeId, inputKey) => {
+    // Helper to resolve inputs recursively
+    const resolve = (nodeId, inputKey, visited = new Set()) => {
+        if (visited.has(nodeId)) return null;
+        visited.add(nodeId);
+        
         const node = promptData[nodeId];
         if (!node || !node.inputs) return null;
         const val = node.inputs[inputKey];
-        if (Array.isArray(val) && val.length === 2 && typeof val[0] === 'string') {
-            const src = promptData[val[0]];
-            if (!src) return null;
-            if (src.inputs[inputKey] !== undefined) return resolve(val[0], inputKey);
-            for(const k of ['value','int','float','text','string']) if(src.inputs[k]!==undefined) return resolve(val[0], k);
-            return null;
+
+        // If it's a direct value (not an array link), return it
+        if (!Array.isArray(val)) return val;
+
+        // If it's a link [parentId, slotIndex]
+        if (val.length === 2) {
+            const parentId = val[0];
+            const parentNode = promptData[parentId];
+            if (!parentNode) return null;
+
+            // 1. Try to find the same key in parent (passthrough)
+            if (parentNode.inputs[inputKey] !== undefined) {
+                return resolve(parentId, inputKey, visited);
+            }
+
+            // 2. Try common value keys (Primitive nodes, etc.)
+            for (const k of ['value', 'int', 'float', 'text', 'text_g', 'text_l', 'string', 'seed', 'steps', 'cfg', 'sampler_name']) {
+                if (parentNode.inputs[k] !== undefined) {
+                    return resolve(parentId, k, visited);
+                }
+            }
         }
-        return val;
+        return null;
     };
+
+    // 1. Identify all KSamplers
+    const samplers = [];
+    for (const id in promptData) {
+        const node = promptData[id];
+        if (node.class_type && node.class_type.includes("KSampler")) {
+            samplers.push({ id, node });
+        }
+    }
+
+    // 2. Strategy: Seed/Sampler (First-win / Base Sampler)
+    let baseSamplerId = null;
+    let isFallback = false;
+
+    if (samplers.length > 0) {
+        // Distance calculation helper to find the "Base" sampler
+        const getDistToSource = (currId, visited = new Set()) => {
+            if (visited.has(currId)) return Infinity;
+            visited.add(currId);
+            
+            const node = promptData[currId];
+            if (!node) return Infinity;
+
+            // Known sources
+            if (node.class_type === "EmptyLatentImage" || 
+                node.class_type.includes("VAEEncode") || 
+                node.class_type.includes("CheckpointLoader") ||
+                node.class_type === "LoadImage") {
+                return 0;
+            }
+
+            // Trace back links
+            let minDist = Infinity;
+            if (node.inputs) {
+                for (const key of Object.keys(node.inputs)) {
+                    const val = node.inputs[key];
+                    if (Array.isArray(val) && val.length === 2) {
+                        const d = getDistToSource(val[0], new Set(visited));
+                        if (d !== Infinity) minDist = Math.min(minDist, d + 1);
+                    }
+                }
+            }
+            return minDist;
+        };
+
+        const scored = samplers.map(s => ({
+            id: s.id,
+            dist: getDistToSource(s.id)
+        }));
+
+        // Sort: Min Distance -> Min ID
+        scored.sort((a, b) => {
+            if (a.dist !== b.dist) return a.dist - b.dist;
+            return parseInt(a.id) - parseInt(b.id);
+        });
+
+        if (scored[0].dist === Infinity) {
+            isFallback = true;
+        }
+        baseSamplerId = scored[0].id;
+    }
+
+    if (baseSamplerId) {
+        metadata.sampler_fallback = isFallback;
+        metadata.seed = resolve(baseSamplerId, "seed");
+        metadata.steps = resolve(baseSamplerId, "steps");
+        metadata.cfg = resolve(baseSamplerId, "cfg");
+        metadata.sampler = resolve(baseSamplerId, "sampler_name");
+        metadata.scheduler = resolve(baseSamplerId, "scheduler");
+    }
+
+    // 3. Strategy: Prompt (Merge)
+    const allPos = new Set();
+    const allNeg = new Set();
+
+    samplers.forEach(s => {
+        const p = resolve(s.id, "positive");
+        const n = resolve(s.id, "negative");
+        if (typeof p === 'string' && p.trim()) allPos.add(p.trim());
+        if (typeof n === 'string' && n.trim()) allNeg.add(n.trim());
+    });
+
+    if (allPos.size > 0) metadata.positive = Array.from(allPos).join("\n");
+    if (allNeg.size > 0) metadata.negative = Array.from(allNeg).join("\n");
+
+    // 4. Other Global Metadata
+    const loras = new Set();
     for (const id in promptData) {
         const node = promptData[id];
         if (!node.class_type) continue;
-        if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) metadata.checkpoint = resolve(id, "ckpt_name");
-        if (node.class_type.includes("LoraLoader") && !metadata.loras) { const l = resolve(id, "lora_name"); if(l) metadata.loras=[l]; }
-        if (node.class_type.includes("KSampler")) {
-            if(!metadata.seed) metadata.seed=resolve(id,"seed");
-            if(!metadata.steps) metadata.steps=resolve(id,"steps");
-            if(!metadata.cfg) metadata.cfg=resolve(id,"cfg");
-            if(!metadata.sampler) metadata.sampler=resolve(id,"sampler_name");
-            if(!metadata.positive) metadata.positive=resolve(id,"positive");
-            if(!metadata.negative) metadata.negative=resolve(id,"negative");
+        
+        if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) {
+            metadata.checkpoint = resolve(id, "ckpt_name");
+        }
+        if (node.class_type.includes("LoraLoader")) {
+            const l = resolve(id, "lora_name");
+            if (l) loras.add(l);
         }
     }
+    if (loras.size > 0) metadata.loras = Array.from(loras);
 }
 
 function extractFromWorkflow(workflowData, metadata) {
@@ -159,7 +264,6 @@ function extractFromWorkflow(workflowData, metadata) {
     nodes.forEach(node => {
         const type = node.type || node.class_type || "";
         if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) {
-            // Widget値からファイル名のみを抽出
             const fullPath = node.widgets_values?.[0] || '';
             metadata.checkpoint = fullPath.split(/[/\\]/).pop();
         }
@@ -170,17 +274,21 @@ function extractFromWorkflow(workflowData, metadata) {
 function cleanPrompt(text, prefix='') {
     if (!text || typeof text !== 'string') return [];
     const tags = new Set();
-    text.replace(/\n/g, ',').split(',').forEach(t => {
+    // 改行やコンマで分割。プロンプト全体をマージした結果、重複するタグを排除する。
+    text.split(/[\n,]/).forEach(t => {
         const v = t.trim();
-        if (v) tags.add((prefix + v).toLowerCase());
+        if (v && !v.startsWith('(') && !v.endsWith(')')) { // 重み付け記号の単純な除去（オプション）
+            tags.add((prefix + v).toLowerCase());
+        } else if (v) {
+            // 重み付けがある場合も一応そのまま入れる（既存仕様維持）
+            tags.add((prefix + v.replace(/[()]/g, '')).toLowerCase());
+        }
     });
     return [...tags];
 }
 
 /**
  * メタデータをEagleのタグとアノテーション形式に変換
- * settings: チェックボックスの有効状態
- * t: 翻訳関数 (テスト時はモックを渡す)
  */
 function processMetadata(meta, settings, t) {
     const cats = { cp: new Set(), lora: new Set(), pos: new Set(), neg: new Set(), param: new Set() };
@@ -188,15 +296,14 @@ function processMetadata(meta, settings, t) {
 
     if (meta.checkpoint) cats.cp.add(getBaseName(meta.checkpoint).toLowerCase());
     if (meta.loras) meta.loras.forEach(l => cats.lora.add(getBaseName(l).toLowerCase()));
-    if (meta.positive) cleanPrompt(meta.positive).forEach(t => cats.pos.add(t));
-    if (meta.negative) cleanPrompt(meta.negative, 'neg:').forEach(t => cats.neg.add(t));
+    if (meta.positive) cleanPrompt(meta.positive).forEach(tag => cats.pos.add(tag));
+    if (meta.negative) cleanPrompt(meta.negative, 'neg:').forEach(tag => cats.neg.add(tag));
     
     if (meta.seed !== undefined) cats.param.add(`seed:${meta.seed}`);
     if (meta.steps !== undefined) cats.param.add(`steps:${meta.steps}`);
     if (meta.cfg !== undefined) cats.param.add(`cfg:${Number(meta.cfg).toFixed(2)}`);
     if (meta.sampler) cats.param.add(`sampler:${String(meta.sampler).toLowerCase()}`);
 
-    // Generate tags based on settings
     const allTags = new Set();
     if (settings.checkpoint) cats.cp.forEach(t => allTags.add(t));
     if (settings.lora) cats.lora.forEach(t => allTags.add(t));
@@ -211,6 +318,8 @@ function processMetadata(meta, settings, t) {
     });
     
     let lines = ['[Generation Info]'];
+    if (meta.sampler_fallback) lines.push(`[Caution] ${t('log.caution.sampler_fallback')}`);
+    
     if (settings.checkpoint && meta.checkpoint) lines.push(`${t('ui.option.checkpoint')}: ${getBaseName(meta.checkpoint)}`);
     if (settings.lora && meta.loras) lines.push(`${t('ui.option.lora')}: ${meta.loras.map(getBaseName).join(', ')}`);
     
@@ -221,14 +330,10 @@ function processMetadata(meta, settings, t) {
     if (settings.seed && meta.seed !== undefined) lines.push(`${t('ui.option.seed')}: ${meta.seed}`);
     if (p.length) lines.push(p.join(' | '));
     
-    if (settings.positive && meta.positive) lines.push(`
-[Positive Prompt]
-${meta.positive}`);
-    if (settings.negative && meta.negative) lines.push(`
-[Negative Prompt]
-${meta.negative}`);
+    if (settings.positive && meta.positive) lines.push(`\n[Positive Prompt]\n${meta.positive}`);
+    if (settings.negative && meta.negative) lines.push(`\n[Negative Prompt]\n${meta.negative}`);
     
-    return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '' };
+    return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '', sampler_fallback: meta.sampler_fallback };
 }
 
 function removeAnnotation(text) {

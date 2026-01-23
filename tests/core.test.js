@@ -52,20 +52,53 @@ describe('Core Logic Tests', () => {
         expect(result.annotation).toContain("linux_model");
     });
 
-    it('should extract sampler parameters correctly', () => {
+    it('should merge prompts from multiple KSamplers', () => {
         const mockJson = {
             prompt: {
-                "3": { 
-                    class_type: "KSampler", 
-                    inputs: { seed: 12345, steps: 20, cfg: 8.0, sampler_name: "euler" } 
-                }
+                "1": { class_type: "KSampler", inputs: { positive: ["10", 0], negative: ["11", 0], sampler_name: "euler", seed: 1 } },
+                "2": { class_type: "KSampler", inputs: { positive: ["12", 0], negative: ["13", 0], sampler_name: "euler", seed: 2 } },
+                "10": { class_type: "TextNode", inputs: { text: "cat" } },
+                "11": { class_type: "TextNode", inputs: { text: "low quality" } },
+                "12": { class_type: "TextNode", inputs: { text: "dog" } },
+                "13": { class_type: "TextNode", inputs: { text: "worst quality" } },
+                "20": { class_type: "EmptyLatentImage", inputs: {} }
+            }
+        };
+        // Link samplers to source to avoid fallback
+        mockJson.prompt["1"].inputs.latent_image = ["20", 0];
+        mockJson.prompt["2"].inputs.latent_image = ["1", 0];
+
+        const result = extractComfyMetadata(mockJson);
+        expect(result.positive).toContain("cat");
+        expect(result.positive).toContain("dog");
+        expect(result.negative).toContain("low quality");
+        expect(result.negative).toContain("worst quality");
+    });
+
+    it('should identify Base Sampler by distance to source', () => {
+        const mockJson = {
+            prompt: {
+                "1": { class_type: "KSampler", inputs: { seed: 111, sampler_name: "euler", latent_image: ["10", 0] } },
+                "2": { class_type: "KSampler", inputs: { seed: 222, sampler_name: "dpmpp", latent_image: ["1", 0] } },
+                "10": { class_type: "EmptyLatentImage", inputs: {} }
             }
         };
         const result = extractComfyMetadata(mockJson);
-        expect(result.seed).toBe(12345);
-        expect(result.steps).toBe(20);
-        expect(result.cfg).toBe(8.0);
+        expect(result.seed).toBe(111);
         expect(result.sampler).toBe("euler");
+        expect(result.sampler_fallback).toBe(false);
+    });
+
+    it('should fallback to smallest ID if source is not found', () => {
+        const mockJson = {
+            prompt: {
+                "10": { class_type: "KSampler", inputs: { seed: 111, sampler_name: "euler" } },
+                "5": { class_type: "KSampler", inputs: { seed: 222, sampler_name: "dpmpp" } }
+            }
+        };
+        const result = extractComfyMetadata(mockJson);
+        expect(result.seed).toBe(222); // ID 5 is smaller than 10
+        expect(result.sampler_fallback).toBe(true);
     });
 
     it('should clean prompt text correctly', () => {
@@ -146,8 +179,15 @@ describe('Core Logic Tests', () => {
             expect(result.annotation).not.toContain('ui.option.lora');
             expect(result.annotation).toContain('ui.option.steps: 20');
             expect(result.annotation).not.toContain('ui.option.seed');
-            expect(result.annotation).toContain('[Positive Prompt]');
-            expect(result.annotation).not.toContain('[Negative Prompt]');
+        });
+
+        it('should include [Caution] message in annotation if fallback used', () => {
+            const metaWithFallback = { ...mockMeta, sampler_fallback: true };
+            const settings = { checkpoint: true, writeNotes: true };
+            const mockT = (key) => key === 'log.caution.sampler_fallback' ? 'Caution Message' : key;
+            
+            const result = processMetadata(metaWithFallback, settings, mockT);
+            expect(result.annotation).toContain('[Caution] Caution Message');
         });
     });
 

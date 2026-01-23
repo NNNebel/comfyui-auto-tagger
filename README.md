@@ -59,6 +59,13 @@ It supports both **PNG** and **WebP** formats and allows you to filter which inf
 This plugin parses `tEXt` chunks (PNG) and `EXIF/XMP` data (WebP) to retrieve ComfyUI workflows without external dependencies.
 * **Debug Mode**: Enable the checkbox in the top-right corner to view detailed logs.
 
+### ⚠️ Disclaimer & Bug Reports
+
+*   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on the logic: **"Seed/Sampler is Base-first, Prompt is all-merged"**.
+*   **Bug Reports**: When reporting issues on GitHub, please always attach:
+    1.  Information about your generation environment (ComfyUI version, custom nodes used).
+    2.  The original image (PNG/WebP) that retains its metadata.
+
 ### 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
@@ -72,45 +79,12 @@ This project is licensed under the [MIT License](LICENSE).
 **ComfyUI Auto Tagger** は、画像収集管理ソフト [Eagle](https://jp.eagle.cool/) 用のプラグインです。
 ComfyUIで生成された画像（PNG/WebP）に含まれるメタデータ（Workflow/Prompt）を解析し、モデル名やプロンプトなどを自動でEagleの「タグ」や「メモ」に追加します。
 
-### ✨ 主な機能
+### ⚠️ 免責事項・不具合報告
 
-* **自動タグ付け**: 以下の情報を検出し、Eagleのタグとして登録します。
-    * Checkpoint名（モデル名）
-    * LoRA名
-    * プロンプト（Positive / Negative）
-    * 生成パラメータ（Seed, Steps, CFG, Sampler）
-* **メモへの書き込み**: プロンプト全文やパラメータを見やすい形式でメモ欄（Annotation）に追記します。
-* **柔軟な設定**:
-    * 「タグには追加するが、メモには書かない」といった出力先の選択が可能。
-    * 「Seed値はタグにしない」「LoRAだけタグにする」など、項目ごとのON/OFFが可能。
-* **一括処理**: 複数の画像をまとめて処理できます（進捗バー付き）。
-* **情報の削除**: このプラグインで付与したタグやメモ情報を削除する機能も搭載しています。
-
-### 📸 スクリーンショット
-
-<p align="center">
-  <img src="assets/processing_movie_full.gif" alt="実行デモ" width="100%">
-</p>
-
-| 実行結果イメージ | 設定画面 |
-| :---: | :---: |
-| <img src="assets/preview-result.png" width="400" alt="実行結果"> | <img src="assets/preview-settings.png" width="400" alt="設定画面"> |
-
-### 📦 インストール方法
-
-1.  [Releases ページ](https://github.com/NNNebel/comfyui-auto-tagger/releases) から最新の `.eagleplugin` ファイルをダウンロードします。
-2.  Eagleを起動します。
-3.  ダウンロードしたファイルをEagleのウィンドウにドラッグ＆ドロップします。
-4.  インストール完了のメッセージが表示されたら準備完了です。
-
-### 🚀 使い方
-
-1.  Eagle上で、情報を付与したい画像を選択します（複数選択可）。
-2.  右クリックメニューから **「プラグイン」** > **「ComfyUI Auto Tagger」** を選択します。
-3.  設定画面が開きます：
-    * **出力設定**: タグに追加するか、メモに追加するか（あるいは両方か）を選びます。
-    * **取得対象**: Checkpoint, LoRA, Seedなど、必要な情報にチェックを入れます。
-4.  **「タグ付け開始」** ボタンを押すと処理が始まります。
+*   **免責事項**: ComfyUIのWorkflowは非常に複雑なため、100%の動作は保証できません。「SeedはBase優先、Promptは全マージ」という仕様で動作します。
+*   **不具合報告**: GitHubのIssueで報告する際は、以下の2点を必ず添付してください。
+    1.  生成環境の情報（ComfyUIのバージョン、使用しているカスタムノード等）。
+    2.  メタデータが保持された画像の実ファイル（PNG/WebP）。
 
 ### 📄 ライセンス
 

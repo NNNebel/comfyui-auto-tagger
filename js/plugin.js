@@ -63,7 +63,6 @@ Promise.all([
 
     // --- 2. ステート管理 ---
     let isCancelled = false;
-    let logBuffer = [];
     const logArea = document.getElementById('log');
     const chunkSizeInput = document.getElementById('chunk-size');
     const progressContainer = document.getElementById('progress-container');
@@ -110,9 +109,13 @@ Promise.all([
 
     function log(key, replacements={}) {
         const msg = t(key, replacements);
-        logBuffer.push(msg);
-        if (logBuffer.length > 100) logBuffer.shift();
-        logArea.textContent = logBuffer.join('\n');
+        const div = document.createElement('div');
+        if (msg.includes('[Caution]') || msg.includes('[要確認]')) {
+            div.className = 'log-caution';
+        }
+        div.textContent = msg;
+        logArea.appendChild(div);
+        if (logArea.childNodes.length > 200) logArea.removeChild(logArea.firstChild);
         logArea.scrollTop = logArea.scrollHeight;
     }
 
@@ -149,6 +152,7 @@ Promise.all([
         let successCount = 0;
         let skippedCount = 0;
         let errorCount = 0;
+        let cautionCount = 0;
         let processedCount = 0;
 
         updateProgress(0, items.length);
@@ -157,15 +161,15 @@ Promise.all([
             if (isCancelled) break;
             const chunk = items.slice(i, i + chunkSize);
             
-            // 並列処理だが、UIスレッドをブロックしないようPromise.allSettled待機
             const results = await Promise.allSettled(chunk.map(processFn));
 
             results.forEach(result => {
                 processedCount++;
                 if (result.status === 'fulfilled') {
-                    const status = result.value; // 'success', 'skipped', 'error'
+                    const status = result.value; // 'success', 'skipped', 'error', 'caution'
                     if (status === 'success') successCount++;
                     else if (status === 'skipped') skippedCount++;
+                    else if (status === 'caution') { successCount++; cautionCount++; }
                     else errorCount++;
                 } else {
                     errorCount++;
@@ -173,28 +177,26 @@ Promise.all([
             });
             updateProgress(processedCount, items.length);
             
-            // UI更新のための微小なウェイト
             await new Promise(r => setTimeout(r, 10));
         }
-        return { successCount, skippedCount, errorCount };
+        return { successCount, skippedCount, errorCount, cautionCount };
     }
 
     // --- 5. メインアクション ---
     async function startTagging() {
         isCancelled = false;
-        logBuffer = [];
+        logArea.innerHTML = '';
         log('log.start');
         
         const items = await eagle.item.getSelected();
         if (!items.length) { log('log.noItemSelected'); return; }
 
-        setUIState(true); // UIロック & プログレスバー表示
+        setUIState(true); 
         const settings = getSettings();
         
         if (checkboxes.debug.checked) log(`[Debug] Log file: ${DEBUG_LOG_FILE}`);
         await debugLog(`START: ${items.length} items`);
 
-        // 個別のアイテム処理関数
         const processItem = async (item) => {
             try {
                 log('log.processingItem', {name: item.name});
@@ -223,10 +225,15 @@ Promise.all([
                     item.annotation = idx !== -1 ? current.substring(0, idx).trim() + '\n\n' + res.annotation : (current ? current + '\n\n' : '') + res.annotation;
                     changed = true;
                 }
+
+                if (res.sampler_fallback) {
+                    log('log.caution.sampler_fallback_item', {name: item.name});
+                }
+
                 if (changed) { 
                     await item.save(); 
                     log('log.success', {name: item.name});
-                    return 'success';
+                    return res.sampler_fallback ? 'caution' : 'success';
                 } else { 
                     log('log.skip', {name: item.name});
                     return 'skipped';
@@ -240,13 +247,13 @@ Promise.all([
 
         const result = await processItemsInChunks(items, processItem);
         log(isCancelled ? 'log.cancelled' : 'log.completed', result);
-        setUIState(false); // UIロック解除
+        setUIState(false); 
         eagle.item.trigger("update", items);
     }
 
     async function removeInfo(event) {
         isCancelled = false;
-        logBuffer = [];
+        logArea.innerHTML = '';
         log('log.delete.start');
 
         const isForceMode = event && event.shiftKey;
