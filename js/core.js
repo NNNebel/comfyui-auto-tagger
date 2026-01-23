@@ -169,6 +169,7 @@ function extractFromPrompt(promptData, metadata) {
     // 2. Strategy: Seed/Sampler (First-win / Base Sampler)
     let baseSamplerId = null;
     let isFallback = false;
+    metadata.extra_samplers = [];
 
     if (samplers.length > 0) {
         // Distance calculation helper to find the "Base" sampler
@@ -216,6 +217,17 @@ function extractFromPrompt(promptData, metadata) {
             isFallback = true;
         }
         baseSamplerId = scored[0].id;
+
+        // Collect info from ALL samplers
+        metadata.extra_samplers = samplers.map(s => ({
+            id: s.id,
+            seed: resolve(s.id, "seed"),
+            steps: resolve(s.id, "steps"),
+            cfg: resolve(s.id, "cfg"),
+            sampler: resolve(s.id, "sampler_name"),
+            scheduler: resolve(s.id, "scheduler"),
+            is_base: s.id === baseSamplerId
+        }));
     }
 
     if (baseSamplerId) {
@@ -299,6 +311,7 @@ function processMetadata(meta, settings, t) {
     if (meta.positive) cleanPrompt(meta.positive).forEach(tag => cats.pos.add(tag));
     if (meta.negative) cleanPrompt(meta.negative, 'neg:').forEach(tag => cats.neg.add(tag));
     
+    // Tag generation uses only the Base Sampler info (meta.seed, meta.steps, etc.)
     if (meta.seed !== undefined) cats.param.add(`seed:${meta.seed}`);
     if (meta.steps !== undefined) cats.param.add(`steps:${meta.steps}`);
     if (meta.cfg !== undefined) cats.param.add(`cfg:${Number(meta.cfg).toFixed(2)}`);
@@ -323,12 +336,22 @@ function processMetadata(meta, settings, t) {
     if (settings.checkpoint && meta.checkpoint) lines.push(`${t('ui.option.checkpoint')}: ${getBaseName(meta.checkpoint)}`);
     if (settings.lora && meta.loras) lines.push(`${t('ui.option.lora')}: ${meta.loras.map(getBaseName).join(', ')}`);
     
+    // Base Sampler Info
     let p = [];
     if (settings.steps && meta.steps) p.push(`${t('ui.option.steps')}: ${meta.steps}`);
     if (settings.cfg && meta.cfg) p.push(`CFG: ${Number(meta.cfg).toFixed(1)}`);
     if (settings.sampler && meta.sampler) p.push(`${t('ui.option.sampler')}: ${meta.sampler}`);
     if (settings.seed && meta.seed !== undefined) lines.push(`${t('ui.option.seed')}: ${meta.seed}`);
     if (p.length) lines.push(p.join(' | '));
+
+    // Extra Samplers Info (for Note/Annotation only)
+    if (settings.writeNotes && meta.extra_samplers && meta.extra_samplers.length > 1) {
+        meta.extra_samplers.forEach(s => {
+            if (s.is_base) return; // Skip base sampler as it's already shown
+            // Format: "Seed (sampler): 12345"
+            lines.push(`${t('ui.option.seed')} (${s.sampler || 'Unknown'}): ${s.seed}`);
+        });
+    }
     
     if (settings.positive && meta.positive) lines.push(`\n[Positive Prompt]\n${meta.positive}`);
     if (settings.negative && meta.negative) lines.push(`\n[Negative Prompt]\n${meta.negative}`);

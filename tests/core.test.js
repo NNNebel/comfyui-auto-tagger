@@ -101,6 +101,46 @@ describe('Core Logic Tests', () => {
         expect(result.sampler_fallback).toBe(true);
     });
 
+    it('should collect multiple seeds and separate base seed', () => {
+        const mockJson = {
+            prompt: {
+                "1": { class_type: "KSampler", inputs: { seed: 100, sampler_name: "base_samp", latent_image: ["10", 0] } },
+                "2": { class_type: "KSampler", inputs: { seed: 200, sampler_name: "refiner", latent_image: ["1", 0] } },
+                "10": { class_type: "EmptyLatentImage", inputs: {} }
+            }
+        };
+        const result = extractComfyMetadata(mockJson);
+        
+        // Check Base Seed (for tags)
+        expect(result.seed).toBe(100);
+        expect(result.sampler).toBe("base_samp");
+        
+        // Check Extra Samplers (collection)
+        expect(result.extra_samplers).toBeDefined();
+        expect(result.extra_samplers.length).toBe(2);
+        
+        const base = result.extra_samplers.find(s => s.id === "1");
+        const refiner = result.extra_samplers.find(s => s.id === "2");
+        
+        expect(base.is_base).toBe(true);
+        expect(base.seed).toBe(100);
+        expect(refiner.is_base).toBe(false);
+        expect(refiner.seed).toBe(200);
+
+        // Check Annotation Formatting
+        const settings = { seed: true, writeNotes: true };
+        const mockT = (key) => key;
+        const processed = processMetadata(result, settings, mockT);
+        
+        // Tags should ONLY contain base seed
+        expect(processed.tags.has("seed:100")).toBe(true);
+        expect(processed.tags.has("seed:200")).toBe(false);
+        
+        // Annotation should contain BOTH
+        expect(processed.annotation).toContain("ui.option.seed: 100");
+        expect(processed.annotation).toContain("ui.option.seed (refiner): 200");
+    });
+
     it('should clean prompt text correctly', () => {
         const text = `cat, dog, 
  bird`;
