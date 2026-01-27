@@ -197,17 +197,27 @@ Promise.all([
         if (checkboxes.debug.checked) log(`[Debug] Log file: ${DEBUG_LOG_FILE}`);
         await debugLog(`START: ${items.length} items`);
 
+        // Initialize MetadataService
+        const metadataService = new MetadataService();
+
         const processItem = async (item) => {
             try {
                 log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
                 const buffer = await fsp.readFile(item.filePath);
+                const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
                 
-                const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
-                await debugLog(`Raw: ${JSON.stringify(raw)}`, item);
+                // Use new MetadataService
+                const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui');
+                await debugLog(`Metadata: ${JSON.stringify(metadata)}`, item);
 
-                const meta = extractComfyMetadata(raw);
-                const res = processMetadata(meta, settings, t);
+                if (!metadata) {
+                    log('log.noMetadata', {name: item.name});
+                    return 'skipped';
+                }
+
+                // Pass buffer and mimeType to processMetadata for proper parsing
+                const res = processMetadata(null, settings, t, buffer, mimeType);
                 
                 let changed = false;
                 if (settings.addTags && res.tags.size > 0) {
@@ -299,15 +309,21 @@ Promise.all([
                     // --- Normal Mode ---
                     const ext = path.extname(item.filePath).toLowerCase();
                     const buffer = await fsp.readFile(item.filePath);
+                    const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
                     
-                    const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
-                    const meta = extractComfyMetadata(raw);
-                    const res = processMetadata(meta, allSettingsOn, t);
+                    // Use new MetadataService
+                    const metadataService = new MetadataService();
+                    const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui');
                     
-                    if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
-                        const beforeCount = item.tags.length;
-                        item.tags = item.tags.filter(tag => !res.tags.has(tag.toLowerCase()));
-                        if (item.tags.length < beforeCount) changed = true;
+                    if (metadata) {
+                        // Pass buffer and mimeType to processMetadata for proper parsing
+                        const res = processMetadata(null, allSettingsOn, t, buffer, mimeType);
+                        
+                        if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
+                            const beforeCount = item.tags.length;
+                            item.tags = item.tags.filter(tag => !res.tags.has(tag.toLowerCase()));
+                            if (item.tags.length < beforeCount) changed = true;
+                        }
                     }
 
                     // アノテーション削除

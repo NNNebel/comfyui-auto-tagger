@@ -1,6 +1,12 @@
 // js/core.js
 
-// --- 1. 画像解析ロジック ---
+// Import MetadataService for parsing
+let MetadataService;
+if (typeof require !== 'undefined') {
+  MetadataService = require('./metadata-parser/integration/MetadataService');
+}
+
+// --- 1. Binary Extraction (kept for backward compatibility) ---
 function getGenInfo(buffer, mimeType) {
     if (mimeType === 'image/png') return parsePng(buffer);
     if (mimeType === 'image/webp') return parseWebP(buffer);
@@ -111,188 +117,15 @@ function getFourCC(view, offset) {
     return String.fromCharCode(view.getUint8(offset), view.getUint8(offset + 1), view.getUint8(offset + 2), view.getUint8(offset + 3));
 }
 
-// --- 2. メタデータ解析ロジック ---
-function extractComfyMetadata(json) {
-    const metadata = {};
-    if (json.prompt) {
-        try { extractFromPrompt(json.prompt, metadata); } catch (e) { console.error("Prompt parsing failed:", e); }
-    }
-    if (json.workflow) {
-        try { extractFromWorkflow(json.workflow, metadata); } catch (e) { console.error("Workflow parsing failed:", e); }
-    }
-    return metadata;
-}
-
-function extractFromPrompt(promptData, metadata) {
-    // Helper to resolve inputs recursively
-    const resolve = (nodeId, inputKey, visited = new Set()) => {
-        if (visited.has(nodeId)) return null;
-        visited.add(nodeId);
-        
-        const node = promptData[nodeId];
-        if (!node || !node.inputs) return null;
-        const val = node.inputs[inputKey];
-
-        // If it's a direct value (not an array link), return it
-        if (!Array.isArray(val)) return val;
-
-        // If it's a link [parentId, slotIndex]
-        if (val.length === 2) {
-            const parentId = val[0];
-            const parentNode = promptData[parentId];
-            if (!parentNode) return null;
-
-            // 1. Try to find the same key in parent (passthrough)
-            if (parentNode.inputs[inputKey] !== undefined) {
-                return resolve(parentId, inputKey, visited);
-            }
-
-            // 2. Try common value keys (Primitive nodes, etc.)
-            for (const k of ['value', 'int', 'float', 'text', 'text_g', 'text_l', 'string', 'seed', 'steps', 'cfg', 'sampler_name']) {
-                if (parentNode.inputs[k] !== undefined) {
-                    return resolve(parentId, k, visited);
-                }
-            }
-        }
-        return null;
-    };
-
-    // 1. Identify all KSamplers
-    const samplers = [];
-    for (const id in promptData) {
-        const node = promptData[id];
-        if (node.class_type && node.class_type.includes("KSampler")) {
-            samplers.push({ id, node });
-        }
-    }
-
-    // 2. Strategy: Seed/Sampler (First-win / Base Sampler)
-    let baseSamplerId = null;
-    let isFallback = false;
-    metadata.extra_samplers = [];
-
-    if (samplers.length > 0) {
-        // Distance calculation helper to find the "Base" sampler
-        const getDistToSource = (currId, visited = new Set()) => {
-            if (visited.has(currId)) return Infinity;
-            visited.add(currId);
-            
-            const node = promptData[currId];
-            if (!node) return Infinity;
-
-            // Known sources
-            if (node.class_type === "EmptyLatentImage" || 
-                node.class_type.includes("VAEEncode") || 
-                node.class_type.includes("CheckpointLoader") ||
-                node.class_type === "LoadImage") {
-                return 0;
-            }
-
-            // Trace back links
-            let minDist = Infinity;
-            if (node.inputs) {
-                for (const key of Object.keys(node.inputs)) {
-                    const val = node.inputs[key];
-                    if (Array.isArray(val) && val.length === 2) {
-                        const d = getDistToSource(val[0], new Set(visited));
-                        if (d !== Infinity) minDist = Math.min(minDist, d + 1);
-                    }
-                }
-            }
-            return minDist;
-        };
-
-        const scored = samplers.map(s => ({
-            id: s.id,
-            dist: getDistToSource(s.id)
-        }));
-
-        // Sort: Min Distance -> Min ID
-        scored.sort((a, b) => {
-            if (a.dist !== b.dist) return a.dist - b.dist;
-            return parseInt(a.id) - parseInt(b.id);
-        });
-
-        if (scored[0].dist === Infinity) {
-            isFallback = true;
-        }
-        baseSamplerId = scored[0].id;
-
-        // Collect info from ALL samplers
-        metadata.extra_samplers = samplers.map(s => ({
-            id: s.id,
-            seed: resolve(s.id, "seed"),
-            steps: resolve(s.id, "steps"),
-            cfg: resolve(s.id, "cfg"),
-            sampler: resolve(s.id, "sampler_name"),
-            scheduler: resolve(s.id, "scheduler"),
-            is_base: s.id === baseSamplerId
-        }));
-    }
-
-    if (baseSamplerId) {
-        metadata.sampler_fallback = isFallback;
-        metadata.seed = resolve(baseSamplerId, "seed");
-        metadata.steps = resolve(baseSamplerId, "steps");
-        metadata.cfg = resolve(baseSamplerId, "cfg");
-        metadata.sampler = resolve(baseSamplerId, "sampler_name");
-        metadata.scheduler = resolve(baseSamplerId, "scheduler");
-    }
-
-    // 3. Strategy: Prompt (Merge)
-    const allPos = new Set();
-    const allNeg = new Set();
-
-    samplers.forEach(s => {
-        const p = resolve(s.id, "positive");
-        const n = resolve(s.id, "negative");
-        if (typeof p === 'string' && p.trim()) allPos.add(p.trim());
-        if (typeof n === 'string' && n.trim()) allNeg.add(n.trim());
-    });
-
-    if (allPos.size > 0) metadata.positive = Array.from(allPos).join("\n");
-    if (allNeg.size > 0) metadata.negative = Array.from(allNeg).join("\n");
-
-    // 4. Other Global Metadata
-    const loras = new Set();
-    for (const id in promptData) {
-        const node = promptData[id];
-        if (!node.class_type) continue;
-        
-        if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) {
-            metadata.checkpoint = resolve(id, "ckpt_name");
-        }
-        if (node.class_type.includes("LoraLoader")) {
-            const l = resolve(id, "lora_name");
-            if (l) loras.add(l);
-        }
-    }
-    if (loras.size > 0) metadata.loras = Array.from(loras);
-}
-
-function extractFromWorkflow(workflowData, metadata) {
-    if (!workflowData.nodes) return;
-    const nodes = workflowData.nodes;
-    nodes.forEach(node => {
-        const type = node.type || node.class_type || "";
-        if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) {
-            const fullPath = node.widgets_values?.[0] || '';
-            metadata.checkpoint = fullPath.split(/[/\\]/).pop();
-        }
-    });
-}
-
-// --- 3. データ整形ロジック ---
+// --- 2. Data Formatting ---
 function cleanPrompt(text, prefix='') {
     if (!text || typeof text !== 'string') return [];
     const tags = new Set();
-    // 改行やコンマで分割。プロンプト全体をマージした結果、重複するタグを排除する。
     text.split(/[\n,]/).forEach(t => {
         const v = t.trim();
-        if (v && !v.startsWith('(') && !v.endsWith(')')) { // 重み付け記号の単純な除去（オプション）
+        if (v && !v.startsWith('(') && !v.endsWith(')')) {
             tags.add((prefix + v).toLowerCase());
         } else if (v) {
-            // 重み付けがある場合も一応そのまま入れる（既存仕様維持）
             tags.add((prefix + v.replace(/[()]/g, '')).toLowerCase());
         }
     });
@@ -300,9 +133,39 @@ function cleanPrompt(text, prefix='') {
 }
 
 /**
- * メタデータをEagleのタグとアノテーション形式に変換
+ * Convert metadata to Eagle's tag and annotation format
+ * 
+ * This function can work in two modes:
+ * 1. With parsed metadata object (for testing and backward compatibility)
+ * 2. With buffer and mimeType (uses MetadataService for parsing)
+ * 
+ * @param {Object|null} parsedMeta - Pre-parsed metadata object (if available)
+ * @param {Object} settings - User settings for which metadata to include
+ * @param {Function} t - Translation function
+ * @param {Uint8Array} [buffer] - Image buffer for MetadataService parsing
+ * @param {string} [mimeType] - Image MIME type for MetadataService parsing
+ * @returns {Object} Formatted metadata with tags, categories, and annotation
  */
-function processMetadata(meta, settings, t) {
+function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null) {
+    let meta = {};
+    
+    // If parsedMeta is provided, use it directly (for testing/backward compatibility)
+    if (parsedMeta && typeof parsedMeta === 'object') {
+        meta = parsedMeta;
+    }
+    // Otherwise, use MetadataService if buffer and mimeType are provided
+    else if (buffer && mimeType && MetadataService) {
+        try {
+            const service = new MetadataService();
+            const parsed = service.extractPreferredMetadata(buffer, mimeType, 'comfyui');
+            if (parsed) {
+                meta = parsed;
+            }
+        } catch (e) {
+            console.error('[core.js] MetadataService parsing failed:', e);
+        }
+    }
+    
     const cats = { cp: new Set(), lora: new Set(), pos: new Set(), neg: new Set(), param: new Set() };
     const getBaseName = (p) => p ? p.split(/[/\\]/).pop().replace(/\.[^/\\.]+$/, "") : "";
 
@@ -311,7 +174,7 @@ function processMetadata(meta, settings, t) {
     if (meta.positive) cleanPrompt(meta.positive).forEach(tag => cats.pos.add(tag));
     if (meta.negative) cleanPrompt(meta.negative, 'neg:').forEach(tag => cats.neg.add(tag));
     
-    // Tag generation uses only the Base Sampler info (meta.seed, meta.steps, etc.)
+    // Tag generation uses only the Base Sampler info
     if (meta.seed !== undefined) cats.param.add(`seed:${meta.seed}`);
     if (meta.steps !== undefined) cats.param.add(`steps:${meta.steps}`);
     if (meta.cfg !== undefined) cats.param.add(`cfg:${Number(meta.cfg).toFixed(2)}`);
@@ -331,32 +194,69 @@ function processMetadata(meta, settings, t) {
     });
     
     let lines = ['[Generation Info]'];
-    if (meta.sampler_fallback) lines.push(`[Caution] ${t('log.caution.sampler_fallback')}`);
+    
+    // Warning for low-confidence base sampler detection
+    if (meta.sampler_fallback) {
+        lines.push(`[Warning] ${t('log.caution.sampler_fallback')}`);
+    }
     
     if (settings.checkpoint && meta.checkpoint) lines.push(`${t('ui.option.checkpoint')}: ${getBaseName(meta.checkpoint)}`);
     if (settings.lora && meta.loras) lines.push(`${t('ui.option.lora')}: ${meta.loras.map(getBaseName).join(', ')}`);
     
     // Base Sampler Info
-    let p = [];
-    if (settings.steps && meta.steps) p.push(`${t('ui.option.steps')}: ${meta.steps}`);
-    if (settings.cfg && meta.cfg) p.push(`CFG: ${Number(meta.cfg).toFixed(1)}`);
-    if (settings.sampler && meta.sampler) p.push(`${t('ui.option.sampler')}: ${meta.sampler}`);
     if (settings.seed && meta.seed !== undefined) lines.push(`${t('ui.option.seed')}: ${meta.seed}`);
-    if (p.length) lines.push(p.join(' | '));
+    
+    let baseParams = [];
+    if (settings.steps && meta.steps) baseParams.push(`${t('ui.option.steps')}: ${meta.steps}`);
+    if (settings.cfg && meta.cfg) baseParams.push(`CFG: ${Number(meta.cfg).toFixed(1)}`);
+    if (settings.sampler && meta.sampler) baseParams.push(`${t('ui.option.sampler')}: ${meta.sampler}`);
+    if (meta.scheduler) baseParams.push(`Scheduler: ${meta.scheduler}`);
+    if (baseParams.length) lines.push(baseParams.join(' | '));
 
-    // Extra Samplers Info (for Note/Annotation only)
-    if (settings.writeNotes && meta.extra_samplers && meta.extra_samplers.length > 1) {
+    // All Samplers Info (for notes only)
+    if (meta.extra_samplers && meta.extra_samplers.length > 0) {
+        lines.push('\n[All Samplers]');
+        
+        const allSeeds = [];
+        const allSteps = [];
+        const allCfgs = [];
+        const allSamplers = [];
+        const allSchedulers = [];
+        
         meta.extra_samplers.forEach(s => {
-            if (s.is_base) return; // Skip base sampler as it's already shown
-            // Format: "Seed (sampler): 12345"
-            lines.push(`${t('ui.option.seed')} (${s.sampler || 'Unknown'}): ${s.seed}`);
+            if (s.seed !== undefined && !allSeeds.includes(s.seed)) allSeeds.push(s.seed);
+            if (s.steps !== undefined && !allSteps.includes(s.steps)) allSteps.push(s.steps);
+            if (s.cfg !== undefined && !allCfgs.includes(s.cfg)) allCfgs.push(s.cfg);
+            if (s.sampler && !allSamplers.includes(s.sampler)) allSamplers.push(s.sampler);
+            if (s.scheduler && !allSchedulers.includes(s.scheduler)) allSchedulers.push(s.scheduler);
         });
+        
+        if (settings.seed && allSeeds.length > 0) {
+            lines.push(`${t('ui.option.seed')}: ${allSeeds.join(', ')}`);
+        }
+        if (settings.steps && allSteps.length > 0) {
+            lines.push(`${t('ui.option.steps')}: ${allSteps.join(', ')}`);
+        }
+        if (settings.cfg && allCfgs.length > 0) {
+            lines.push(`CFG: ${allCfgs.map(c => Number(c).toFixed(1)).join(', ')}`);
+        }
+        if (settings.sampler && allSamplers.length > 0) {
+            lines.push(`${t('ui.option.sampler')}: ${allSamplers.join(', ')}`);
+        }
+        if (allSchedulers.length > 0) {
+            lines.push(`Scheduler: ${allSchedulers.join(', ')}`);
+        }
     }
     
     if (settings.positive && meta.positive) lines.push(`\n[Positive Prompt]\n${meta.positive}`);
     if (settings.negative && meta.negative) lines.push(`\n[Negative Prompt]\n${meta.negative}`);
     
-    return { tags: allTags, cats, annotation: lines.length > 1 ? lines.join('\n') : '', sampler_fallback: meta.sampler_fallback };
+    return { 
+        tags: allTags, 
+        cats, 
+        annotation: lines.length > 1 ? lines.join('\n') : '', 
+        sampler_fallback: meta.sampler_fallback 
+    };
 }
 
 function removeAnnotation(text) {
@@ -373,7 +273,6 @@ function removeAnnotation(text) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         getGenInfo,
-        extractComfyMetadata,
         processMetadata,
         cleanPrompt,
         removeAnnotation

@@ -1,0 +1,119 @@
+// js/metadata-parser/integration/MetadataService.js
+
+const ImageMetadataReader = require('../binary-extraction/ImageMetadataReader');
+const FormatDetector = require('../binary-extraction/FormatDetector');
+const ParserRegistry = require('../parsers/ParserRegistry');
+const ComfyUIParser = require('../parsers/ComfyUIParser');
+const A1111Parser = require('../parsers/A1111Parser');
+
+/**
+ * MetadataService
+ * 
+ * Orchestrates the metadata parsing pipeline and provides a clean API for Eagle integration.
+ * This service coordinates the binary extraction, format detection, and parsing layers.
+ * 
+ * Implements Requirements 2.2, 2.3, and 2.4:
+ * - 2.2: Parser registration mechanism
+ * - 2.3: Delegation to appropriate format-specific parser
+ * - 2.4: Support for multiple parser implementations
+ */
+class MetadataService {
+  /**
+   * Create a new MetadataService instance.
+   * Initializes the parser registry and registers all available parsers.
+   */
+  constructor() {
+    /**
+     * Parser registry for managing format-specific parsers
+     * @type {ParserRegistry}
+     */
+    this.registry = new ParserRegistry();
+    this.initializeParsers();
+  }
+
+  /**
+   * Initialize and register all available parsers.
+   * This method registers ComfyUI and A1111 parsers by default.
+   * Additional parsers can be registered by extending this method.
+   * @private
+   */
+  initializeParsers() {
+    this.registry.register(new ComfyUIParser());
+    this.registry.register(new A1111Parser());
+  }
+
+  /**
+   * Extract and parse metadata from image buffer.
+   * 
+   * This method orchestrates the complete parsing pipeline:
+   * 1. Extract raw metadata chunks from the image buffer
+   * 2. Detect which metadata formats are present
+   * 3. Parse all detected formats using registered parsers
+   * 
+   * @param {Uint8Array} buffer - Image file buffer
+   * @param {string} mimeType - Image MIME type ('image/png' or 'image/webp')
+   * @returns {Array<ParsedMetadata>} Array of parsed metadata from all detected formats
+   * 
+   * @example
+   * const service = new MetadataService();
+   * const buffer = await fs.readFile('image.png');
+   * const results = service.extractMetadata(buffer, 'image/png');
+   * results.forEach(metadata => {
+   *   console.log(`Format: ${metadata.format}`);
+   *   console.log(`Checkpoint: ${metadata.checkpoint}`);
+   * });
+   */
+  extractMetadata(buffer, mimeType) {
+    // Step 1: Extract raw chunks from the image
+    const rawChunks = ImageMetadataReader.extractRawMetadata(buffer, mimeType);
+    
+    // Step 2: Detect which formats are present
+    const formats = FormatDetector.detectFormats(rawChunks);
+    
+    // Step 3: Parse all detected formats
+    const results = this.registry.parseAll(formats, rawChunks);
+    
+    return results;
+  }
+
+  /**
+   * Extract metadata and prefer a specific format.
+   * 
+   * This method extracts metadata from all detected formats but returns
+   * the result from the preferred format if available. If the preferred
+   * format is not found, it falls back to the first available format.
+   * 
+   * This is useful for maintaining backward compatibility where ComfyUI
+   * format is preferred, but other formats can be used as fallback.
+   * 
+   * @param {Uint8Array} buffer - Image file buffer
+   * @param {string} mimeType - Image MIME type ('image/png' or 'image/webp')
+   * @param {string} [preferredFormat='comfyui'] - Preferred format name (e.g., 'comfyui', 'a1111')
+   * @returns {ParsedMetadata|null} Parsed metadata from preferred format, or first available, or null if no metadata found
+   * 
+   * @example
+   * const service = new MetadataService();
+   * const buffer = await fs.readFile('image.png');
+   * 
+   * // Try to get ComfyUI metadata first, fall back to any other format
+   * const metadata = service.extractPreferredMetadata(buffer, 'image/png', 'comfyui');
+   * if (metadata) {
+   *   console.log(`Using ${metadata.format} format`);
+   *   console.log(`Checkpoint: ${metadata.checkpoint}`);
+   * } else {
+   *   console.log('No metadata found');
+   * }
+   */
+  extractPreferredMetadata(buffer, mimeType, preferredFormat = 'comfyui') {
+    const results = this.extractMetadata(buffer, mimeType);
+    
+    // Try preferred format first
+    const preferred = results.find(r => r.format === preferredFormat);
+    if (preferred) return preferred;
+    
+    // Fall back to first available
+    return results.length > 0 ? results[0] : null;
+  }
+}
+
+module.exports = MetadataService;
