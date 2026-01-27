@@ -12,13 +12,13 @@
 
 **ComfyUI Auto Tagger** is a plugin for [Eagle](https://en.eagle.cool/) that automatically extracts metadata (Workflow/Prompt JSON) from AI-generated images and saves them as Eagle **Tags** and **Notes**.
 
-It supports **ComfyUI**, **Automatic1111 (A1111)**, and **Civitai** generated images in both **PNG** and **WebP** formats, and allows you to filter which information to import.
+It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Forge, and other variants; referred to as "A1111" below), and **Civitai** generated images in both **PNG** and **WebP** formats, and allows you to filter which information to import.
 
 ### ✨ Features
 
 * **Multi-Format Support**: 
     * ComfyUI workflows (complex multi-sampler support)
-    * Automatic1111 (WebUI) parameters
+    * A1111 (Stable Diffusion WebUI) parameters
     * Civitai image generation metadata
 * **Metadata Extraction**: Automatically detects and imports:
     * Checkpoint Name
@@ -61,7 +61,7 @@ It supports **ComfyUI**, **Automatic1111 (A1111)**, and **Civitai** generated im
 ### 🛠️ Development
 
 This plugin parses PNG tEXt/comf chunks and WebP EXIF/XMP data to retrieve AI generation metadata without external dependencies.
-* **Supported Formats**: ComfyUI, Automatic1111 (WebUI), Civitai
+* **Supported Formats**: ComfyUI, A1111 (Stable Diffusion WebUI), Civitai
 * **Debug Mode**: Enable the checkbox in the top-right corner to view detailed logs.
 
 #### ComfyUI Multi-Sampler Handling
@@ -92,13 +92,13 @@ This project is licensed under the [MIT License](LICENSE).
 **ComfyUI Auto Tagger** は、画像収集管理ソフト [Eagle](https://jp.eagle.cool/) 用のプラグインです。
 AI画像生成ツールで生成された画像に含まれるメタデータ（Workflow/Prompt）を解析し、モデル名やプロンプトなどを自動でEagleの「タグ」や「メモ」に追加します。
 
-**ComfyUI**、**Automatic1111 (A1111)**、**Civitai** で生成された **PNG** および **WebP** 形式の画像に対応しており、取り込む情報を選択できます。
+**ComfyUI**、**Stable Diffusion WebUI**（Automatic1111、Forge等の派生版を含む。以下「A1111」と表記）、**Civitai** で生成された **PNG** および **WebP** 形式の画像に対応しており、取り込む情報を選択できます。
 
 ### ✨ 機能
 
 * **複数フォーマット対応**: 
     * ComfyUIワークフロー（複雑なマルチサンプラー対応）
-    * Automatic1111 (WebUI) パラメータ
+    * A1111（Stable Diffusion WebUI）パラメータ
     * Civitai画像生成メタデータ
 * **メタデータ抽出**: 以下の情報を自動検出・取り込み:
     * チェックポイント名
@@ -141,7 +141,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 ### 🛠️ 開発
 
 このプラグインは、外部依存なしでPNG tEXt/comfチャンクおよびWebP EXIF/XMPデータを解析し、AI生成メタデータを取得します。
-* **対応フォーマット**: ComfyUI、Automatic1111 (WebUI)、Civitai
+* **対応フォーマット**: ComfyUI、A1111（Stable Diffusion WebUI）、Civitai
 * **デバッグモード**: 右上のチェックボックスを有効にすると詳細ログを表示
 
 #### ComfyUI マルチサンプラー処理
