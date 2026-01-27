@@ -34,15 +34,12 @@ out/
 *.sublime-project
 *.sublime-workspace
 
-# AI development files
+# AI development files - NEVER commit these
 AGENTS.md
 .kiro/
 
-# Test sample files (except README.md)
-tests/samples/*
-!tests/samples/README.md
-
-# Test expected files - ignore actual test files but keep sample directory
-tests/expected/*
-!tests/expected/README.md
-!tests/expected/sample/
+# Test sample files - developers should generate their own
+tests/samples/*.png
+tests/samples/*.webp
+tests/samples/*.jpg
+tests/samples/*.jpeg

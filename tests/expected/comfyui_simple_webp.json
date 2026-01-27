@@ -1,0 +1,23 @@
+{
+  "format": "comfyui",
+  "extra_samplers": [
+    {
+      "id": "5",
+      "seed": 111111,
+      "steps": 20,
+      "cfg": 8,
+      "sampler": "euler",
+      "scheduler": "simple",
+      "is_base": true
+    }
+  ],
+  "sampler_fallback": false,
+  "seed": 111111,
+  "steps": 20,
+  "cfg": 8,
+  "sampler": "euler",
+  "scheduler": "simple",
+  "positive": "1girl",
+  "negative": "bad image",
+  "checkpoint": "boleromixIllustrious_v700.safetensors"
+}

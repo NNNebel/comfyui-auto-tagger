@@ -1,26 +1,59 @@
 # Test Sample Images
 
-This directory contains sample images with known metadata for testing the metadata parser.
+> [!IMPORTANT]
+> **Sample images are NOT included in the repository.**
+> 
+> Developers must provide their own test images with ComfyUI/A1111 metadata for testing.
 
-## Sample Files
+## Why aren't sample images included?
 
-- `comfyui_sample.png` - PNG image with ComfyUI metadata
-- `comfyui_sample.webp` - WebP image with ComfyUI metadata
-- `a1111_sample.png` - PNG image with Automatic1111 metadata
-- `multi_format.png` - PNG image with both ComfyUI and A1111 metadata
+1. **File Size**: Image files would bloat the repository
+2. **Copyright**: Sample images may contain copyrighted content
+3. **Privacy**: Generated images may contain sensitive prompts or settings
+4. **Flexibility**: Developers can test with their own workflows and custom nodes
 
-## Purpose
+## How to Add Test Samples
 
-These sample images enable:
-- Independent testing without Eagle dependencies
-- Validation of metadata extraction across different formats
-- Regression testing to ensure backward compatibility
-- Property-based testing with known inputs
+To test the metadata parser with your own images:
 
-## Adding New Samples
+1. **Generate test images** using ComfyUI or Automatic1111
+2. **Place images in this directory**:
+   - `comfyui_simple.png` - Simple ComfyUI workflow
+   - `comfyui_multi.png` - Complex multi-sampler workflow
+   - `comfyui_simple.webp` - WebP format
+   - `a1111_simple.png` - Automatic1111 image
+   
+3. **Generate expected output** (optional):
+   ```bash
+   node scripts/analyze-image.js tests/samples/your_image.png > tests/expected/sample/your_image.json
+   ```
 
-When adding new sample images:
-1. Place the image file in this directory
-2. Create a corresponding expected output JSON file in `tests/expected/`
-3. Document the sample in this README
-4. Add a test case in `tests/integration/sample-based.test.js`
+4. **Run tests**:
+   ```bash
+   npm test
+   ```
+
+## Recommended Test Cases
+
+For comprehensive testing, include images with:
+- ✅ Simple single-sampler workflows
+- ✅ Multi-sampler workflows (HiresFix, FaceDetailer)
+- ✅ img2img workflows with VAEEncode
+- ✅ Custom nodes and complex connections
+- ✅ Both PNG and WebP formats
+- ✅ A1111 format for compatibility testing
+
+## File Naming Convention
+
+Use descriptive names that indicate the test scenario:
+- `comfyui_simple.png` - Basic ComfyUI workflow
+- `comfyui_multi.png` - Multiple samplers
+- `comfyui_i2i.webp` - Image-to-image workflow
+- `a1111_simple.png` - Automatic1111 format
+
+## Note
+
+Sample images are automatically ignored by git (see `.gitignore`). This ensures:
+- Clean repository without binary files
+- No accidental commits of large images
+- Each developer maintains their own test set

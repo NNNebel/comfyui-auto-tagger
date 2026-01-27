@@ -1,0 +1,50 @@
+{
+  "format": "comfyui",
+  "extra_samplers": [
+    {
+      "id": "3",
+      "seed": 111111,
+      "steps": 30,
+      "cfg": 6,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": true
+    },
+    {
+      "id": "32",
+      "seed": 222222,
+      "steps": 20,
+      "cfg": 6,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": false
+    },
+    {
+      "id": "325",
+      "seed": 333333,
+      "steps": 30,
+      "cfg": 7,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": false
+    },
+    {
+      "id": "430",
+      "seed": 444444,
+      "steps": 2,
+      "cfg": 2,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": false
+    }
+  ],
+  "sampler_fallback": false,
+  "seed": 111111,
+  "steps": 30,
+  "cfg": 6,
+  "sampler": "dpmpp_2m",
+  "scheduler": "normal",
+  "positive": "masterpiece, best quality, 1girl, detailed face, beautiful eyes\nmasterpiece, best quality, 1girl, detailed face, beautiful eyes,\nsuper resolution,\nmasterpiece, best quality, amazing quality, very aesthetic, newest, highres, absurdres, dynamic pose,\nbeautiful face, perfect hand,\n4 sampler positive pronpt",
+  "negative": "worst quality, low quality, blurry, bad anatomy\ncharacter sheet, character design, multiple people, 2girl, 3girl, twins, cloned face, extra girl, \nworst quality, low quality, blurry, bad anatomy,\ncurvy, chunky legs, thick thighs,\ncharacter sheet, character design, multiple people, 2girl, 3girl, twins, cloned face, extra girl, \nworst quality, low quality, blurry, bad anatomy,\n4 sampler negative prompt",
+  "checkpoint": "boleromixIllustrious_v700.safetensors"
+}

@@ -293,17 +293,14 @@ Promise.all([
                 let changed = false;
 
                 if (isForceMode) {
-                    // --- Force Delete Mode ---
+                    // --- Force Delete Mode: Remove ALL tags and annotations ---
                     if (item.tags && item.tags.length > 0) {
                         item.tags = [];
                         changed = true;
                     }
                     if (item.annotation) {
-                        const newAnnotation = removeAnnotation(item.annotation);
-                        if (newAnnotation !== item.annotation) {
-                            item.annotation = newAnnotation;
-                            changed = true;
-                        }
+                        item.annotation = '';
+                        changed = true;
                     }
                 } else {
                     // --- Normal Mode ---
@@ -325,14 +322,14 @@ Promise.all([
                             if (item.tags.length < beforeCount) changed = true;
                         }
                     }
-
-                    // アノテーション削除
-                    if (item.annotation) {
-                        const newAnnotation = removeAnnotation(item.annotation);
-                        if (newAnnotation !== item.annotation) {
-                            item.annotation = newAnnotation;
-                            changed = true;
-                        }
+                }
+                
+                // Remove [Generation Info] annotation section (both modes)
+                if (item.annotation) {
+                    const newAnnotation = removeAnnotation(item.annotation);
+                    if (newAnnotation !== item.annotation) {
+                        item.annotation = newAnnotation;
+                        changed = true;
                     }
                 }
 

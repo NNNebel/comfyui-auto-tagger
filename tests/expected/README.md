@@ -23,15 +23,16 @@ tests/expected/
 
 ### Sample Files (`sample/` directory)
 - **Purpose**: Documentation and examples for developers
-- **Content**: Generic prompts and parameters
-- **Usage**: Reference for understanding metadata structure
-- **Version Control**: Committed to repository
+- **Content**: Generic prompts and parameters for reference
+- **Usage**: Understanding metadata structure and parser output format
+- **Version Control**: ✅ Committed to repository
 
 ### Actual Test Files (root directory)
 - **Purpose**: Integration testing with real sample images
 - **Content**: Actual metadata from test images in `tests/samples/`
 - **Usage**: Automated tests compare parser output against these files
-- **Version Control**: May contain project-specific data
+- **Version Control**: ❌ NOT committed (generated locally from sample images)
+- **Note**: Developers generate these files from their own test images
 
 ## Usage in Tests
 

@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import ImageMetadataReader from '../../js/metadata-parser/binary-extraction/ImageMetadataReader.js';
-import { getGenInfo } from '../../js/core.js';
 
 describe('ImageMetadataReader Integration', () => {
-  describe('Compatibility with existing getGenInfo', () => {
-    it('should extract same PNG data as getGenInfo', () => {
+  describe('Compatibility with ImageMetadataReader', () => {
+    it('should extract PNG data correctly', () => {
       // Create a PNG with tEXt chunks
       const pngSignature = new Uint8Array([
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
@@ -28,15 +27,12 @@ describe('ImageMetadataReader Integration', () => {
       buffer.set(pngSignature, 0);
       buffer.set(chunk, pngSignature.length);
       
-      // Compare results
-      const oldResult = getGenInfo(buffer, 'image/png');
-      const newResult = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
+      const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
       
-      expect(newResult).toEqual(oldResult);
-      expect(newResult.workflow).toEqual({ nodes: [{ id: 1, type: 'test' }] });
+      expect(result.workflow).toEqual({ nodes: [{ id: 1, type: 'test' }] });
     });
 
-    it('should extract same WebP data as getGenInfo', () => {
+    it('should extract WebP data correctly', () => {
       // Create a minimal WebP with RIFF/WEBP signature
       const buffer = new Uint8Array([
         0x52, 0x49, 0x46, 0x46, // 'RIFF'
@@ -47,14 +43,12 @@ describe('ImageMetadataReader Integration', () => {
         0x00, 0x00, 0x00, 0x00  // Size
       ]);
       
-      const oldResult = getGenInfo(buffer, 'image/webp');
-      const newResult = ImageMetadataReader.extractRawMetadata(buffer, 'image/webp');
+      const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/webp');
       
-      expect(newResult).toEqual(oldResult);
-      expect(newResult).toEqual({});
+      expect(result).toEqual({});
     });
 
-    it('should handle multiple PNG tEXt chunks like getGenInfo', () => {
+    it('should handle multiple PNG tEXt chunks correctly', () => {
       const pngSignature = new Uint8Array([
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
       ]);
@@ -86,33 +80,27 @@ describe('ImageMetadataReader Integration', () => {
       buffer.set(chunk2, pngSignature.length + chunk1.length);
       buffer.set(chunk3, pngSignature.length + chunk1.length + chunk2.length);
       
-      const oldResult = getGenInfo(buffer, 'image/png');
-      const newResult = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
+      const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
       
-      expect(newResult).toEqual(oldResult);
-      expect(newResult.workflow).toEqual({ nodes: [] });
-      expect(newResult.prompt).toEqual({ "1": { class_type: "test" } });
-      expect(newResult.parameters).toBe('test parameters');
+      expect(result.workflow).toEqual({ nodes: [] });
+      expect(result.prompt).toEqual({ "1": { class_type: "test" } });
+      expect(result.parameters).toBe('test parameters');
     });
 
-    it('should handle invalid PNG like getGenInfo', () => {
+    it('should handle invalid PNG correctly', () => {
       const buffer = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
       
-      const oldResult = getGenInfo(buffer, 'image/png');
-      const newResult = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
+      const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
       
-      expect(newResult).toEqual(oldResult);
-      expect(newResult).toEqual({});
+      expect(result).toEqual({});
     });
 
-    it('should handle unsupported format like getGenInfo', () => {
+    it('should handle unsupported format correctly', () => {
       const buffer = new Uint8Array([0, 1, 2, 3]);
       
-      const oldResult = getGenInfo(buffer, 'image/jpeg');
-      const newResult = ImageMetadataReader.extractRawMetadata(buffer, 'image/jpeg');
+      const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/jpeg');
       
-      expect(newResult).toEqual(oldResult);
-      expect(newResult).toEqual({});
+      expect(result).toEqual({});
     });
   });
 

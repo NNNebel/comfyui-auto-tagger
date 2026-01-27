@@ -6,118 +6,8 @@ if (typeof require !== 'undefined') {
   MetadataService = require('./metadata-parser/integration/MetadataService');
 }
 
-// --- 1. Binary Extraction (kept for backward compatibility) ---
-function getGenInfo(buffer, mimeType) {
-    if (mimeType === 'image/png') return parsePng(buffer);
-    if (mimeType === 'image/webp') return parseWebP(buffer);
-    return {};
-}
+// --- Data Formatting Functions ---
 
-function parsePng(buffer) {
-    const result = {};
-    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-    if (view.getUint32(0) !== 0x89504e47) return result;
-    let offset = 8;
-    while (offset < view.byteLength) {
-        if (offset + 4 > view.byteLength) break;
-        const length = view.getUint32(offset);
-        offset += 4;
-        if (offset + 4 > view.byteLength) break;
-        const type = getFourCC(view, offset);
-        offset += 4;
-        if (type === 'tEXt') {
-            const chunkData = buffer.slice(offset, offset + length);
-            const { keyword, text } = decodePngText(chunkData);
-            try {
-                if (keyword === 'workflow' || keyword === 'prompt') {
-                    result[keyword] = JSON.parse(text);
-                } else {
-                    result[keyword] = text;
-                }
-            } catch (e) {}
-        }
-        offset += length + 4;
-    }
-    return result;
-}
-
-function decodePngText(data) {
-    const nullIndex = data.indexOf(0x00);
-    if (nullIndex === -1) return { keyword: '', text: '' };
-    const decoder = new TextDecoder('utf-8');
-    return {
-        keyword: decoder.decode(data.slice(0, nullIndex)),
-        text: decoder.decode(data.slice(nullIndex + 1))
-    };
-}
-
-function parseWebP(buffer) {
-    const result = {};
-    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-    if (getFourCC(view, 0) !== 'RIFF' || getFourCC(view, 8) !== 'WEBP') return result;
-    let offset = 12;
-    while (offset < view.byteLength) {
-        if (offset + 8 > view.byteLength) break;
-        const chunkSize = view.getUint32(offset + 4, true);
-        const chunkDataOffset = offset + 8;
-        const chunkType = getFourCC(view, offset);
-        if (chunkType === 'EXIF' || chunkType === 'XMP ') {
-            extractFromBinary(buffer.slice(chunkDataOffset, chunkDataOffset + chunkSize), result);
-        }
-        offset += 8 + chunkSize + (chunkSize % 2);
-    }
-    return result;
-}
-
-function extractFromBinary(data, result) {
-    const decoder = new TextDecoder('iso-8859-1');
-    const binaryString = decoder.decode(data);
-
-    const parseJson = (key) => {
-        const match = binaryString.match(new RegExp(`${key}:\s*(\{)`, 'i'));
-        if (match) {
-            const jsonStart = match.index + match[0].lastIndexOf('{');
-            const json = parseJsonFromPos(data, jsonStart);
-            if (json) {
-                result[key.toLowerCase()] = json;
-            }
-        }
-    };
-    parseJson('workflow');
-    parseJson('prompt');
-}
-
-function parseJsonFromPos(fullBuffer, startPos) {
-    let braceCount = 0;
-    let inString = false;
-    let escape = false;
-    let endPos = -1;
-    for (let i = startPos; i < fullBuffer.length; i++) {
-        const byte = fullBuffer[i];
-        if (escape) { escape = false; continue; }
-        if (byte === 0x5c) { escape = true; continue; }
-        if (byte === 0x22) { inString = !inString; continue; }
-        if (!inString) {
-            if (byte === 0x7b) braceCount++;
-            else if (byte === 0x7d) {
-                braceCount--;
-                if (braceCount === 0) { endPos = i; break; }
-            }
-        }
-    }
-    if (endPos !== -1) {
-        try {
-            return JSON.parse(new TextDecoder('utf-8').decode(fullBuffer.slice(startPos, endPos + 1)));
-        } catch (e) { return null; }
-    }
-    return null;
-}
-
-function getFourCC(view, offset) {
-    return String.fromCharCode(view.getUint8(offset), view.getUint8(offset + 1), view.getUint8(offset + 2), view.getUint8(offset + 3));
-}
-
-// --- 2. Data Formatting ---
 function cleanPrompt(text, prefix='') {
     if (!text || typeof text !== 'string') return [];
     const tags = new Set();
@@ -272,7 +162,6 @@ function removeAnnotation(text) {
 // --- Node.js環境(Vitest)向けのエクスポート ---
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        getGenInfo,
         processMetadata,
         cleanPrompt,
         removeAnnotation
