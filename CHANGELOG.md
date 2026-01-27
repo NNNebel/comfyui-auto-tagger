@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.2-pre] - 2026-XX-XX
+## [1.3.2-pre] - 2026-01-27
 
 ### 🇬🇧 English
 #### 🎉 New Features
