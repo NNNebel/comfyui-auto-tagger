@@ -13,6 +13,9 @@ All notable changes to this project will be documented in this file.
 - **Civitai Generated Images Support**:
   - Full support for images generated on Civitai platform.
   - Automatically detects and extracts generation parameters.
+- **Force Delete Mode**:
+  - Added "Force Delete Mode" (Shift + Click on "Delete Info") to remove all tags from selected images without metadata analysis.
+  - Useful for cleaning up malformed tags.
 
 #### ✨ Improvements
 - **Enhanced Multi-Sampler Workflow Support (ComfyUI)**:
@@ -44,6 +47,9 @@ All notable changes to this project will be documented in this file.
 - **Civitai生成画像対応**:
   - Civitaiプラットフォームで生成された画像に完全対応しました。
   - 生成パラメータを自動検出・抽出します。
+- **強制削除モード**:
+  - 「情報を削除」ボタンをShiftキーを押しながらクリックすると、メタデータ解析を行わずに選択画像の全てのタグを削除する「強制削除モード」を追加しました。
+  - 不正なタグを一括削除する際に便利です。
 
 #### ✨ 改善
 - **マルチサンプラーワークフローのサポート強化（ComfyUI）**:
@@ -65,14 +71,6 @@ All notable changes to this project will be documented in this file.
   - 実際のサンプル画像を使用した統合テスト（ComfyUI、A1111、Civitai）
   - 堅牢性を確認するプロパティベーステスト
 - メタデータ抽出の問題をトラブルシューティングするためのデバッグスクリプトを追加しました。
-
-## [1.3.2] - Unreleased
-
-### 🇬🇧 English
-- **New Feature**: Added "Force Delete Mode" (Shift + Click on "Delete Info") to remove all tags from selected images without metadata analysis. Useful for cleaning up malformed tags.
-
-### 🇯🇵 日本語
-- **新機能**: 「情報を削除」ボタンをShiftキーを押しながらクリックすると、メタデータ解析を行わずに選択画像の全てのタグを削除する「強制削除モード」を追加しました。不正なタグを一括削除する際に便利です。
 
 ## [1.3.1] - 2024-XX-XX
 
