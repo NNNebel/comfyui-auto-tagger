@@ -1,171 +1,218 @@
-# Scripts
+# Utility Scripts
 
-This directory contains utility scripts for development and testing of the ComfyUI Auto Tagger plugin.
+This directory contains utility scripts for analyzing and debugging image metadata.
 
 ## Available Scripts
 
 ### analyze-image.js
 
-Analyzes an image file and extracts metadata using the metadata parser.
+Analyze an image and output its metadata as JSON. This is the primary tool for extracting and inspecting metadata from ComfyUI and A1111 images.
 
 **Usage:**
 ```bash
-node scripts/analyze-image.js <image-path> [output-json-path]
+node scripts/analyze-image.js <image-path> [output-path]
 ```
 
-**Arguments:**
-- `image-path` (required): Path to the image file (PNG or WebP)
-- `output-json-path` (optional): Path to save the parsed metadata as JSON
-
-**Example:**
+**Examples:**
 ```bash
-# Analyze and display metadata
-node scripts/analyze-image.js tests/samples/comfyui_sample.png
+# Display metadata in console
+node scripts/analyze-image.js tests/samples/comfyui_simple.png
 
-# Analyze and save to file
-node scripts/analyze-image.js tests/samples/comfyui_sample.png output.json
+# Save metadata to JSON file
+node scripts/analyze-image.js tests/samples/comfyui_simple.png output.json
+
+# Analyze WebP image
+node scripts/analyze-image.js tests/samples/comfyui_simple.webp
 ```
 
 **Output:**
-- Displays MIME type, detected formats, and parsed metadata
-- Optionally saves the parsed metadata to a JSON file
-
----
-
-### inspect-metadata.js
-
-Inspects raw metadata chunks from an image file without parsing.
-
-**Usage:**
-```bash
-node scripts/inspect-metadata.js <image-path>
-```
-
-**Arguments:**
-- `image-path` (required): Path to the image file (PNG or WebP)
-
-**Example:**
-```bash
-node scripts/inspect-metadata.js tests/samples/comfyui_sample.png
-```
-
-**Output:**
-- Displays raw metadata chunk keys and their content
-- Useful for debugging metadata extraction issues
-
----
-
-### inspect-comfyui-structure.js
-
-Provides detailed inspection of ComfyUI workflow structure.
-
-**Usage:**
-```bash
-node scripts/inspect-comfyui-structure.js <image-path>
-```
-
-**Arguments:**
-- `image-path` (required): Path to the ComfyUI image file (PNG or WebP)
-
-**Example:**
-```bash
-node scripts/inspect-comfyui-structure.js tests/samples/comfyui_sample.png
-```
-
-**Output:**
-- Total node count and nodes grouped by type
-- Detailed information about KSampler nodes
-- Text encode nodes (prompts)
-- Checkpoint and LoRA loaders
-- Source nodes for distance calculation
-- Workflow data summary
-
----
-
-### inspect-node-detail.js
-
-Displays detailed information about a specific node in a ComfyUI workflow.
-
-**Usage:**
-```bash
-node scripts/inspect-node-detail.js <image-path> <node-id>
-```
-
-**Arguments:**
-- `image-path` (required): Path to the ComfyUI image file (PNG or WebP)
-- `node-id` (required): The ID of the node to inspect
-
-**Example:**
-```bash
-node scripts/inspect-node-detail.js tests/samples/comfyui_sample.png 325
-```
-
-**Output:**
-- Node class type and title
-- All input parameters and their values
-- Full node data structure
+- Detected formats (ComfyUI, A1111, or both)
+- Parsed metadata including:
+  - Checkpoint and LoRA names
+  - Positive and negative prompts
+  - Generation parameters (seed, steps, CFG, sampler)
+  - All samplers information (for multi-sampler workflows)
 
 ---
 
 ### inspect-png-chunks.js
 
-Lists all chunks in a PNG file with their types and sizes.
+Low-level PNG chunk inspector. Displays all chunks in a PNG file with their types, lengths, and preview of text chunks.
 
 **Usage:**
 ```bash
 node scripts/inspect-png-chunks.js <image-path>
 ```
 
-**Arguments:**
-- `image-path` (required): Path to the PNG image file
-
 **Example:**
 ```bash
-node scripts/inspect-png-chunks.js tests/samples/comfyui_sample.png
+node scripts/inspect-png-chunks.js tests/samples/comfyui_simple.png
 ```
 
 **Output:**
-- PNG file validation
-- List of all chunks with length and CRC
-- Preview of text chunk content (tEXt, iTXt, zTXt)
+- PNG signature validation
+- List of all chunks (IHDR, tEXt, IDAT, IEND, etc.)
+- Chunk lengths and CRC values
+- Preview of text chunk contents
+
+**Use cases:**
+- Verify PNG file structure
+- Check if metadata chunks exist
+- Debug PNG parsing issues
 
 ---
 
-### inspect-comf-chunk.js
+### inspect-comfyui-structure.js
 
-Inspects ComfyUI-specific `comf` chunks in PNG files.
+Detailed ComfyUI metadata structure inspector. Provides a comprehensive view of ComfyUI workflow structure, including nodes, connections, and parameters.
 
 **Usage:**
 ```bash
-node scripts/inspect-comf-chunk.js <image-path>
+node scripts/inspect-comfyui-structure.js <image-path>
 ```
-
-**Arguments:**
-- `image-path` (required): Path to the PNG image file
 
 **Example:**
 ```bash
-node scripts/inspect-comf-chunk.js tests/samples/comfyui_sample.png
+node scripts/inspect-comfyui-structure.js tests/samples/comfyui_multi.png
 ```
 
 **Output:**
-- Details of each `comf` chunk found
-- First 500 characters of chunk data
-- JSON parsing status
+- Total node count and grouping by type
+- KSampler nodes with all parameters
+- Text encode nodes (prompts)
+- Checkpoint and LoRA loaders
+- Source nodes (EmptyLatentImage, VAEEncode, LoadImage)
+- Workflow UI state information
+
+**Use cases:**
+- Understand complex multi-sampler workflows
+- Debug sampler distance calculation
+- Identify node connections and data flow
+- Verify prompt and parameter extraction
 
 ---
 
-## Development Workflow
+### inspect-metadata.js
 
-These scripts are primarily used for:
+Quick raw metadata inspector. Displays raw metadata chunks without parsing or interpretation.
 
-1. **Testing metadata extraction**: Use `analyze-image.js` to verify that metadata is correctly extracted from images
-2. **Debugging parser issues**: Use `inspect-metadata.js` and `inspect-comfyui-structure.js` to examine raw data
-3. **Understanding workflow structure**: Use `inspect-node-detail.js` to examine specific nodes
-4. **Investigating file format issues**: Use `inspect-png-chunks.js` and `inspect-comf-chunk.js` to examine low-level file structure
+**Usage:**
+```bash
+node scripts/inspect-metadata.js <image-path>
+```
+
+**Example:**
+```bash
+node scripts/inspect-metadata.js tests/samples/comfyui_simple.png
+```
+
+**Output:**
+- Raw prompt data (JSON)
+- Raw workflow data (JSON)
+- KSampler node count and basic info
+
+**Use cases:**
+- Quick metadata check
+- Verify metadata presence
+- Debug metadata extraction issues
+
+---
+
+### inspect-node-detail.js
+
+Inspect a specific node in detail. Useful for debugging specific nodes in complex workflows.
+
+**Usage:**
+```bash
+node scripts/inspect-node-detail.js <image-path> <node-id>
+```
+
+**Examples:**
+```bash
+# Inspect node 325 in a workflow
+node scripts/inspect-node-detail.js tests/samples/comfyui_multi.webp 325
+
+# Inspect a KSampler node
+node scripts/inspect-node-detail.js tests/samples/comfyui_multi.png 3
+```
+
+**Output:**
+- Node class type
+- Node title (if available)
+- All inputs with values and connections
+- Full node data as JSON
+
+**Use cases:**
+- Debug specific node behavior
+- Verify node connections
+- Check node parameters
+
+---
+
+## Common Workflows
+
+### Creating Test Expected Outputs
+
+When adding new test samples, generate expected output files:
+
+```bash
+# Generate expected output for a sample image
+node scripts/analyze-image.js tests/samples/comfyui_simple.png tests/expected/comfyui_simple_png.json
+```
+
+### Debugging Parser Issues
+
+1. **Check if metadata exists:**
+   ```bash
+   node scripts/inspect-metadata.js <image-path>
+   ```
+
+2. **Verify PNG structure:**
+   ```bash
+   node scripts/inspect-png-chunks.js <image-path>
+   ```
+
+3. **Analyze ComfyUI workflow:**
+   ```bash
+   node scripts/inspect-comfyui-structure.js <image-path>
+   ```
+
+4. **Inspect specific nodes:**
+   ```bash
+   node scripts/inspect-node-detail.js <image-path> <node-id>
+   ```
+
+5. **Compare parsed output:**
+   ```bash
+   node scripts/analyze-image.js <image-path>
+   ```
+
+### Investigating Multi-Sampler Workflows
+
+For complex workflows with multiple samplers (HiresFix, FaceDetailer, etc.):
+
+```bash
+# Get overview of all samplers and their connections
+node scripts/inspect-comfyui-structure.js tests/samples/comfyui_multi.png
+
+# Check parsed metadata to verify base sampler selection
+node scripts/analyze-image.js tests/samples/comfyui_multi.png
+```
+
+---
 
 ## Notes
 
-- All scripts require Node.js to be installed
-- Scripts should be run from the project root directory
-- These scripts are for development purposes only and are not included in the Eagle plugin package
+- All scripts support both PNG and WebP formats
+- Scripts automatically detect MIME type from file extension
+- Use these scripts for development and debugging only
+- For production use, use the `MetadataService` API directly
+
+## Adding New Scripts
+
+When adding new utility scripts:
+1. Keep them focused on a single purpose
+2. Provide clear usage instructions
+3. Add examples to this README
+4. Use consistent error handling and output formatting
+5. Support both PNG and WebP formats when applicable
