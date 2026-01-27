@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3] - Unreleased
+
+### 🇬🇧 English
+#### 🔧 Internal Refactoring
+- **Metadata Parser Architecture Refactoring**:
+  - Migrated to a three-layer architecture (Binary Extraction → Format Detection → Parsing) for better maintainability and extensibility.
+  - Introduced `MetadataService` as the main entry point for metadata extraction.
+  - Separated format-specific logic into dedicated parser classes (`ComfyUIParser`, `A1111Parser`).
+  - Removed duplicate code from `core.js` and delegated parsing to the new architecture.
+
+#### ✨ Improvements
+- **Enhanced Multi-Sampler Workflow Support**:
+  - Implemented VAEEncode image chain tracing for accurate base sampler detection in img2img workflows.
+  - Improved distance calculation for samplers in complex workflows (HiresFix, FaceDetailer, etc.).
+  - Special handling for DetailerForEach and other nodes without `latent_image` input.
+  - More accurate base sampler selection in workflows with multiple refinement stages.
+
+#### 🧪 Testing
+- Added comprehensive test suite with 200+ tests covering:
+  - Unit tests for all parser components
+  - Integration tests with real sample images
+  - Property-based tests for robustness
+- Added debug scripts for troubleshooting metadata extraction issues.
+
+### 🇯🇵 日本語
+#### 🔧 内部リファクタリング
+- **メタデータパーサーのアーキテクチャ刷新**:
+  - 保守性と拡張性を向上させるため、3層アーキテクチャ（バイナリ抽出 → フォーマット検出 → パース）に移行しました。
+  - メタデータ抽出のメインエントリーポイントとして`MetadataService`を導入しました。
+  - フォーマット固有のロジックを専用のパーサークラス（`ComfyUIParser`、`A1111Parser`）に分離しました。
+  - `core.js`から重複コードを削除し、新しいアーキテクチャにパース処理を委譲しました。
+
+#### ✨ 改善
+- **マルチサンプラーワークフローのサポート強化**:
+  - img2imgワークフローでの正確なベースサンプラー検出のため、VAEEncodeの画像チェーン追跡を実装しました。
+  - 複雑なワークフロー（HiresFix、FaceDetailerなど）でのサンプラー距離計算を改善しました。
+  - DetailerForEachなど`latent_image`入力を持たないノードの特別処理を追加しました。
+  - 複数のリファインメント段階を持つワークフローでのベースサンプラー選択がより正確になりました。
+
+#### 🧪 テスト
+- 200以上のテストを含む包括的なテストスイートを追加:
+  - 全パーサーコンポーネントのユニットテスト
+  - 実際のサンプル画像を使用した統合テスト
+  - 堅牢性を確認するプロパティベーステスト
+- メタデータ抽出の問題をトラブルシューティングするためのデバッグスクリプトを追加しました。
+
 ## [1.3.2] - Unreleased
 
 ### 🇬🇧 English

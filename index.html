@@ -223,6 +223,20 @@
 
     <div id="log"></div>
 
+    <!-- Binary Extraction Layer -->
+    <script src="js/metadata-parser/binary-extraction/ImageMetadataReader.js"></script>
+    <script src="js/metadata-parser/binary-extraction/FormatDetector.js"></script>
+    
+    <!-- Parser Layer -->
+    <script src="js/metadata-parser/parsers/MetadataParser.js"></script>
+    <script src="js/metadata-parser/parsers/ParserRegistry.js"></script>
+    <script src="js/metadata-parser/parsers/ComfyUIParser.js"></script>
+    <script src="js/metadata-parser/parsers/A1111Parser.js"></script>
+    
+    <!-- Integration Layer -->
+    <script src="js/metadata-parser/integration/MetadataService.js"></script>
+    
+    <!-- Legacy core.js for processMetadata -->
     <script src="js/core.js"></script>
     <script src="js/plugin.js"></script>
 </body>
