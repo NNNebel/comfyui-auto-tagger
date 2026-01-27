@@ -64,6 +64,14 @@ This plugin parses PNG tEXt/comf chunks and WebP EXIF/XMP data to retrieve AI ge
 * **Supported Formats**: ComfyUI, Automatic1111 (WebUI), Civitai
 * **Debug Mode**: Enable the checkbox in the top-right corner to view detailed logs.
 
+#### ComfyUI Multi-Sampler Handling
+
+For complex ComfyUI workflows with multiple samplers (HiresFix, FaceDetailer, etc.), the plugin uses the following logic:
+
+* **Seed (Tags)**: Extracts the seed from the **first KSampler in the workflow** (the base sampler that determines the composition). Only this seed is added as a tag for consistency.
+* **Seed (Notes)**: In the notes section, displays the seed from the **first KSampler** along with seeds from all other samplers for reference.
+* **Prompts**: When multiple prompts exist (HiresFix, partial refinement, etc.), all prompts are **merged with duplicates removed** to improve searchability.
+
 ### ⚠️ Disclaimer & Bug Reports
 
 *   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on the logic: **"Seed/Sampler is Base-first, Prompt is all-merged"**.
@@ -135,6 +143,14 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 このプラグインは、外部依存なしでPNG tEXt/comfチャンクおよびWebP EXIF/XMPデータを解析し、AI生成メタデータを取得します。
 * **対応フォーマット**: ComfyUI、Automatic1111 (WebUI)、Civitai
 * **デバッグモード**: 右上のチェックボックスを有効にすると詳細ログを表示
+
+#### ComfyUI マルチサンプラー処理
+
+複数のサンプラーを含む複雑なComfyUIワークフロー（HiresFix、FaceDetailerなど）では、以下のロジックで処理します：
+
+* **Seed値（タグ）**: **ワークフロー内の最初のKSampler**（構図を決定づけるベースサンプラー）のSeed値を抽出します。一貫性のため、このSeed値のみがタグとして追加されます。
+* **Seed値（メモ）**: メモ欄には、**最初のKSampler**のSeed値と共に、他のすべてのサンプラーのSeed値も参照用に表示されます。
+* **プロンプト**: 複数のプロンプトが存在する場合（HiresFix、部分修正など）、検索性を高めるため**重複を排除してすべてマージ**されます。
 
 ### ⚠️ 免責事項・不具合報告
 
