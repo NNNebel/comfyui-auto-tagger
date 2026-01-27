@@ -56,7 +56,7 @@ It supports both **PNG** and **WebP** formats and allows you to filter which inf
 
 ### 🛠️ Development
 
-This plugin parses `tEXt` chunks (PNG) and `EXIF/XMP` data (WebP) to retrieve ComfyUI workflows without external dependencies.
+This plugin parses PNG tEXt/comf chunks and WebP EXIF/XMP data to retrieve ComfyUI workflows without external dependencies.
 * **Debug Mode**: Enable the checkbox in the top-right corner to view detailed logs.
 
 ### ⚠️ Disclaimer & Bug Reports
