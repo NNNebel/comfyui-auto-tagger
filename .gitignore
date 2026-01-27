@@ -43,3 +43,7 @@ tests/samples/*.png
 tests/samples/*.webp
 tests/samples/*.jpg
 tests/samples/*.jpeg
+
+# Test expected files - developers generate from their own samples
+tests/expected/*.json
+!tests/expected/sample/
