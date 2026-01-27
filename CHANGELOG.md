@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [1.3.2-pre] - 2026-01-27
 
 ### 🇬🇧 English
+[!IMPORTANT]
+### ⚠️ Pre-release Notice (Untested on Eagle App)
+This is a **pre-release** version. While I have implemented a comprehensive test suite (200+ tests) covering the new metadata parsers, I currently do not have access to an environment where the Eagle app is installed. Therefore, **the actual behavior within the Eagle interface remains untested.**
+If you encounter any issues, please report them on the GitHub Issue. Your feedback is essential to making this a stable release!
+
 #### 🎉 New Features
 - **Stable Diffusion WebUI (A1111) Support**:
   - Added official support for Automatic1111, Forge, and other A1111-based WebUI generated images.
@@ -39,6 +44,11 @@ All notable changes to this project will be documented in this file.
 - Added debug scripts for troubleshooting metadata extraction issues.
 
 ### 🇯🇵 日本語
+[!IMPORTANT]
+### ⚠️ プレリリースのお知らせ（Eagleアプリでは未検証）
+このバージョンは**プレリリース版**です。新しいメタデータパーサーに対して200以上のテストコードを実行し動作確認を行っていますが、現在開発者がEagleアプリ本体を起動できる環境にないため、**Eagle上での実際の挙動については未テストです。**
+もし動作に不具合があれば、GitHubのIssueにてご報告いただけると助かります。皆様のフィードバックをもとに正式版へとアップデートします。
+
 #### 🎉 新機能
 - **Stable Diffusion WebUI (A1111) 対応**:
   - Automatic1111、Forge、その他A1111ベースのWebUIで生成された画像に正式対応しました。
@@ -72,7 +82,7 @@ All notable changes to this project will be documented in this file.
   - 堅牢性を確認するプロパティベーステスト
 - メタデータ抽出の問題をトラブルシューティングするためのデバッグスクリプトを追加しました。
 
-## [1.3.1] - 2024-XX-XX
+## [1.3.1] - 2026-01-10
 
 ### 🇬🇧 English
 - Fixed an issue where some labels were not translated when English was selected.
