@@ -35,17 +35,21 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 
 ### 📸 Screenshots
 ...
-#### ComfyUI Multi-Sampler Handling
+#### 🧠 Advanced Workflow Trace Logic
 
-For complex ComfyUI workflows with multiple samplers (HiresFix, FaceDetailer, Refiners, etc.), the plugin uses an advanced detection algorithm:
+Unlike simple metadata readers, this plugin dynamically analyzes the ComfyUI node graph to trace the actual execution path leading to the final image. Even within a massive "All-in-One" workflow, it accurately identifies and extracts parameters from the nodes that contributed to the generation.
 
-* **Base Sampler Detection**: Automatically identifies the primary sampler by tracing the latent chain back from the output nodes to the source. The seed, steps, and CFG from this "Base Sampler" are used for tagging.
-* **Detailed Generation Steps (Notes)**: In the Notes section, the plugin now records detailed information for **every generation step**, including individual seeds, samplers, and specific prompts used in each stage.
-* **Prompt Merging**: All prompts from different stages are merged with duplicates removed for Eagle tags, while individual prompts are preserved in the Notes for reference.
+| Workflow Overview | Extraction Result (Multi-Stage) |
+| :---: | :---: |
+| <img src="assets/workflow_image.png" width="500" alt="Complex Workflow"> | <img src="assets/workflow_trace_result.png" width="300" alt="Trace Result"> |
+
+*   **Path-Based Extraction**: Automatically traces the latent/image chain back from the output nodes to filter out inactive nodes or unused branches.
+*   **Multi-Stage Support**: Comprehensive extraction of seeds, prompts, and samplers from all stages, including KSampler, SAM Detailer, HiresFix, and FaceDetailer.
+*   **Full Audit in Notes**: Records detailed metadata for every detected generation step in the Eagle Notes section for precise reproduction.
 
 ### ⚠️ Disclaimer & Bug Reports
 
-*   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on the logic: **"Seed/Sampler is Base-first, Prompt is all-merged"**.
+*   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on the advanced trace logic to identify the most relevant generation parameters.
 *   **Bug Reports**: When reporting issues on GitHub, please always attach:
     1.  Information about your generation environment (ComfyUI/A1111 version, custom nodes used, etc.).
     2.  The original image (PNG/WebP) that retains its metadata.
@@ -116,17 +120,21 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 * **対応フォーマット**: ComfyUI、A1111（Stable Diffusion WebUI）、Civitai
 * **デバッグモード**: 右上のチェックボックスを有効にすると詳細ログを表示
 
-#### ComfyUI マルチサンプラー処理
+#### 🧠 高度なワークフロー解析ロジック
 
-複数のサンプラーを含む複雑なComfyUIワークフロー（HiresFix、FaceDetailer、リファイナーなど）では、高度な検出アルゴリズムを使用して処理します：
+単なるメタデータの読み取りではなく、ComfyUIのノードグラフを動的に解析し、最終的な画像出力に至るまでの実際の実行ルートを特定します。これにより、どれほど巨大で複雑な「オールインワン」ワークフローであっても、生成に関与したノードから正確にパラメータを抽出します。
 
-* **ベースサンプラーの自動判別**: 画像出力ノードからソースまで潜在空間のチェーンを逆算し、構図を決定づける主要なサンプラー（ベースサンプラー）を自動的に特定します。タグ付けにはこのサンプラーのSeed、Steps、CFGが使用されます。
-* **詳細な生成ステップ（メモ）**: メモ欄には、**全ての生成ステップ**の詳細情報が記録されるようになりました。各ステージで使用された個別のSeed、サンプラー、プロンプトを確認できます。
-* **プロンプトのマージ**: タグ用には全ステージのプロンプトが重複を排除してマージされますが、メモ欄には参照用に各ステップごとの個別プロンプトが保持されます。
+| ワークフロー全体像 | 抽出結果（マルチステージ） |
+| :---: | :---: |
+| <img src="assets/workflow_image.png" width="500" alt="Complex Workflow"> | <img src="assets/workflow_trace_result.png" width="300" alt="Trace Result"> |
+
+*   **実行経路の動的探索**: 出力ノードから潜在空間や画像の連鎖を逆引きし、画像生成に使用されていない不要なブランチの情報は除外します。
+*   **マルチステージ対応**: KSampler、SAM Detailer、HiresFix、FaceDetailerなど、経路上のあらゆる工程からシード値、プロンプト、サンプラー情報を網羅的に取得します。
+*   **詳細な履歴保存**: Eagleのメモ欄には、検出されたすべての生成ステップごとのメタデータが記録され、後からの正確な振り返りが可能です。
 
 ### ⚠️ 免責事項・不具合報告
 
-*   **免責事項**: ComfyUIのWorkflowは非常に複雑なため、100%の動作は保証できません。「SeedはBase優先、Promptは全マージ」という仕様で動作します。
+*   **免責事項**: ComfyUIのWorkflowは非常に複雑なため、100%の動作は保証できません。本プラグインは、高度な解析ロジックに基づいて最も関連性の高い生成パラメータを特定します。
 *   **不具合報告**: GitHubのIssueで報告する際は、以下の2点を必ず添付してください。
     1.  生成環境の情報（ComfyUI/A1111のバージョン、使用しているカスタムノード等）
     2.  メタデータが保持された画像の実ファイル（PNG/WebP）
