@@ -183,8 +183,10 @@ class ComfyUIParser extends MetadataParserBase {
       return null;
     };
 
-    // 1. Identify all sampling nodes (KSampler, Detailer, etc.)
-    // A sampling node is any node that has seed, steps, cfg, and positive/negative inputs
+    // 1. Identify all sampling nodes (KSampler, Detailer, SamplerCustomAdvanced, etc.)
+    // A sampling node is any node that:
+    // - Has seed, steps, cfg, and positive/negative inputs (traditional KSampler), OR
+    // - Is a SamplerCustomAdvanced or similar advanced sampler node
     const samplers = [];
     for (const id in promptData) {
       const node = promptData[id];
@@ -202,6 +204,18 @@ class ComfyUIParser extends MetadataParserBase {
       const samplingParamCount = [hasSeed, hasSteps, hasCfg, hasPositive, hasNegative].filter(Boolean).length;
       
       if (samplingParamCount >= 3) {
+        samplers.push({ id, node });
+        continue;
+      }
+      
+      // Also check for advanced sampler nodes like SamplerCustomAdvanced
+      // These nodes have sampler, sigmas, and latent_image inputs
+      const hasAdvancedSamplerInputs = 
+        node.inputs.sampler !== undefined &&
+        node.inputs.sigmas !== undefined &&
+        node.inputs.latent_image !== undefined;
+      
+      if (hasAdvancedSamplerInputs) {
         samplers.push({ id, node });
       }
     }
@@ -443,8 +457,39 @@ class ComfyUIParser extends MetadataParserBase {
         let nodeName = node.class_type || 'Unknown';
         
         // Extract positive and negative prompts for this specific sampler
-        const positivePrompt = resolve(nodeId, "positive");
-        const negativePrompt = resolve(nodeId, "negative");
+        let positivePrompt = resolve(nodeId, "positive");
+        let negativePrompt = resolve(nodeId, "negative");
+        
+        // For advanced samplers like SamplerCustomAdvanced, try to find prompts through guider/conditioning
+        if (!positivePrompt && node.inputs.guider) {
+          const guiderInput = node.inputs.guider;
+          if (Array.isArray(guiderInput) && guiderInput.length === 2) {
+            const guiderId = String(guiderInput[0]);
+            const guiderNode = promptData[guiderId];
+            if (guiderNode && guiderNode.inputs.conditioning) {
+              const condInput = guiderNode.inputs.conditioning;
+              if (Array.isArray(condInput) && condInput.length === 2) {
+                const condId = String(condInput[0]);
+                // Try to get text from conditioning node (e.g., FluxGuidance)
+                let textValue = resolve(condId, "text");
+                if (!textValue) {
+                  // If not found, try to trace through conditioning input
+                  const condNode = promptData[condId];
+                  if (condNode && condNode.inputs.conditioning) {
+                    const innerCondInput = condNode.inputs.conditioning;
+                    if (Array.isArray(innerCondInput) && innerCondInput.length === 2) {
+                      const innerCondId = String(innerCondInput[0]);
+                      textValue = resolve(innerCondId, "text");
+                    }
+                  }
+                }
+                if (textValue) {
+                  positivePrompt = textValue;
+                }
+              }
+            }
+          }
+        }
         
         // Trace back to find the checkpoint for this specific sampler
         let samplerCheckpoint = null;
@@ -496,11 +541,22 @@ class ComfyUIParser extends MetadataParserBase {
           nodeName: nodeName,
           nodeType: node.class_type,
           checkpoint: samplerCheckpoint,
-          seed: resolve(nodeId, "seed"),
-          steps: resolve(nodeId, "steps"),
-          cfg: resolve(nodeId, "cfg"),
-          sampler: resolve(nodeId, "sampler_name"),
-          scheduler: resolve(nodeId, "scheduler"),
+          seed: resolve(nodeId, "seed") || (node.inputs.noise ? resolve(String(node.inputs.noise[0]), "noise_seed") : null),
+          steps: resolve(nodeId, "steps") || (node.inputs.sigmas ? resolve(String(node.inputs.sigmas[0]), "steps") : null),
+          cfg: resolve(nodeId, "cfg") || 
+               (node.inputs.guider ? resolve(String(node.inputs.guider[0]), "guidance") : null) ||
+               (node.inputs.guider ? (() => {
+                 const guiderNode = promptData[String(node.inputs.guider[0])];
+                 if (guiderNode && guiderNode.inputs.conditioning) {
+                   const condInput = guiderNode.inputs.conditioning;
+                   if (Array.isArray(condInput) && condInput.length === 2) {
+                     return resolve(String(condInput[0]), "guidance");
+                   }
+                 }
+                 return null;
+               })() : null),
+          sampler: resolve(nodeId, "sampler_name") || (node.inputs.sampler ? resolve(String(node.inputs.sampler[0]), "sampler_name") : null),
+          scheduler: resolve(nodeId, "scheduler") || (node.inputs.sigmas ? resolve(String(node.inputs.sigmas[0]), "scheduler") : null),
           positive: typeof positivePrompt === 'string' ? positivePrompt.trim() : '',
           negative: typeof negativePrompt === 'string' ? negativePrompt.trim() : '',
           isBase: isBase,

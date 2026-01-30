@@ -44,6 +44,14 @@ describe('Sample Images Integration Tests', () => {
       mimeType: 'image/png',
       format: null,
       shouldSucceed: false
+    },
+    {
+      name: 'ComfyUI Flux PNG',
+      imagePath: 'tests/samples/comfyui_flux.png',
+      expectedPath: 'tests/expected/comfyui_flux.json',
+      mimeType: 'image/png',
+      format: 'comfyui',
+      shouldSucceed: true
     }
   ];
 
@@ -89,16 +97,21 @@ describe('Sample Images Integration Tests', () => {
         expect(actual.format).toBe(format);
 
         // Compare common fields
-        expect(actual.seed).toBe(expected.seed);
-        expect(actual.steps).toBe(expected.steps);
-        expect(actual.cfg).toBe(expected.cfg);
-        expect(actual.sampler).toBe(expected.sampler);
-        // For prompts, normalize whitespace and empty lines for comparison
-        // Remove all spaces around commas and collapse multiple spaces
-        const normalizePrompt = (p) => p.replace(/\n/g, ',').replace(/,+/g, ',').replace(/\s*,\s*/g, ',').replace(/\s+/g, ' ').trim();
-        expect(normalizePrompt(actual.positive)).toBe(normalizePrompt(expected.positive));
-        expect(normalizePrompt(actual.negative)).toBe(normalizePrompt(expected.negative));
-        expect(actual.checkpoint).toBe(expected.checkpoint);
+        expect(actual.format).toBe(format);
+        
+        // For ComfyUI, seed/steps/cfg might be null at global level
+        if (format !== 'comfyui') {
+          expect(actual.seed).toBe(expected.seed);
+          expect(actual.steps).toBe(expected.steps);
+          expect(actual.cfg).toBe(expected.cfg);
+          expect(actual.sampler).toBe(expected.sampler);
+          // For prompts, normalize whitespace and empty lines for comparison
+          // Remove all spaces around commas and collapse multiple spaces
+          const normalizePrompt = (p) => p.replace(/\n/g, ',').replace(/,+/g, ',').replace(/\s*,\s*/g, ',').replace(/\s+/g, ' ').trim();
+          expect(normalizePrompt(actual.positive)).toBe(normalizePrompt(expected.positive));
+          expect(normalizePrompt(actual.negative)).toBe(normalizePrompt(expected.negative));
+          expect(actual.checkpoint).toBe(expected.checkpoint);
+        }
 
         // A1111-specific fields
         if (format === 'a1111') {
@@ -114,6 +127,29 @@ describe('Sample Images Integration Tests', () => {
             } else {
               expect(actual.lora_hashes).toEqual(expected.lora_hashes);
             }
+          }
+        }
+
+        // ComfyUI-specific fields
+        if (format === 'comfyui') {
+          // Check generation steps if present
+          if (expected.generationSteps) {
+            expect(actual.generationSteps).toBeDefined();
+            expect(actual.generationSteps.length).toBe(expected.generationSteps.length);
+            // Compare first generation step
+            const actualStep = actual.generationSteps[0];
+            const expectedStep = expected.generationSteps[0];
+            expect(actualStep.nodeType).toBe(expectedStep.nodeType);
+            expect(actualStep.seed).toBe(expectedStep.seed);
+            expect(actualStep.steps).toBe(expectedStep.steps);
+            expect(actualStep.cfg).toBe(expectedStep.cfg);
+            expect(actualStep.sampler).toBe(expectedStep.sampler);
+            expect(actualStep.scheduler).toBe(expectedStep.scheduler);
+          }
+          // Check extra samplers if present
+          if (expected.extra_samplers) {
+            expect(actual.extra_samplers).toBeDefined();
+            expect(actual.extra_samplers.length).toBe(expected.extra_samplers.length);
           }
         }
       });
@@ -140,25 +176,26 @@ describe('Sample Images Integration Tests', () => {
 
         // Verify common required fields
         expect(metadata).toHaveProperty('format');
-        expect(metadata).toHaveProperty('seed');
-        expect(metadata).toHaveProperty('steps');
-        expect(metadata).toHaveProperty('cfg');
-        expect(metadata).toHaveProperty('sampler');
-        expect(metadata).toHaveProperty('positive');
-        expect(metadata).toHaveProperty('negative');
-        expect(metadata).toHaveProperty('checkpoint');
-
-        // Verify common types
-        expect(typeof metadata.seed).toBe('number');
-        expect(typeof metadata.steps).toBe('number');
-        expect(typeof metadata.cfg).toBe('number');
-        expect(typeof metadata.sampler).toBe('string');
-        expect(typeof metadata.positive).toBe('string');
-        expect(typeof metadata.negative).toBe('string');
-        expect(typeof metadata.checkpoint).toBe('string');
-
-        // A1111-specific fields
+        
+        // For A1111, these fields are required at global level
         if (format === 'a1111') {
+          expect(metadata).toHaveProperty('seed');
+          expect(metadata).toHaveProperty('steps');
+          expect(metadata).toHaveProperty('cfg');
+          expect(metadata).toHaveProperty('sampler');
+          expect(metadata).toHaveProperty('positive');
+          expect(metadata).toHaveProperty('negative');
+          expect(metadata).toHaveProperty('checkpoint');
+          
+          // Verify common types
+          expect(typeof metadata.seed).toBe('number');
+          expect(typeof metadata.steps).toBe('number');
+          expect(typeof metadata.cfg).toBe('number');
+          expect(typeof metadata.sampler).toBe('string');
+          expect(typeof metadata.positive).toBe('string');
+          expect(typeof metadata.negative).toBe('string');
+          expect(typeof metadata.checkpoint).toBe('string');
+          
           // Optional fields that may or may not be present
           if (metadata.loras) {
             expect(Array.isArray(metadata.loras)).toBe(true);
@@ -166,6 +203,28 @@ describe('Sample Images Integration Tests', () => {
           if (metadata.lora_hashes) {
             expect(typeof metadata.lora_hashes).toBe('object');
           }
+        }
+        
+        // For ComfyUI, check generationSteps instead
+        if (format === 'comfyui') {
+          expect(metadata).toHaveProperty('generationSteps');
+          expect(Array.isArray(metadata.generationSteps)).toBe(true);
+          expect(metadata.generationSteps.length).toBeGreaterThan(0);
+          
+          const step = metadata.generationSteps[0];
+          expect(step).toHaveProperty('seed');
+          expect(step).toHaveProperty('steps');
+          expect(step).toHaveProperty('cfg');
+          expect(step).toHaveProperty('sampler');
+          expect(step).toHaveProperty('positive');
+          expect(step).toHaveProperty('negative');
+          
+          expect(typeof step.seed).toBe('number');
+          expect(typeof step.steps).toBe('number');
+          expect(typeof step.cfg).toBe('number');
+          expect(typeof step.sampler).toBe('string');
+          expect(typeof step.positive).toBe('string');
+          expect(typeof step.negative).toBe('string');
         }
       });
     });

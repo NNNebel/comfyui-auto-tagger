@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🇬🇧 English
+#### 🐛 Bug Fixes
+- Fixed ComfyUI parser to support advanced sampler nodes (SamplerCustomAdvanced, Flux models) that don't have direct seed/steps/cfg inputs.
+- Improved parameter extraction for advanced samplers by tracing through connected nodes (RandomNoise, BasicScheduler, FluxGuidance).
+- Fixed prompt extraction for advanced samplers by tracing through guider and conditioning nodes.
+
+#### ✨ Improvements
+- Enhanced ComfyUI parser to handle Flux model workflows with complex node structures.
+- Improved parameter resolution to support both traditional KSampler and modern advanced sampler architectures.
+
+#### 🧪 Testing
+- Added test data for Flux model ComfyUI images (comfyui_flux.json) to validate advanced sampler support.
+- Updated integration tests to handle format-specific metadata structures (ComfyUI vs A1111).
+
+### 🇯🇵 日本語
+#### 🐛 バグ修正
+- ComfyUIパーサーがSamplerCustomAdvancedやFluxモデルなどの高度なサンプラーノードに対応しました。
+- 接続されたノード（RandomNoise、BasicScheduler、FluxGuidance）を辿ることでパラメータ抽出を改善しました。
+- 高度なサンプラーのプロンプト抽出をguiderとconditioning ノードを辿ることで改善しました。
+
+#### ✨ 改善
+- ComfyUIパーサーがFluxモデルの複雑なノード構造に対応しました。
+- 従来のKSamplerと最新の高度なサンプラーアーキテクチャの両方をサポートするようにパラメータ解決を改善しました。
+
+#### 🧪 テスト
+- Fluxモデルの ComfyUI 画像用テストデータ（comfyui_flux.json）を追加して、高度なサンプラーサポートを検証しました。
+- 統合テストをフォーマット固有のメタデータ構造（ComfyUI vs A1111）に対応するように更新しました。
+
 ## [1.3.2] - 2026-01-30
 
 ### 🇬🇧 English
