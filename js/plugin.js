@@ -242,8 +242,13 @@ Promise.all([
                 }
 
                 if (changed) { 
-                    await item.save(); 
-                    log('log.success', {name: item.name});
+                    await item.save();
+                    // Enhanced log message with step count
+                    if (res.stepCount && res.stepCount > 1) {
+                        log('log.success', {name: `${item.name} (${res.stepCount} steps detected)`});
+                    } else {
+                        log('log.success', {name: item.name});
+                    }
                     return res.sampler_fallback ? 'caution' : 'success';
                 } else { 
                     log('log.skip', {name: item.name});

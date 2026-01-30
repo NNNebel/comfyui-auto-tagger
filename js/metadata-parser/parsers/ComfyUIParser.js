@@ -433,16 +433,96 @@ class ComfyUIParser extends MetadataParserBase {
       
       baseSamplerId = scored[0].id;
 
-      // Collect info from ALL samplers
-      metadata.extra_samplers = samplers.map(s => ({
-        id: s.id,
-        seed: resolve(s.id, "seed"),
-        steps: resolve(s.id, "steps"),
-        cfg: resolve(s.id, "cfg"),
-        sampler: resolve(s.id, "sampler_name"),
-        scheduler: resolve(s.id, "scheduler"),
-        is_base: s.id === baseSamplerId
+      // Collect info from ALL samplers with detailed information for each generation step
+      metadata.generationSteps = samplers.map((s, index) => {
+        const nodeId = s.id;
+        const node = s.node;
+        const isBase = nodeId === baseSamplerId;
+        
+        // Get node title/name from workflow if available
+        let nodeName = node.class_type || 'Unknown';
+        
+        // Extract positive and negative prompts for this specific sampler
+        const positivePrompt = resolve(nodeId, "positive");
+        const negativePrompt = resolve(nodeId, "negative");
+        
+        // Trace back to find the checkpoint for this specific sampler
+        let samplerCheckpoint = null;
+        const visited = new Set();
+        const findCheckpoint = (currentNodeId, preferredInputKey = null) => {
+          if (visited.has(currentNodeId)) return null;
+          visited.add(currentNodeId);
+          
+          const currentNode = promptData[currentNodeId];
+          if (!currentNode) return null;
+          
+          // Check if this node is a CheckpointLoader
+          if (currentNode.class_type && currentNode.class_type.includes('CheckpointLoader')) {
+            const ckptName = resolve(currentNodeId, 'ckpt_name');
+            return ckptName ? ckptName.split(/[/\\]/).pop() : null;
+          }
+          
+          // If preferredInputKey is specified, check it first
+          if (preferredInputKey && currentNode.inputs && currentNode.inputs[preferredInputKey]) {
+            const inputValue = currentNode.inputs[preferredInputKey];
+            if (Array.isArray(inputValue) && inputValue.length === 2) {
+              const sourceNodeId = String(inputValue[0]);
+              const checkpoint = findCheckpoint(sourceNodeId);
+              if (checkpoint) return checkpoint;
+            }
+          }
+          
+          // Traverse through other inputs to find checkpoint
+          if (currentNode.inputs) {
+            for (const inputKey in currentNode.inputs) {
+              if (inputKey === preferredInputKey) continue; // Already checked
+              const inputValue = currentNode.inputs[inputKey];
+              if (Array.isArray(inputValue) && inputValue.length === 2) {
+                const sourceNodeId = String(inputValue[0]);
+                const checkpoint = findCheckpoint(sourceNodeId);
+                if (checkpoint) return checkpoint;
+              }
+            }
+          }
+          
+          return null;
+        };
+        
+        // Start search from 'model' input (most common for KSampler)
+        samplerCheckpoint = findCheckpoint(nodeId, 'model');
+        
+        return {
+          nodeId: nodeId,
+          nodeName: nodeName,
+          nodeType: node.class_type,
+          checkpoint: samplerCheckpoint,
+          seed: resolve(nodeId, "seed"),
+          steps: resolve(nodeId, "steps"),
+          cfg: resolve(nodeId, "cfg"),
+          sampler: resolve(nodeId, "sampler_name"),
+          scheduler: resolve(nodeId, "scheduler"),
+          positive: typeof positivePrompt === 'string' ? positivePrompt.trim() : '',
+          negative: typeof negativePrompt === 'string' ? negativePrompt.trim() : '',
+          isBase: isBase,
+          stepIndex: index + 1,
+          distance: scored.find(sc => sc.id === nodeId)?.dist
+        };
+      });
+      
+      // Keep extra_samplers for backward compatibility (tags generation)
+      metadata.extra_samplers = metadata.generationSteps.map(step => ({
+        id: step.nodeId,
+        seed: step.seed,
+        steps: step.steps,
+        cfg: step.cfg,
+        sampler: step.sampler,
+        scheduler: step.scheduler,
+        is_base: step.isBase
       }));
+    } else {
+      // No samplers found - initialize empty arrays
+      metadata.generationSteps = [];
+      metadata.extra_samplers = [];
     }
 
     if (baseSamplerId) {
@@ -452,6 +532,12 @@ class ComfyUIParser extends MetadataParserBase {
       metadata.cfg = resolve(baseSamplerId, "cfg");
       metadata.sampler = resolve(baseSamplerId, "sampler_name");
       metadata.scheduler = resolve(baseSamplerId, "scheduler");
+      
+      // Set global checkpoint from base sampler
+      const baseStep = metadata.generationSteps.find(s => s.isBase);
+      if (baseStep && baseStep.checkpoint) {
+        metadata.checkpoint = baseStep.checkpoint;
+      }
     }
 
     // 3. Strategy: Prompt (Merge)
@@ -468,23 +554,22 @@ class ComfyUIParser extends MetadataParserBase {
     if (allPos.size > 0) metadata.positive = Array.from(allPos).join("\n");
     if (allNeg.size > 0) metadata.negative = Array.from(allNeg).join("\n");
 
-    // 4. Other Global Metadata
+    // 4. Other Global Metadata (LoRA and fallback checkpoint)
     const loras = new Set();
     for (const id in promptData) {
       const node = promptData[id];
-      if (!node.class_type) continue;
+      if (!node || !node.class_type) continue;
       
+      // Fallback: If no checkpoint found from samplers, use first CheckpointLoader
       if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) {
         const ckptName = resolve(id, "ckpt_name");
         if (ckptName) {
-          // Extract just the filename from the path (handles both / and \ separators)
           metadata.checkpoint = ckptName.split(/[/\\]/).pop();
         }
       }
       if (node.class_type.includes("LoraLoader")) {
         const l = resolve(id, "lora_name");
         if (l) {
-          // Extract just the filename from the path (handles both / and \ separators)
           loras.add(l.split(/[/\\]/).pop());
         }
       }
@@ -494,14 +579,34 @@ class ComfyUIParser extends MetadataParserBase {
 
   /**
    * Extract metadata from ComfyUI workflow JSON.
-   * Extracts checkpoint information from workflow nodes.
+   * Extracts checkpoint information and node titles from workflow nodes.
    * @param {Object} workflowData - ComfyUI workflow JSON object
    * @param {Object} metadata - Metadata object to populate
    */
   extractFromWorkflow(workflowData, metadata) {
     if (!workflowData.nodes) return;
-    const nodes = workflowData.nodes;
-    nodes.forEach(node => {
+    
+    // Build a map of node IDs to their titles/names
+    const nodeTitles = new Map();
+    const nodeGroups = new Map();
+    
+    workflowData.nodes.forEach(node => {
+      const nodeId = String(node.id);
+      
+      // Store node title if available
+      if (node.title) {
+        nodeTitles.set(nodeId, node.title);
+      }
+      
+      // Store group information if available
+      if (node.group !== undefined && workflowData.groups) {
+        const group = workflowData.groups.find(g => g.id === node.group);
+        if (group && group.title) {
+          nodeGroups.set(nodeId, group.title);
+        }
+      }
+      
+      // Extract checkpoint
       const type = node.type || node.class_type || "";
       if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) {
         const fullPath = node.widgets_values?.[0] || '';
@@ -509,6 +614,18 @@ class ComfyUIParser extends MetadataParserBase {
         metadata.checkpoint = fullPath.split(/[/\\]/).pop();
       }
     });
+    
+    // Update generationSteps with node titles and groups
+    if (metadata.generationSteps) {
+      metadata.generationSteps.forEach(step => {
+        if (nodeTitles.has(step.nodeId)) {
+          step.nodeTitle = nodeTitles.get(step.nodeId);
+        }
+        if (nodeGroups.has(step.nodeId)) {
+          step.nodeGroup = nodeGroups.get(step.nodeId);
+        }
+      });
+    }
   }
 }
 
