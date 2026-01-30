@@ -36,6 +36,7 @@ out/
 
 # AI development files - NEVER commit these
 AGENTS.md
+gemini.md
 .kiro/
 
 # Test sample files - developers should generate their own
@@ -47,3 +48,4 @@ tests/samples/*.jpeg
 # Test expected files - developers generate from their own samples
 tests/expected/*.json
 !tests/expected/sample/
+tests/expected/raw-metadata/

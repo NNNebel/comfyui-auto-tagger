@@ -35,6 +35,26 @@ node scripts/analyze-image.js tests/samples/comfyui_simple.webp
 
 ---
 
+### extract_metadata_standard.py (Python)
+
+Standard library based metadata extractor. Extracts raw metadata (chunks) from PNG and WebP files without external dependencies. This is useful for creating ground-truth data for tests or verifying raw file content.
+
+**Usage:**
+```bash
+python scripts/extract_metadata_standard.py
+```
+
+**Behavior:**
+- Scans `tests/samples/` directory for `.png` and `.webp` files.
+- Extracts standard text chunks (`tEXt`, `iTXt`) and private chunks (`comf`) from PNGs.
+- Extracts `EXIF` and `XMP` metadata from WebPs.
+- Saves raw metadata as JSON files in `tests/expected/raw-metadata/`.
+
+**Output:**
+- JSON files named like `<filename>_raw.json` in `tests/expected/raw-metadata/`.
+
+---
+
 ### inspect-png-chunks.js
 
 Low-level PNG chunk inspector. Displays all chunks in a PNG file with their types, lengths, and preview of text chunks.
@@ -153,12 +173,14 @@ node scripts/inspect-node-detail.js tests/samples/comfyui_multi.png 3
 
 ### Creating Test Expected Outputs
 
-When adding new test samples, generate expected output files:
+1. **Generate raw metadata (Ground Truth):**
+   ```bash
+   python scripts/extract_metadata_standard.py
+   ```
+   This creates raw JSON files in `tests/expected/raw-metadata/`.
 
-```bash
-# Generate expected output for a sample image
-node scripts/analyze-image.js tests/samples/comfyui_simple.png tests/expected/comfyui_simple_png.json
-```
+2. **Create expected output JSON:**
+   Manually create or update files in `tests/expected/sample/` based on the content of raw metadata files.
 
 ### Debugging Parser Issues
 
