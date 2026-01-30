@@ -37,6 +37,7 @@
         "processingItem": "[Processing] {{name}}",
         "progress": "... {{progress}} / {{total}} items processed ...",
         "success": "[Success] {{name}}",
+        "noMetadata": "[Skip] {{name}}: No metadata found (may not be ComfyUI/A1111 format).",
         "skip": "[Skip] {{name}}: No updates to perform.",
         "cancelled": "Process cancelled. (Success: {{successCount}}, Caution: {{cautionCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
         "completed": "All processes completed. (Success: {{successCount}}, Caution: {{cautionCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
