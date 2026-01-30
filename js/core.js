@@ -97,43 +97,44 @@ function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null
     });
     
     // Build annotation using new generation steps format
-    let lines = ['[Generation Info]'];
+    let lines = [];
     
-    // Warning for low-confidence base sampler detection
-    if (meta.sampler_fallback) {
-        lines.push(`[Warning] ${t('log.caution.sampler_fallback')}`);
+    // Add header only if we have content to show
+    let hasContent = false;
+    
+    // Check if we have any content to display
+    if (meta.sampler_fallback || 
+        (settings.checkpoint && meta.checkpoint) || 
+        (settings.lora && meta.loras) ||
+        (meta.generationSteps && meta.generationSteps.length > 0)) {
+        hasContent = true;
     }
     
-    if (settings.checkpoint && meta.checkpoint) {
-        lines.push(`${t('ui.option.checkpoint')}: ${getBaseName(meta.checkpoint)}`);
-    }
-    if (settings.lora && meta.loras) {
-        lines.push(`${t('ui.option.lora')}: ${meta.loras.map(getBaseName).join(', ')}`);
+    if (hasContent) {
+        lines.push('[Generation Info]');
+        
+        // Warning for low-confidence base sampler detection
+        if (meta.sampler_fallback) {
+            lines.push(`[Warning] ${t('log.caution.sampler_fallback')}`);
+        }
+        
+        if (settings.checkpoint && meta.checkpoint) {
+            lines.push(`${t('ui.option.checkpoint')}: ${getBaseName(meta.checkpoint)}`);
+        }
+        if (settings.lora && meta.loras) {
+            lines.push(`${t('ui.option.lora')}: ${meta.loras.map(getBaseName).join(', ')}`);
+        }
     }
     
     // Use new generationSteps format if available
     if (meta.generationSteps && meta.generationSteps.length > 0) {
-        lines.push(''); // Empty line before steps
+        if (lines.length > 0) {
+            lines.push(''); // Empty line before steps
+        }
         
         meta.generationSteps.forEach((step, index) => {
-            // Determine step label
-            let stepLabel = '';
-            if (step.nodeTitle) {
-                stepLabel = step.nodeTitle;
-            } else if (step.nodeGroup) {
-                stepLabel = `${step.nodeGroup} (ID: ${step.nodeId})`;
-            } else {
-                stepLabel = `${step.nodeType || 'Sampler'} (ID: ${step.nodeId})`;
-            }
-            
-            // Add role indicator
-            if (step.isBase) {
-                stepLabel = `Base Sampler - ${stepLabel}`;
-            } else {
-                stepLabel = `Step ${index + 1} - ${stepLabel}`;
-            }
-            
-            lines.push(`[${stepLabel}]`);
+            // Collect step content first to check if there's anything to display
+            const stepContent = [];
             
             // Add checkpoint for this step if different from global or if it's the only step
             if (settings.checkpoint && step.checkpoint) {
@@ -142,14 +143,14 @@ function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null
                 
                 // Show checkpoint if: 1) it's different from global, 2) there's only one step, or 3) no global checkpoint
                 if (!globalCheckpoint || stepCheckpoint !== globalCheckpoint || meta.generationSteps.length === 1) {
-                    lines.push(`${t('ui.option.checkpoint')}: ${stepCheckpoint}`);
+                    stepContent.push(`${t('ui.option.checkpoint')}: ${stepCheckpoint}`);
                 }
             }
             
             // Add parameters for this step
             const params = [];
             if (settings.seed && step.seed !== undefined) {
-                lines.push(`${t('ui.option.seed')}: ${step.seed}`);
+                stepContent.push(`${t('ui.option.seed')}: ${step.seed}`);
             }
             if (settings.steps && step.steps !== undefined) params.push(`${t('ui.option.steps')}: ${step.steps}`);
             if (settings.cfg && step.cfg !== undefined) params.push(`CFG: ${Number(step.cfg).toFixed(1)}`);
@@ -157,39 +158,62 @@ function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null
             if (settings.scheduler && step.scheduler) params.push(`Scheduler: ${step.scheduler}`);
             
             if (params.length > 0) {
-                lines.push(params.join(' | '));
+                stepContent.push(params.join(' | '));
             }
             
             // Add prompts for this step (no deduplication - show actual values)
             if (settings.positive && step.positive) {
-                lines.push(`Positive: ${step.positive}`);
+                stepContent.push(`Positive: ${step.positive}`);
             }
             if (settings.negative && step.negative) {
-                lines.push(`Negative: ${step.negative}`);
+                stepContent.push(`Negative: ${step.negative}`);
             }
             
-            // Add empty line between steps (except after last step)
-            if (index < meta.generationSteps.length - 1) {
-                lines.push('');
+            // Only add step label and content if there's something to display
+            if (stepContent.length > 0) {
+                // Determine step label
+                let stepLabel = '';
+                if (step.nodeTitle) {
+                    stepLabel = step.nodeTitle;
+                } else if (step.nodeGroup) {
+                    stepLabel = `${step.nodeGroup} (ID: ${step.nodeId})`;
+                } else {
+                    stepLabel = `${step.nodeType || 'Sampler'} (ID: ${step.nodeId})`;
+                }
+                
+                // Add role indicator
+                if (step.isBase) {
+                    stepLabel = `Base Sampler - ${stepLabel}`;
+                } else {
+                    stepLabel = `Step ${index + 1} - ${stepLabel}`;
+                }
+                
+                lines.push(`[${stepLabel}]`);
+                lines.push(...stepContent);
+                
+                // Add empty line between steps (except after last step)
+                if (index < meta.generationSteps.length - 1) {
+                    lines.push('');
+                }
             }
         });
     } else {
         // Fallback to old format
-        lines.push('');
+        let fallbackLines = [];
         
         // Base Sampler Info
-        if (settings.seed && meta.seed !== undefined) lines.push(`${t('ui.option.seed')}: ${meta.seed}`);
+        if (settings.seed && meta.seed !== undefined) fallbackLines.push(`${t('ui.option.seed')}: ${meta.seed}`);
         
         let baseParams = [];
         if (settings.steps && meta.steps) baseParams.push(`${t('ui.option.steps')}: ${meta.steps}`);
         if (settings.cfg && meta.cfg) baseParams.push(`CFG: ${Number(meta.cfg).toFixed(1)}`);
         if (settings.sampler && meta.sampler) baseParams.push(`${t('ui.option.sampler')}: ${meta.sampler}`);
         if (settings.scheduler && meta.scheduler) baseParams.push(`Scheduler: ${meta.scheduler}`);
-        if (baseParams.length) lines.push(baseParams.join(' | '));
+        if (baseParams.length) fallbackLines.push(baseParams.join(' | '));
 
         // All Samplers Info (for notes only)
         if (meta.extra_samplers && meta.extra_samplers.length > 0) {
-            lines.push('', '[All Samplers]');
+            fallbackLines.push('', '[All Samplers]');
             
             const allSeeds = [];
             const allSteps = [];
@@ -206,24 +230,32 @@ function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null
             });
             
             if (settings.seed && allSeeds.length > 0) {
-                lines.push(`${t('ui.option.seed')}: ${allSeeds.join(', ')}`);
+                fallbackLines.push(`${t('ui.option.seed')}: ${allSeeds.join(', ')}`);
             }
             if (settings.steps && allSteps.length > 0) {
-                lines.push(`${t('ui.option.steps')}: ${allSteps.join(', ')}`);
+                fallbackLines.push(`${t('ui.option.steps')}: ${allSteps.join(', ')}`);
             }
             if (settings.cfg && allCfgs.length > 0) {
-                lines.push(`CFG: ${allCfgs.map(c => Number(c).toFixed(1)).join(', ')}`);
+                fallbackLines.push(`CFG: ${allCfgs.map(c => Number(c).toFixed(1)).join(', ')}`);
             }
             if (settings.sampler && allSamplers.length > 0) {
-                lines.push(`${t('ui.option.sampler')}: ${allSamplers.join(', ')}`);
+                fallbackLines.push(`${t('ui.option.sampler')}: ${allSamplers.join(', ')}`);
             }
             if (settings.scheduler && allSchedulers.length > 0) {
-                lines.push(`Scheduler: ${allSchedulers.join(', ')}`);
+                fallbackLines.push(`Scheduler: ${allSchedulers.join(', ')}`);
             }
         }
         
-        if (settings.positive && meta.positive) lines.push('', '[Positive Prompt]', meta.positive);
-        if (settings.negative && meta.negative) lines.push('', '[Negative Prompt]', meta.negative);
+        if (settings.positive && meta.positive) fallbackLines.push('', '[Positive Prompt]', meta.positive);
+        if (settings.negative && meta.negative) fallbackLines.push('', '[Negative Prompt]', meta.negative);
+        
+        // Only add fallback content if we have something to show
+        if (fallbackLines.length > 0) {
+            if (lines.length > 0) {
+                lines.push(''); // Empty line before fallback content
+            }
+            lines.push(...fallbackLines);
+        }
     }
     
     return { 

@@ -55,7 +55,11 @@ class A1111Parser extends MetadataParserBase {
         positiveLines.push(lines[i]);
         i++;
       }
-      metadata.positive = positiveLines.join('\n').trim();
+      // Join lines, preserving structure but trimming each line
+      metadata.positive = positiveLines
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join('\n');
 
       // Extract negative prompt (lines after "Negative prompt:")
       if (i < lines.length && lines[i].startsWith('Negative prompt:')) {
@@ -68,8 +72,15 @@ class A1111Parser extends MetadataParserBase {
           negativeLines.push(lines[i]);
           i++;
         }
-        metadata.negative = negativeLines.join('\n').trim();
+        // Join lines, preserving structure but trimming each line
+        metadata.negative = negativeLines
+          .map(line => line.trim())
+          .filter(line => line.length > 0)
+          .join('\n');
       }
+
+      // Store metadata temporarily for LoRA extraction from prompts
+      this.currentMetadata = metadata;
 
       // Parse parameters line (contains Steps, Sampler, CFG, Seed, Model, etc.)
       const paramLine = lines.find(line => line.includes('Steps:'));
@@ -77,6 +88,9 @@ class A1111Parser extends MetadataParserBase {
         const params = this.parseParameterLine(paramLine);
         Object.assign(metadata, params);
       }
+
+      // Clean up temporary reference
+      this.currentMetadata = null;
     } catch (e) {
       console.error("A1111 parsing failed:", e);
     }
@@ -95,6 +109,7 @@ class A1111Parser extends MetadataParserBase {
     const params = {};
     const adetailer = {};
     const loraHashes = {};
+    const loras = []; // Array for consistency with ComfyUI format
     
     // Split by comma, but be careful with quoted values
     const pairs = this.splitParameters(line);
@@ -122,9 +137,15 @@ class A1111Parser extends MetadataParserBase {
       // Handle Lora hashes
       if (key === 'Lora hashes') {
         // Parse "name1: hash1, name2: hash2" format
-        const loraMatches = value.matchAll(/([^:,]+):\s*([^,]+)/g);
+        // Improved regex: match name (non-colon), colon, hash (non-comma)
+        const loraMatches = value.matchAll(/([^:,]+):\s*([^, ]+)/g);
         for (const match of loraMatches) {
-          loraHashes[match[1].trim()] = match[2].trim();
+          const name = match[1].trim();
+          const hash = match[2].trim();
+          loraHashes[name] = hash;
+          if (!loras.includes(name)) {
+            loras.push(name);
+          }
         }
         continue;
       }
@@ -189,12 +210,41 @@ class A1111Parser extends MetadataParserBase {
       }
     }
     
-    // Add ADetailer and Lora hashes if present
+    // Extract LoRA names from prompts if available
+    // Handles <lora:name:weight> format in positive/negative prompts
+    if (this.currentMetadata) {
+      const promptTexts = [];
+      if (this.currentMetadata.positive) {
+        promptTexts.push(this.currentMetadata.positive);
+      }
+      if (this.currentMetadata.negative) {
+        promptTexts.push(this.currentMetadata.negative);
+      }
+      
+      for (const promptText of promptTexts) {
+        const promptLoras = promptText.matchAll(/<lora:([^:]+):[^>]+>/g);
+        for (const match of promptLoras) {
+          const name = match[1].trim();
+          if (!loras.includes(name)) {
+            loras.push(name);
+          }
+        }
+      }
+    }
+    
+    // Add ADetailer if present
     if (Object.keys(adetailer).length > 0) {
       params.adetailer = adetailer;
     }
+    
+    // Add Lora hashes if present
     if (Object.keys(loraHashes).length > 0) {
       params.lora_hashes = loraHashes;
+    }
+    
+    // Add loras array for consistency with ComfyUI format
+    if (loras.length > 0) {
+      params.loras = loras;
     }
     
     return params;

@@ -30,47 +30,18 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
     * **Notes (Annotation)**: Save full prompts and parameters in the Note section for easy copying.
 * **Selective Import**: Toggle specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
 * **Batch Processing**: Efficiently process multiple images with a progress bar.
+* **Force Delete Mode**: Remove all tags and notes from selected items without analysis by holding **Shift** while clicking the "Delete Info" button.
 * **Utility**: Includes a "Delete Info" button to remove tags/notes added by this plugin.
 
 ### 📸 Screenshots
-
-<p align="center">
-  <img src="assets/processing_movie_full.gif" alt="Processing Demo" width="100%">
-</p>
-
-| Output Result | Settings UI |
-| :---: | :---: |
-| <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Settings Window"> |
-
-### 📦 Installation
-
-1.  Download the latest `.eagleplugin` file from the [Releases page](https://github.com/NNNebel/comfyui-auto-tagger/releases).
-2.  Launch Eagle.
-3.  Drag and drop the `.eagleplugin` file into the Eagle window.
-4.  Restart Eagle if prompted.
-
-### 🚀 Usage
-
-1.  Select one or more AI-generated images (ComfyUI/A1111/Civitai) in Eagle.
-2.  Right-click and select **"Plugins"** > **"ComfyUI Auto Tagger"**.
-3.  In the popup window:
-    * **Output Settings**: Choose whether to add to "Tags", "Notes", or both.
-    * **Target**: Check the metadata items you want to extract (Checkpoint, LoRA, Prompt, etc.).
-4.  Click **"Start Tagging"**.
-
-### 🛠️ Development
-
-This plugin parses PNG tEXt/comf chunks and WebP EXIF/XMP data to retrieve AI generation metadata without external dependencies.
-* **Supported Formats**: ComfyUI, A1111 (Stable Diffusion WebUI), Civitai
-* **Debug Mode**: Enable the checkbox in the top-right corner to view detailed logs.
-
+...
 #### ComfyUI Multi-Sampler Handling
 
-For complex ComfyUI workflows with multiple samplers (HiresFix, FaceDetailer, etc.), the plugin uses the following logic:
+For complex ComfyUI workflows with multiple samplers (HiresFix, FaceDetailer, Refiners, etc.), the plugin uses an advanced detection algorithm:
 
-* **Seed (Tags)**: Extracts the seed from the **first KSampler in the workflow** (the base sampler that determines the composition). Only this seed is added as a tag for consistency.
-* **Seed (Notes)**: In the notes section, displays the seed from the **first KSampler** along with seeds from all other samplers for reference.
-* **Prompts**: When multiple prompts exist (HiresFix, partial refinement, etc.), all prompts are **merged with duplicates removed** to improve searchability.
+* **Base Sampler Detection**: Automatically identifies the primary sampler by tracing the latent chain back from the output nodes to the source. The seed, steps, and CFG from this "Base Sampler" are used for tagging.
+* **Detailed Generation Steps (Notes)**: In the Notes section, the plugin now records detailed information for **every generation step**, including individual seeds, samplers, and specific prompts used in each stage.
+* **Prompt Merging**: All prompts from different stages are merged with duplicates removed for Eagle tags, while individual prompts are preserved in the Notes for reference.
 
 ### ⚠️ Disclaimer & Bug Reports
 
@@ -110,6 +81,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
     * **メモ（アノテーション）**: プロンプトやパラメータをメモ欄に保存し、簡単にコピー可能
 * **選択的取り込み**: チェックボックスで特定の項目のみ取り込み可能（例: チェックポイントは取り込むがSeedは無視）
 * **バッチ処理**: 複数画像を効率的に処理、進捗バー表示
+* **強制削除モード**: 「情報を削除」ボタンを **Shiftキー** を押しながらクリックすることで、メタデータ解析を行わずに選択アイテムの全てのタグとメモを削除できます。
 * **ユーティリティ**: このプラグインが追加したタグ・メモを削除する機能付き
 
 ### 📸 スクリーンショット
@@ -146,11 +118,11 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 #### ComfyUI マルチサンプラー処理
 
-複数のサンプラーを含む複雑なComfyUIワークフロー（HiresFix、FaceDetailerなど）では、以下のロジックで処理します：
+複数のサンプラーを含む複雑なComfyUIワークフロー（HiresFix、FaceDetailer、リファイナーなど）では、高度な検出アルゴリズムを使用して処理します：
 
-* **Seed値（タグ）**: **ワークフロー内の最初のKSampler**（構図を決定づけるベースサンプラー）のSeed値を抽出します。一貫性のため、このSeed値のみがタグとして追加されます。
-* **Seed値（メモ）**: メモ欄には、**最初のKSampler**のSeed値と共に、他のすべてのサンプラーのSeed値も参照用に表示されます。
-* **プロンプト**: 複数のプロンプトが存在する場合（HiresFix、部分修正など）、検索性を高めるため**重複を排除してすべてマージ**されます。
+* **ベースサンプラーの自動判別**: 画像出力ノードからソースまで潜在空間のチェーンを逆算し、構図を決定づける主要なサンプラー（ベースサンプラー）を自動的に特定します。タグ付けにはこのサンプラーのSeed、Steps、CFGが使用されます。
+* **詳細な生成ステップ（メモ）**: メモ欄には、**全ての生成ステップ**の詳細情報が記録されるようになりました。各ステージで使用された個別のSeed、サンプラー、プロンプトを確認できます。
+* **プロンプトのマージ**: タグ用には全ステージのプロンプトが重複を排除してマージされますが、メモ欄には参照用に各ステップごとの個別プロンプトが保持されます。
 
 ### ⚠️ 免責事項・不具合報告
 

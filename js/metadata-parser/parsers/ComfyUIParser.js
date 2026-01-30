@@ -567,13 +567,35 @@ class ComfyUIParser extends MetadataParserBase {
           metadata.checkpoint = ckptName.split(/[/\\]/).pop();
         }
       }
-      if (node.class_type.includes("LoraLoader")) {
-        const l = resolve(id, "lora_name");
-        if (l) {
-          loras.add(l.split(/[/\\]/).pop());
+      
+      // Extract LoRA from LoraLoader nodes (standard and custom variants)
+      if (node.class_type && node.class_type.toLowerCase().includes("lora")) {
+        // Standard LoraLoader node
+        if (node.class_type.includes("LoraLoader")) {
+          const l = resolve(id, "lora_name");
+          if (l) {
+            loras.add(l.split(/[/\\]/).pop());
+          }
+        }
+        // Custom LoRA loader variants (e.g., "Lora Loader Stack (rgthree)")
+        else if (node.inputs) {
+          // Check for common LoRA input keys
+          for (const inputKey in node.inputs) {
+            if (inputKey.toLowerCase().includes("lora")) {
+              const loraValue = resolve(id, inputKey);
+              if (loraValue && typeof loraValue === 'string' && loraValue !== 'None') {
+                // Extract filename from path
+                const filename = loraValue.split(/[/\\]/).pop();
+                if (filename && filename.toLowerCase().endsWith('.safetensors')) {
+                  loras.add(filename);
+                }
+              }
+            }
+          }
         }
       }
     }
+    
     if (loras.size > 0) metadata.loras = Array.from(loras);
   }
 

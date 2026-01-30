@@ -2,14 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.2-pre] - 2026-01-27
+## [1.3.2] - 2026-01-30
 
 ### 🇬🇧 English
-[!IMPORTANT]
-### ⚠️ Pre-release Notice (Untested on Eagle App)
-This is a **pre-release** version. While I have implemented a comprehensive test suite (200+ tests) covering the new metadata parsers, I currently do not have access to an environment where the Eagle app is installed. Therefore, **the actual behavior within the Eagle interface remains untested.**
-If you encounter any issues, please report them on the GitHub Issue. Your feedback is essential to making this a stable release!
-
 #### 🎉 New Features
 - **Stable Diffusion WebUI (A1111) Support**:
   - Added official support for Automatic1111, Forge, and other A1111-based WebUI generated images.
@@ -28,6 +23,14 @@ If you encounter any issues, please report them on the GitHub Issue. Your feedba
   - Improved distance calculation for samplers in complex workflows (HiresFix, FaceDetailer, etc.).
   - Special handling for DetailerForEach and other nodes without `latent_image` input.
   - More accurate base sampler selection in workflows with multiple refinement stages.
+- **Enhanced LoRA Extraction**:
+  - Improved detection to handle both standard LoraLoader nodes and custom extensions (e.g., "Lora Loader Stack (rgthree)").
+  - Detects LoRA files from any node with "lora" in input keys.
+  - Added support for extracting LoRA information from A1111 images (both from "Lora hashes" parameter and prompt tags).
+
+#### 🐛 Bug Fixes
+- Fixed ComfyUI annotation generation to skip "[Generation Info]" label when no samplers are found.
+- Fixed ComfyUI annotation to skip step labels when no content is available for that step (e.g., when only LoRA is enabled).
 
 #### 🔧 Internal Refactoring
 - **Metadata Parser Architecture Refactoring**:
@@ -37,18 +40,10 @@ If you encounter any issues, please report them on the GitHub Issue. Your feedba
   - Removed duplicate code from `core.js` and delegated parsing to the new architecture.
 
 #### 🧪 Testing
-- Added comprehensive test suite with 200+ tests covering:
-  - Unit tests for all parser components
-  - Integration tests with real sample images (ComfyUI, A1111, Civitai)
-  - Property-based tests for robustness
-- Added debug scripts for troubleshooting metadata extraction issues.
+- Added comprehensive test suite with 200+ tests covering unit tests, integration tests, and property-based tests.
+- Improved test suite to separate sample data (fictional) from actual test expectations (real data), ensuring safer and more robust testing.
 
 ### 🇯🇵 日本語
-[!IMPORTANT]
-### ⚠️ プレリリースのお知らせ（Eagleアプリでは未検証）
-このバージョンは**プレリリース版**です。新しいメタデータパーサーに対して200以上のテストコードを実行し動作確認を行っていますが、現在開発者がEagleアプリ本体を起動できる環境にないため、**Eagle上での実際の挙動については未テストです。**
-もし動作に不具合があれば、GitHubのIssueにてご報告いただけると助かります。皆様のフィードバックをもとに正式版へとアップデートします。
-
 #### 🎉 新機能
 - **Stable Diffusion WebUI (A1111) 対応**:
   - Automatic1111、Forge、その他A1111ベースのWebUIで生成された画像に正式対応しました。
@@ -67,6 +62,14 @@ If you encounter any issues, please report them on the GitHub Issue. Your feedba
   - 複雑なワークフロー（HiresFix、FaceDetailerなど）でのサンプラー距離計算を改善しました。
   - DetailerForEachなど`latent_image`入力を持たないノードの特別処理を追加しました。
   - 複数のリファインメント段階を持つワークフローでのベースサンプラー選択がより正確になりました。
+- **LoRA抽出の強化**:
+  - 標準的な LoraLoader ノードとカスタム拡張（例："Lora Loader Stack (rgthree)"）の両方に対応し、検出精度を改善しました。
+  - "lora" を含む任意のノードの入力キーから LoRA ファイルを検出できるようになりました。
+  - A1111 画像からの LoRA 情報抽出に対応しました（"Lora hashes" パラメータとプロンプトタグの両方から抽出）。
+
+#### 🐛 バグ修正
+- ComfyUI のアノテーション生成で、サンプラーが見つからない場合に "[Generation Info]" ラベルだけが表示される問題を修正しました。
+- ComfyUI のアノテーション生成で、ステップにコンテンツがない場合（例：LoRA のみ有効な場合）にステップラベルを表示しないように修正しました。
 
 #### 🔧 内部リファクタリング
 - **メタデータパーサーのアーキテクチャ刷新**:
@@ -76,11 +79,8 @@ If you encounter any issues, please report them on the GitHub Issue. Your feedba
   - `core.js`から重複コードを削除し、新しいアーキテクチャにパース処理を委譲しました。
 
 #### 🧪 テスト
-- 200以上のテストを含む包括的なテストスイートを追加:
-  - 全パーサーコンポーネントのユニットテスト
-  - 実際のサンプル画像を使用した統合テスト（ComfyUI、A1111、Civitai）
-  - 堅牢性を確認するプロパティベーステスト
-- メタデータ抽出の問題をトラブルシューティングするためのデバッグスクリプトを追加しました。
+- 200以上のテストを含む包括的なテストスイート（ユニットテスト、統合テスト、プロパティテスト）を追加しました。
+- テスト環境を整備し、公開用サンプルデータ（架空）とテスト実行用データ（実データ）を分離することで、安全性と信頼性を向上させました。
 
 ## [1.3.1] - 2026-01-10
 
