@@ -1,4 +1,7 @@
 // js/metadata-parser/binary-extraction/FormatDetector.js
+// Universal module (Browser + Node.js)
+(function(global) {
+  'use strict';
 
 /**
  * FormatDetector
@@ -56,12 +59,12 @@ class FormatDetector {
   }
 }
 
-// Node.js/CommonJS export
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = FormatDetector;
-}
+  // Export for both browser and Node.js environments
+  if (typeof window !== 'undefined') {
+    window.FormatDetector = FormatDetector;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = FormatDetector;
+  }
 
-// ES Module export
-if (typeof exports !== 'undefined') {
-  exports.FormatDetector = FormatDetector;
-}
+})(typeof window !== 'undefined' ? window : global);

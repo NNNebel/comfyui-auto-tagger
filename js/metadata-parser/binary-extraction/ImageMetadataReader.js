@@ -1,4 +1,7 @@
 // js/metadata-parser/binary-extraction/ImageMetadataReader.js
+// Universal module (Browser + Node.js)
+(function(global) {
+  'use strict';
 
 /**
  * ImageMetadataReader
@@ -287,12 +290,12 @@ class ImageMetadataReader {
   }
 }
 
-// Node.js/CommonJS export
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ImageMetadataReader;
-}
+  // Export for both browser and Node.js environments
+  if (typeof window !== 'undefined') {
+    window.ImageMetadataReader = ImageMetadataReader;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ImageMetadataReader;
+  }
 
-// ES Module export
-if (typeof exports !== 'undefined') {
-  exports.ImageMetadataReader = ImageMetadataReader;
-}
+})(typeof window !== 'undefined' ? window : global);

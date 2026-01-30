@@ -1,0 +1,56 @@
+name: "🐛 Bug Report"
+description: "Report a reproducible bug or error"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use the [Feature Request] template for new ideas.
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      description: "What is the problem?"
+    validations:
+      required: true
+  - type: input
+    id: software_info
+    attributes:
+      label: "Image Generation Software & Version"
+      description: "Enter the software used to generate images and its version (e.g., ComfyUI v0.10.0, SD WebUI v1.7.0)."
+      placeholder: "e.g., ComfyUI v0.10.0"
+    validations:
+      required: true
+  - type: textarea
+    id: custom_nodes
+    attributes:
+      label: "Custom Nodes"
+      description: "List any relevant custom nodes if applicable."
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Steps to Reproduce"
+      placeholder: |
+        1. Run ...
+        2. Click ...
+        3. Error
+    validations:
+      required: true
+  - type: textarea
+    id: debug_log
+    attributes:
+      label: "Debug Output / Logs"
+      description: |
+        1. Enable the --debug option.
+        2. Run the process.
+        3. Locate the log file at the path shown in your terminal/console.
+        4. Copy and paste the content here, or drag and drop the log file.
+    validations:
+      required: true
+  - type: checkboxes
+    id: image_upload
+    attributes:
+      label: "Sample Images"
+      options:
+        - label: "I have attached the relevant image file/screenshot that causes the error."
+          required: true

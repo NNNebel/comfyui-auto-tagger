@@ -148,6 +148,21 @@
             color: #ffc107;
             font-weight: bold;
         }
+
+        #log {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--log-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            min-height: calc(1.5em * 5); /* Minimum 5 lines visible */
+            max-height: calc(1.5em * 5); /* Maximum 5 lines visible */
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body>
@@ -199,6 +214,10 @@
         <div class="option-group">
             <input type="checkbox" id="chk-sampler">
             <label for="chk-sampler">Sampler</label>
+        </div>
+        <div class="option-group">
+            <input type="checkbox" id="chk-scheduler">
+            <label for="chk-scheduler">Scheduler</label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-steps">

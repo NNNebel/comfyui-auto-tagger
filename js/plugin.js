@@ -76,6 +76,7 @@ Promise.all([
         negative: document.getElementById('chk-negative'),
         seed: document.getElementById('chk-seed'),
         sampler: document.getElementById('chk-sampler'),
+        scheduler: document.getElementById('chk-scheduler'),
         steps: document.getElementById('chk-steps'),
         cfg: document.getElementById('chk-cfg'),
         addTags: document.getElementById('chk-add-tags'),
@@ -216,8 +217,8 @@ Promise.all([
                     return 'skipped';
                 }
 
-                // Pass buffer and mimeType to processMetadata for proper parsing
-                const res = processMetadata(null, settings, t, buffer, mimeType);
+                // Pass parsed metadata directly to processMetadata
+                const res = processMetadata(metadata, settings, t);
                 
                 let changed = false;
                 if (settings.addTags && res.tags.size > 0) {
@@ -258,7 +259,11 @@ Promise.all([
         const result = await processItemsInChunks(items, processItem);
         log(isCancelled ? 'log.cancelled' : 'log.completed', result);
         setUIState(false); 
-        eagle.item.trigger("update", items);
+        
+        // Trigger update if API supports it
+        if (typeof eagle.item.trigger === 'function') {
+            eagle.item.trigger("update", items);
+        }
     }
 
     async function removeInfo(event) {
@@ -313,8 +318,8 @@ Promise.all([
                     const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui');
                     
                     if (metadata) {
-                        // Pass buffer and mimeType to processMetadata for proper parsing
-                        const res = processMetadata(null, allSettingsOn, t, buffer, mimeType);
+                        // Pass parsed metadata directly to processMetadata
+                        const res = processMetadata(metadata, allSettingsOn, t);
                         
                         if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
                             const beforeCount = item.tags.length;
@@ -353,7 +358,11 @@ Promise.all([
         else log('log.delete.completed', { removedCount: result.successCount, skippedCount: result.skippedCount, errorCount: result.errorCount });
         
         setUIState(false); // UIロック解除
-        eagle.item.trigger("update", items);
+        
+        // Trigger update if API supports it
+        if (typeof eagle.item.trigger === 'function') {
+            eagle.item.trigger("update", items);
+        }
     }
 
     // --- 6. 設定保存・復元 ---

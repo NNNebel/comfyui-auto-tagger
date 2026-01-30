@@ -1,3 +1,8 @@
+// js/metadata-parser/parsers/MetadataParser.js
+// Universal module (Browser + Node.js)
+(function(global) {
+  'use strict';
+
 /**
  * @typedef {Object} ParsedMetadata
  * @property {string} format - Format name ('comfyui', 'a1111')
@@ -41,4 +46,12 @@ class MetadataParser {
   }
 }
 
-module.exports = MetadataParser;
+  // Export for both browser and Node.js environments
+  if (typeof window !== 'undefined') {
+    window.MetadataParser = MetadataParser;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = MetadataParser;
+  }
+
+})(typeof window !== 'undefined' ? window : global);

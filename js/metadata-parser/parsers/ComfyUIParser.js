@@ -1,10 +1,22 @@
-const MetadataParser = require('./MetadataParser');
+// ComfyUIParser.js - Universal module (Browser + Node.js)
+(function(global) {
+  'use strict';
+
+  // Get MetadataParser reference for both environments
+  var MetadataParserBase;
+  if (typeof window !== 'undefined' && window.MetadataParser) {
+    MetadataParserBase = window.MetadataParser;
+  } else if (typeof require !== 'undefined') {
+    MetadataParserBase = require('./MetadataParser');
+  } else {
+    throw new Error('MetadataParser not found');
+  }
 
 /**
  * Parser for ComfyUI metadata format.
  * Extracts metadata from ComfyUI's prompt and workflow JSON structures.
  */
-class ComfyUIParser extends MetadataParser {
+class ComfyUIParser extends MetadataParserBase {
   /**
    * Get the format name this parser handles.
    * @returns {string} Format identifier 'comfyui'
@@ -500,4 +512,12 @@ class ComfyUIParser extends MetadataParser {
   }
 }
 
-module.exports = ComfyUIParser;
+  // Export for both browser and Node.js environments
+  if (typeof window !== 'undefined') {
+    window.ComfyUIParser = ComfyUIParser;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ComfyUIParser;
+  }
+
+})(typeof window !== 'undefined' ? window : global);

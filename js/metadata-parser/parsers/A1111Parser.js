@@ -1,4 +1,16 @@
-const MetadataParser = require('./MetadataParser');
+// A1111Parser.js - Universal module (Browser + Node.js)
+(function(global) {
+  'use strict';
+
+  // Get MetadataParser reference for both environments
+  var MetadataParserBase;
+  if (typeof window !== 'undefined' && window.MetadataParser) {
+    MetadataParserBase = window.MetadataParser;
+  } else if (typeof require !== 'undefined') {
+    MetadataParserBase = require('./MetadataParser');
+  } else {
+    throw new Error('MetadataParser not found');
+  }
 
 /**
  * Parser for Automatic1111 (A1111) metadata format.
@@ -9,7 +21,7 @@ const MetadataParser = require('./MetadataParser');
  * Negative prompt: negative prompt text
  * Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 123456, Size: 512x512, Model: model_name"
  */
-class A1111Parser extends MetadataParser {
+class A1111Parser extends MetadataParserBase {
   /**
    * Get the format name this parser handles.
    * @returns {string} Format identifier 'a1111'
@@ -255,4 +267,12 @@ class A1111Parser extends MetadataParser {
   }
 }
 
-module.exports = A1111Parser;
+  // Export for both browser and Node.js environments
+  if (typeof window !== 'undefined') {
+    window.A1111Parser = A1111Parser;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = A1111Parser;
+  }
+
+})(typeof window !== 'undefined' ? window : global);

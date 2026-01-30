@@ -1,9 +1,12 @@
 // js/core.js
+// Universal module (Browser + Node.js)
 
-// Import MetadataService for parsing
+// Load MetadataService for Node.js environment
 let MetadataService;
-if (typeof require !== 'undefined') {
+if (typeof window === 'undefined' && typeof require !== 'undefined') {
   MetadataService = require('./metadata-parser/integration/MetadataService');
+} else if (typeof window !== 'undefined') {
+  MetadataService = window.MetadataService;
 }
 
 // --- Data Formatting Functions ---
@@ -100,12 +103,12 @@ function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null
     if (settings.steps && meta.steps) baseParams.push(`${t('ui.option.steps')}: ${meta.steps}`);
     if (settings.cfg && meta.cfg) baseParams.push(`CFG: ${Number(meta.cfg).toFixed(1)}`);
     if (settings.sampler && meta.sampler) baseParams.push(`${t('ui.option.sampler')}: ${meta.sampler}`);
-    if (meta.scheduler) baseParams.push(`Scheduler: ${meta.scheduler}`);
+    if (settings.scheduler && meta.scheduler) baseParams.push(`Scheduler: ${meta.scheduler}`);
     if (baseParams.length) lines.push(baseParams.join(' | '));
 
     // All Samplers Info (for notes only)
     if (meta.extra_samplers && meta.extra_samplers.length > 0) {
-        lines.push('\n[All Samplers]');
+        lines.push('', '[All Samplers]');
         
         const allSeeds = [];
         const allSteps = [];
@@ -133,13 +136,13 @@ function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null
         if (settings.sampler && allSamplers.length > 0) {
             lines.push(`${t('ui.option.sampler')}: ${allSamplers.join(', ')}`);
         }
-        if (allSchedulers.length > 0) {
+        if (settings.scheduler && allSchedulers.length > 0) {
             lines.push(`Scheduler: ${allSchedulers.join(', ')}`);
         }
     }
     
-    if (settings.positive && meta.positive) lines.push(`\n[Positive Prompt]\n${meta.positive}`);
-    if (settings.negative && meta.negative) lines.push(`\n[Negative Prompt]\n${meta.negative}`);
+    if (settings.positive && meta.positive) lines.push('', '[Positive Prompt]', meta.positive);
+    if (settings.negative && meta.negative) lines.push('', '[Negative Prompt]', meta.negative);
     
     return { 
         tags: allTags, 

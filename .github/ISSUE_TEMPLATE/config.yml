@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 General Discussion / Q&A"
+    url: "https://github.com/NNNebel/comfyui-auto-tagger/discussions"
+    about: "For general questions or community chat."

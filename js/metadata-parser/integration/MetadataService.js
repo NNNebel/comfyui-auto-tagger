@@ -1,10 +1,28 @@
 // js/metadata-parser/integration/MetadataService.js
+// Universal module (Browser + Node.js)
+(function(global) {
+  'use strict';
 
-const ImageMetadataReader = require('../binary-extraction/ImageMetadataReader');
-const FormatDetector = require('../binary-extraction/FormatDetector');
-const ParserRegistry = require('../parsers/ParserRegistry');
-const ComfyUIParser = require('../parsers/ComfyUIParser');
-const A1111Parser = require('../parsers/A1111Parser');
+  // Get dependencies for both environments
+  var ImageMetadataReader, FormatDetector, ParserRegistry, ComfyUIParser, A1111Parser;
+  
+  if (typeof window !== 'undefined') {
+    // Browser environment
+    ImageMetadataReader = window.ImageMetadataReader;
+    FormatDetector = window.FormatDetector;
+    ParserRegistry = window.ParserRegistry;
+    ComfyUIParser = window.ComfyUIParser;
+    A1111Parser = window.A1111Parser;
+  } else if (typeof require !== 'undefined') {
+    // Node.js environment
+    ImageMetadataReader = require('../binary-extraction/ImageMetadataReader');
+    FormatDetector = require('../binary-extraction/FormatDetector');
+    ParserRegistry = require('../parsers/ParserRegistry');
+    ComfyUIParser = require('../parsers/ComfyUIParser');
+    A1111Parser = require('../parsers/A1111Parser');
+  } else {
+    throw new Error('Dependencies not found');
+  }
 
 /**
  * MetadataService
@@ -116,4 +134,13 @@ class MetadataService {
   }
 }
 
-module.exports = MetadataService;
+  // Export for both browser and Node.js environments
+  if (typeof window !== 'undefined') {
+    window.MetadataService = MetadataService;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = MetadataService;
+  }
+
+})(typeof window !== 'undefined' ? window : global);
+

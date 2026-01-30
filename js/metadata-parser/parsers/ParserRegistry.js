@@ -1,3 +1,8 @@
+// js/metadata-parser/parsers/ParserRegistry.js
+// Universal module (Browser + Node.js)
+(function(global) {
+  'use strict';
+
 /**
  * ParserRegistry manages parser registration and delegation.
  * It maintains a registry of format-specific parsers and delegates parsing
@@ -110,4 +115,12 @@ class ParserRegistry {
   }
 }
 
-module.exports = ParserRegistry;
+  // Export for both browser and Node.js environments
+  if (typeof window !== 'undefined') {
+    window.ParserRegistry = ParserRegistry;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ParserRegistry;
+  }
+
+})(typeof window !== 'undefined' ? window : global);
