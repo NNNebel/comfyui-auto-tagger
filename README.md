@@ -16,26 +16,29 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 
 ### ✨ Features
 
-* **Multi-Format Support**: 
-    * ComfyUI workflows (complex multi-sampler support)
-    * A1111 (Stable Diffusion WebUI) parameters
-    * Civitai image generation metadata
-* **Metadata Extraction**: Automatically detects and imports:
-    * Checkpoint Name
-    * LoRA Name
-    * Positive / Negative Prompts
-    * Generation Parameters (Seed, Steps, CFG, Sampler)
+* **Multi-Format Support**: Supports ComfyUI workflows (including complex multi-sampler), A1111 (Stable Diffusion WebUI) parameters, and Civitai generation metadata.
+* **Metadata Extraction**: Automatically detects Checkpoint, LoRA, Prompts (Positive/Negative), and Generation Parameters (Seed, Steps, CFG, Sampler).
 * **Flexible Output**:
-    * **Tags**: Add extracted info to Eagle tags (e.g., `#checkpoint_name`, `#lora_name`, `seed:12345`).
-    * **Notes (Annotation)**: Save full prompts and parameters in the Note section for easy copying.
-* **Selective Import**: Toggle specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
-* **Batch Processing**: Efficiently process multiple images with a progress bar.
-* **Force Delete Mode**: Remove all tags and notes from selected items without analysis by holding **Shift** while clicking the "Delete Info" button.
-* **Utility**: Includes a "Delete Info" button to remove tags/notes added by this plugin.
+    * **Tags**: Adds extracted info to Eagle tags (e.g., `#checkpoint_name`, `#lora_name`, `seed:12345`).
+    * **Notes (Annotation)**: Saves full prompts and parameters in the Note section for easy reference.
+* **Selective Import**: Allows toggling specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
+* **Batch Processing**: Efficiently processes multiple images with a progress bar.
+* **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
+* **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
+* **No External Dependencies**: Parses PNG/WebP chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
+* **Utility**: Provides a dedicated button to safely remove only the tags/notes added by this plugin.
 
 ### 📸 Screenshots
-...
-#### 🧠 Advanced Workflow Trace Logic
+
+<p align="center">
+  <img src="assets/processing_movie_full.gif" alt="Processing Demo" width="100%">
+</p>
+
+| Output Result | Settings UI |
+| :---: | :---: |
+| <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Settings Window"> |
+
+### 🧠 Advanced Workflow Trace Logic
 
 Unlike simple metadata readers, this plugin dynamically analyzes the ComfyUI node graph to trace the actual execution path leading to the final image. Even within a massive "All-in-One" workflow, it accurately identifies and extracts parameters from the nodes that contributed to the generation.
 
@@ -71,22 +74,17 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 ### ✨ 機能
 
-* **複数フォーマット対応**: 
-    * ComfyUIワークフロー（複雑なマルチサンプラー対応）
-    * A1111（Stable Diffusion WebUI）パラメータ
-    * Civitai画像生成メタデータ
-* **メタデータ抽出**: 以下の情報を自動検出・取り込み:
-    * チェックポイント名
-    * LoRA名
-    * ポジティブ/ネガティブプロンプト
-    * 生成パラメータ（Seed、Steps、CFG、Sampler）
-* **柔軟な出力**:
-    * **タグ**: 抽出した情報をEagleのタグに追加（例: `#checkpoint_name`, `#lora_name`, `seed:12345`）
-    * **メモ（アノテーション）**: プロンプトやパラメータをメモ欄に保存し、簡単にコピー可能
-* **選択的取り込み**: チェックボックスで特定の項目のみ取り込み可能（例: チェックポイントは取り込むがSeedは無視）
-* **バッチ処理**: 複数画像を効率的に処理、進捗バー表示
-* **強制削除モード**: 「情報を削除」ボタンを **Shiftキー** を押しながらクリックすることで、メタデータ解析を行わずに選択アイテムの全てのタグとメモを削除できます。
-* **ユーティリティ**: このプラグインが追加したタグ・メモを削除する機能付き
+* **複数フォーマット対応**: ComfyUIワークフロー（複雑なマルチサンプラー対応）、A1111（Stable Diffusion WebUI）、Civitai生成画像に対応。
+* **メタデータ抽出**: チェックポイント、LoRA、プロンプト（Positive/Negative）、生成パラメータ（Seed, Steps, CFG, Sampler）を自動検出。
+* **柔軟な出力先**:
+    * **タグ**: 抽出した情報をEagleのタグとして追加（例: `#checkpoint_name`, `seed:12345`）。
+    * **メモ（アノテーション）**: プロンプトやパラメータの詳細をメモ欄に保存し、参照・コピーを容易に。
+* **選択的取り込み**: チェックボックスで必要な情報のみ（例: チェックポイントのみ）を選択して取り込み可能。
+* **バッチ処理**: 複数画像をまとめて効率的に処理し、進捗状況を表示。
+* **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
+* **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
+* **外部依存なし**: PNG/WebPの内部データ（tEXt, comf, Exif）を直接解析するため、重い外部ライブラリに依存せず動作。
+* **ユーティリティ**: このプラグインが生成したタグやメモのみを安全に削除する機能を提供。
 
 ### 📸 スクリーンショット
 
@@ -112,15 +110,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 3.  ポップアップウィンドウで:
     * **出力設定**: 「タグ」、「メモ」、または両方への追加を選択
     * **対象**: 抽出したいメタデータ項目をチェック（チェックポイント、LoRA、プロンプトなど）
-4.  **「Start Tagging」** をクリック
-
-### 🛠️ 開発
-
-このプラグインは、外部依存なしでPNG tEXt/comfチャンクおよびWebP EXIF/XMPデータを解析し、AI生成メタデータを取得します。
-* **対応フォーマット**: ComfyUI、A1111（Stable Diffusion WebUI）、Civitai
-* **デバッグモード**: 右上のチェックボックスを有効にすると詳細ログを表示
-
-#### 🧠 高度なワークフロー解析ロジック
+### 🧠 高度なワークフロー解析ロジック
 
 単なるメタデータの読み取りではなく、ComfyUIのノードグラフを動的に解析し、最終的な画像出力に至るまでの実際の実行ルートを特定します。これにより、どれほど巨大で複雑な「オールインワン」ワークフローであっても、生成に関与したノードから正確にパラメータを抽出します。
 
