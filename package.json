@@ -6,9 +6,13 @@
   "author": "Nebel",
   "license": "MIT",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:property": "vitest run --grep 'Property'",
+    "test:unit": "vitest run --grep -v 'Property'"
   },
   "devDependencies": {
+    "fast-check": "^3.15.0",
     "vitest": "^4.0.16"
   }
 }

@@ -39,12 +39,25 @@ jobs:
           TAG_NAME=${GITHUB_REF#refs/tags/}
           FILENAME="ComfyUI-Auto-Tagger-${TAG_NAME}.eagleplugin"
 
-          mkdir -p dist/js dist/_locales
+          # Create directory structure for plugin
+          mkdir -p dist/js/metadata-parser/binary-extraction
+          mkdir -p dist/js/metadata-parser/parsers
+          mkdir -p dist/js/metadata-parser/integration
+          mkdir -p dist/_locales
 
+          # Copy only essential files for Eagle plugin runtime
           cp index.html manifest.json logo.png LICENSE dist/
+          
+          # Copy JavaScript files
           cp js/core.js js/plugin.js dist/js/
+          cp js/metadata-parser/binary-extraction/*.js dist/js/metadata-parser/binary-extraction/
+          cp js/metadata-parser/parsers/*.js dist/js/metadata-parser/parsers/
+          cp js/metadata-parser/integration/*.js dist/js/metadata-parser/integration/
+          
+          # Copy localization files
           cp _locales/*.json dist/_locales/
 
+          # Create plugin package
           cd dist
           zip -r "../${FILENAME}" ./*
           cd ..

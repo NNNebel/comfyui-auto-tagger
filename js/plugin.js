@@ -63,7 +63,6 @@ Promise.all([
 
     // --- 2. ステート管理 ---
     let isCancelled = false;
-    let logBuffer = [];
     const logArea = document.getElementById('log');
     const chunkSizeInput = document.getElementById('chunk-size');
     const progressContainer = document.getElementById('progress-container');
@@ -77,6 +76,7 @@ Promise.all([
         negative: document.getElementById('chk-negative'),
         seed: document.getElementById('chk-seed'),
         sampler: document.getElementById('chk-sampler'),
+        scheduler: document.getElementById('chk-scheduler'),
         steps: document.getElementById('chk-steps'),
         cfg: document.getElementById('chk-cfg'),
         addTags: document.getElementById('chk-add-tags'),
@@ -110,9 +110,13 @@ Promise.all([
 
     function log(key, replacements={}) {
         const msg = t(key, replacements);
-        logBuffer.push(msg);
-        if (logBuffer.length > 100) logBuffer.shift();
-        logArea.textContent = logBuffer.join('\n');
+        const div = document.createElement('div');
+        if (msg.includes('[Caution]') || msg.includes('[要確認]')) {
+            div.className = 'log-caution';
+        }
+        div.textContent = msg;
+        logArea.appendChild(div);
+        if (logArea.childNodes.length > 200) logArea.removeChild(logArea.firstChild);
         logArea.scrollTop = logArea.scrollHeight;
     }
 
@@ -149,6 +153,7 @@ Promise.all([
         let successCount = 0;
         let skippedCount = 0;
         let errorCount = 0;
+        let cautionCount = 0;
         let processedCount = 0;
 
         updateProgress(0, items.length);
@@ -157,15 +162,15 @@ Promise.all([
             if (isCancelled) break;
             const chunk = items.slice(i, i + chunkSize);
             
-            // 並列処理だが、UIスレッドをブロックしないようPromise.allSettled待機
             const results = await Promise.allSettled(chunk.map(processFn));
 
             results.forEach(result => {
                 processedCount++;
                 if (result.status === 'fulfilled') {
-                    const status = result.value; // 'success', 'skipped', 'error'
+                    const status = result.value; // 'success', 'skipped', 'error', 'caution'
                     if (status === 'success') successCount++;
                     else if (status === 'skipped') skippedCount++;
+                    else if (status === 'caution') { successCount++; cautionCount++; }
                     else errorCount++;
                 } else {
                     errorCount++;
@@ -173,39 +178,47 @@ Promise.all([
             });
             updateProgress(processedCount, items.length);
             
-            // UI更新のための微小なウェイト
             await new Promise(r => setTimeout(r, 10));
         }
-        return { successCount, skippedCount, errorCount };
+        return { successCount, skippedCount, errorCount, cautionCount };
     }
 
     // --- 5. メインアクション ---
     async function startTagging() {
         isCancelled = false;
-        logBuffer = [];
+        logArea.innerHTML = '';
         log('log.start');
         
         const items = await eagle.item.getSelected();
         if (!items.length) { log('log.noItemSelected'); return; }
 
-        setUIState(true); // UIロック & プログレスバー表示
+        setUIState(true); 
         const settings = getSettings();
         
         if (checkboxes.debug.checked) log(`[Debug] Log file: ${DEBUG_LOG_FILE}`);
         await debugLog(`START: ${items.length} items`);
 
-        // 個別のアイテム処理関数
+        // Initialize MetadataService
+        const metadataService = new MetadataService();
+
         const processItem = async (item) => {
             try {
                 log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
                 const buffer = await fsp.readFile(item.filePath);
+                const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
                 
-                const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
-                await debugLog(`Raw: ${JSON.stringify(raw)}`, item);
+                // Use new MetadataService
+                const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui');
+                await debugLog(`Metadata: ${JSON.stringify(metadata)}`, item);
 
-                const meta = extractComfyMetadata(raw);
-                const res = processMetadata(meta, settings, t);
+                if (!metadata) {
+                    log('log.noMetadata', {name: item.name});
+                    return 'skipped';
+                }
+
+                // Pass parsed metadata directly to processMetadata
+                const res = processMetadata(metadata, settings, t);
                 
                 let changed = false;
                 if (settings.addTags && res.tags.size > 0) {
@@ -223,10 +236,20 @@ Promise.all([
                     item.annotation = idx !== -1 ? current.substring(0, idx).trim() + '\n\n' + res.annotation : (current ? current + '\n\n' : '') + res.annotation;
                     changed = true;
                 }
+
+                if (res.sampler_fallback) {
+                    log('log.caution.sampler_fallback_item', {name: item.name});
+                }
+
                 if (changed) { 
-                    await item.save(); 
-                    log('log.success', {name: item.name});
-                    return 'success';
+                    await item.save();
+                    // Enhanced log message with step count
+                    if (res.stepCount && res.stepCount > 1) {
+                        log('log.success', {name: `${item.name} (${res.stepCount} steps detected)`});
+                    } else {
+                        log('log.success', {name: item.name});
+                    }
+                    return res.sampler_fallback ? 'caution' : 'success';
                 } else { 
                     log('log.skip', {name: item.name});
                     return 'skipped';
@@ -240,13 +263,17 @@ Promise.all([
 
         const result = await processItemsInChunks(items, processItem);
         log(isCancelled ? 'log.cancelled' : 'log.completed', result);
-        setUIState(false); // UIロック解除
-        eagle.item.trigger("update", items);
+        setUIState(false); 
+        
+        // Trigger update if API supports it
+        if (typeof eagle.item.trigger === 'function') {
+            eagle.item.trigger("update", items);
+        }
     }
 
     async function removeInfo(event) {
         isCancelled = false;
-        logBuffer = [];
+        logArea.innerHTML = '';
         log('log.delete.start');
 
         const isForceMode = event && event.shiftKey;
@@ -276,40 +303,43 @@ Promise.all([
                 let changed = false;
 
                 if (isForceMode) {
-                    // --- Force Delete Mode ---
+                    // --- Force Delete Mode: Remove ALL tags and annotations ---
                     if (item.tags && item.tags.length > 0) {
                         item.tags = [];
                         changed = true;
                     }
                     if (item.annotation) {
-                        const newAnnotation = removeAnnotation(item.annotation);
-                        if (newAnnotation !== item.annotation) {
-                            item.annotation = newAnnotation;
-                            changed = true;
-                        }
+                        item.annotation = '';
+                        changed = true;
                     }
                 } else {
                     // --- Normal Mode ---
                     const ext = path.extname(item.filePath).toLowerCase();
                     const buffer = await fsp.readFile(item.filePath);
+                    const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
                     
-                    const raw = getGenInfo(buffer, ext === '.png' ? 'image/png' : 'image/webp');
-                    const meta = extractComfyMetadata(raw);
-                    const res = processMetadata(meta, allSettingsOn, t);
+                    // Use new MetadataService
+                    const metadataService = new MetadataService();
+                    const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui');
                     
-                    if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
-                        const beforeCount = item.tags.length;
-                        item.tags = item.tags.filter(tag => !res.tags.has(tag.toLowerCase()));
-                        if (item.tags.length < beforeCount) changed = true;
-                    }
-
-                    // アノテーション削除
-                    if (item.annotation) {
-                        const newAnnotation = removeAnnotation(item.annotation);
-                        if (newAnnotation !== item.annotation) {
-                            item.annotation = newAnnotation;
-                            changed = true;
+                    if (metadata) {
+                        // Pass parsed metadata directly to processMetadata
+                        const res = processMetadata(metadata, allSettingsOn, t);
+                        
+                        if (item.tags && item.tags.length > 0 && res.tags.size > 0) {
+                            const beforeCount = item.tags.length;
+                            item.tags = item.tags.filter(tag => !res.tags.has(tag.toLowerCase()));
+                            if (item.tags.length < beforeCount) changed = true;
                         }
+                    }
+                }
+                
+                // Remove [Generation Info] annotation section (both modes)
+                if (item.annotation) {
+                    const newAnnotation = removeAnnotation(item.annotation);
+                    if (newAnnotation !== item.annotation) {
+                        item.annotation = newAnnotation;
+                        changed = true;
                     }
                 }
 
@@ -333,7 +363,11 @@ Promise.all([
         else log('log.delete.completed', { removedCount: result.successCount, skippedCount: result.skippedCount, errorCount: result.errorCount });
         
         setUIState(false); // UIロック解除
-        eagle.item.trigger("update", items);
+        
+        // Trigger update if API supports it
+        if (typeof eagle.item.trigger === 'function') {
+            eagle.item.trigger("update", items);
+        }
     }
 
     // --- 6. 設定保存・復元 ---

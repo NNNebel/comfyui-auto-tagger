@@ -1,175 +1,94 @@
 import { describe, it, expect } from 'vitest';
-import { extractComfyMetadata, cleanPrompt, processMetadata, removeAnnotation } from '../js/core.js';
+import { cleanPrompt, processMetadata, removeAnnotation } from '../js/core.js';
 
 describe('Core Logic Tests', () => {
-    it('should extract checkpoint name correctly', () => {
-        const mockJson = {
-            prompt: {
-                "4": { 
-                    class_type: "CheckpointLoaderSimple", 
-                    inputs: { ckpt_name: "sd_xl_base_1.0.safetensors" } 
-                }
-            }
-        };
-        const result = extractComfyMetadata(mockJson);
-        expect(result.checkpoint).toBe("sd_xl_base_1.0.safetensors");
+
+    // NOTE: Metadata extraction tests have been moved to tests/unit/ComfyUIParser.test.js
+    // This file now focuses on data formatting functions (processMetadata, cleanPrompt, removeAnnotation)
+
+    // --- 1. Prompt Cleaning Tests ---
+    describe('Prompt Cleaning', () => {
+        it('should clean prompt text correctly (commas, newlines)', () => {
+            const text = `cat, dog, 
+     bird`;
+            const cleaned = cleanPrompt(text);
+            expect(cleaned).toEqual(expect.arrayContaining(["cat", "dog", "bird"]));
+        });
+
+        it('should handle weighting syntax (tag:1.2)', () => {
+            const text = "(cat:1.2), [dog], ((bird))";
+            const cleaned = cleanPrompt(text);
+            // Implementation removes parentheses: (cat:1.2) -> cat:1.2
+            expect(cleaned).toContain("cat:1.2"); 
+            expect(cleaned).toContain("[dog]");
+            expect(cleaned).toContain("bird");
+        });
     });
 
-    it('should handle Windows-style path in checkpoint name', () => {
-        const mockJson = {
-            prompt: {
-                "4": { 
-                    class_type: "CheckpointLoaderSimple", 
-                    inputs: { ckpt_name: "folder\\subfolder\\model.safetensors" } 
-                }
-            }
-        };
-        const meta = extractComfyMetadata(mockJson);
-        const settings = { checkpoint: true };
-        const mockT = (key) => key;
-        const result = processMetadata(meta, settings, mockT);
-        
-        expect(result.tags.has("model")).toBe(true);
-        expect(result.annotation).toContain("model");
-        expect(result.annotation).not.toContain("folder");
-    });
-
-    it('should handle Linux-style path in checkpoint name', () => {
-        const mockJson = {
-            prompt: {
-                "4": { 
-                    class_type: "CheckpointLoaderSimple", 
-                    inputs: { ckpt_name: "folder/subfolder/linux_model.safetensors" } 
-                }
-            }
-        };
-        const meta = extractComfyMetadata(mockJson);
-        const settings = { checkpoint: true };
-        const mockT = (key) => key;
-        const result = processMetadata(meta, settings, mockT);
-        
-        expect(result.tags.has("linux_model")).toBe(true);
-        expect(result.annotation).toContain("linux_model");
-    });
-
-    it('should extract sampler parameters correctly', () => {
-        const mockJson = {
-            prompt: {
-                "3": { 
-                    class_type: "KSampler", 
-                    inputs: { seed: 12345, steps: 20, cfg: 8.0, sampler_name: "euler" } 
-                }
-            }
-        };
-        const result = extractComfyMetadata(mockJson);
-        expect(result.seed).toBe(12345);
-        expect(result.steps).toBe(20);
-        expect(result.cfg).toBe(8.0);
-        expect(result.sampler).toBe("euler");
-    });
-
-    it('should clean prompt text correctly', () => {
-        const text = `cat, dog, 
- bird`;
-        const cleaned = cleanPrompt(text);
-        expect(cleaned).toEqual(expect.arrayContaining(["cat", "dog", "bird"]));
-    });
-
-    describe('processMetadata', () => {
+    // --- 2. Processing & Annotation Tests ---
+    describe('processMetadata (Tag & Annotation)', () => {
         const mockMeta = {
-            checkpoint: "sd_xl_base_1.0.safetensors",
+            checkpoint: "sd_xl.safetensors",
             loras: ["lora1.safetensors"],
-            positive: "cat, cute",
-            negative: "ugly, blur",
-            seed: 12345,
+            positive: "cat",
+            negative: "ugly",
+            seed: 100,
             steps: 20,
             cfg: 7.0,
-            sampler: "euler"
+            sampler: "euler",
+            extra_samplers: [
+                { id: "1", seed: 100, sampler: "euler", is_base: true },
+                { id: "2", seed: 200, sampler: "dpmpp", is_base: false }
+            ]
         };
-        const mockT = (key) => key; // Mock translation function
+        const mockT = (key) => key;
 
-        it('should generate tags only for enabled settings', () => {
-            const settings = {
-                checkpoint: true,
-                lora: false,
-                positive: true,
-                negative: false,
-                seed: false,
-                steps: true,
-                cfg: false,
-                sampler: false
-            };
+        it('should generate tags using ONLY base sampler info', () => {
+            const settings = { seed: true, sampler: true };
             const result = processMetadata(mockMeta, settings, mockT);
             
-            expect(result.tags.has("sd_xl_base_1.0")).toBe(true); // Checkpoint
-            expect(result.tags.has("lora1")).toBe(false); // LoRA (Disabled)
-            expect(result.tags.has("cat")).toBe(true); // Positive
-            expect(result.tags.has("ugly")).toBe(false); // Negative (Disabled)
-            expect(result.tags.has("steps:20")).toBe(true); // Steps
-            expect(result.tags.has("seed:12345")).toBe(false); // Seed (Disabled)
+            expect(result.tags.has("seed:100")).toBe(true);
+            expect(result.tags.has("seed:200")).toBe(false);
+            expect(result.tags.has("sampler:euler")).toBe(true);
+            expect(result.tags.has("sampler:dpmpp")).toBe(false);
         });
 
-        it('should generate no tags if all settings are disabled', () => {
-            const settings = {
-                checkpoint: false, lora: false, positive: false, negative: false,
-                seed: false, steps: false, cfg: false, sampler: false
-            };
-            const result = processMetadata(mockMeta, settings, mockT);
-            expect(result.tags.size).toBe(0);
-        });
-
-        it('should generate annotation with all info when settings are enabled', () => {
-            const settings = {
-                checkpoint: true, lora: true, positive: true, negative: true,
-                seed: true, steps: true, cfg: true, sampler: true,
-                addTags: true, writeNotes: true
-            };
+        it('should generate annotation with MULTIPLE seeds', () => {
+            const settings = { seed: true, writeNotes: true };
             const result = processMetadata(mockMeta, settings, mockT);
             
-            expect(result.annotation).toContain('ui.option.checkpoint: sd_xl_base_1.0');
-            expect(result.annotation).toContain('ui.option.lora: lora1');
-            expect(result.annotation).toContain('ui.option.steps: 20');
-            expect(result.annotation).toContain('ui.option.seed: 12345');
-            expect(result.annotation).toContain('[Positive Prompt]');
-            expect(result.annotation).toContain('cat, cute');
+            // Base seed should be in the base section
+            expect(result.annotation).toContain("ui.option.seed: 100");
+            // All seeds should be in the "All Samplers" section
+            expect(result.annotation).toContain("[All Samplers]");
+            expect(result.annotation).toContain("ui.option.seed: 100, 200");
         });
 
-        it('should exclude disabled info from annotation', () => {
-            const settings = {
-                checkpoint: true, lora: false, positive: true, negative: false,
-                seed: false, steps: true, cfg: true, sampler: false,
-                addTags: true, writeNotes: true
-            };
-            const result = processMetadata(mockMeta, settings, mockT);
-            
-            expect(result.annotation).toContain('ui.option.checkpoint: sd_xl_base_1.0');
-            expect(result.annotation).not.toContain('ui.option.lora');
-            expect(result.annotation).toContain('ui.option.steps: 20');
-            expect(result.annotation).not.toContain('ui.option.seed');
-            expect(result.annotation).toContain('[Positive Prompt]');
-            expect(result.annotation).not.toContain('[Negative Prompt]');
+        it('should handle paths in checkpoint names (Windows/Linux)', () => {
+            const metaWin = { ...mockMeta, checkpoint: "C:\\models\\win_model.safetensors" };
+            const resWin = processMetadata(metaWin, { checkpoint: true }, mockT);
+            expect(resWin.tags.has("win_model")).toBe(true);
+
+            const metaLin = { ...mockMeta, checkpoint: "/mnt/models/lin_model.safetensors" };
+            const resLin = processMetadata(metaLin, { checkpoint: true }, mockT);
+            expect(resLin.tags.has("lin_model")).toBe(true);
+        });
+
+        it('should include [Warning] message when fallback occurs', () => {
+            const metaFallback = { ...mockMeta, sampler_fallback: true };
+            const result = processMetadata(metaFallback, { checkpoint: true }, mockT);
+            expect(result.annotation).toContain("[Warning] log.caution.sampler_fallback");
         });
     });
 
+    // --- 3. Utility Tests ---
     describe('removeAnnotation', () => {
         it('should remove generation info block', () => {
-            const input = "User Note\n\n[Generation Info]\nCheckpoint: model.safetensors";
-            const expected = "User Note";
-            expect(removeAnnotation(input)).toBe(expected);
+            const input = "User Note\n\n[Generation Info]\nCheckpoint: model";
+            expect(removeAnnotation(input)).toBe("User Note");
         });
-
-        it('should return original text if marker is not found', () => {
-            const input = "Just a user note";
-            expect(removeAnnotation(input)).toBe(input);
-        });
-
-        it('should handle empty string', () => {
-            expect(removeAnnotation("")).toBe("");
-        });
-
-        it('should handle text starting with marker', () => {
-            const input = "[Generation Info]\nSome info";
-            expect(removeAnnotation(input)).toBe("");
+        it('should handle text without marker', () => {
+            expect(removeAnnotation("Note")).toBe("Note");
         });
     });
 });

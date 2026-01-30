@@ -1,0 +1,42 @@
+{
+  "format": "comfyui",
+  "checkpoint": "model_v2.safetensors",
+  "loras": ["lora1.safetensors"],
+  "positive": "cat, detailed\ndog, photorealistic\nlandscape, beautiful",
+  "negative": "ugly, blurry\nbad quality\nlow resolution",
+  "seed": 111111,
+  "steps": 25,
+  "cfg": 8.0,
+  "sampler": "euler",
+  "scheduler": "normal",
+  "sampler_fallback": false,
+  "extra_samplers": [
+    {
+      "id": "1",
+      "seed": 111111,
+      "steps": 25,
+      "cfg": 8.0,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "is_base": true
+    },
+    {
+      "id": "2",
+      "seed": 222222,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler": "dpmpp_sde",
+      "scheduler": "karras",
+      "is_base": false
+    },
+    {
+      "id": "5",
+      "seed": 333333,
+      "steps": 20,
+      "cfg": 6.5,
+      "sampler": "uni_pc",
+      "scheduler": "exponential",
+      "is_base": false
+    }
+  ]
+}

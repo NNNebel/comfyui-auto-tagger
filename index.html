@@ -144,18 +144,24 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
 
+        #log .log-caution {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
         #log {
             margin-top: 10px;
             padding: 10px;
             background-color: var(--log-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            height: 130px; /* ログエリアの高さは維持 */
+            min-height: calc(1.5em * 5); /* Minimum 5 lines visible */
+            max-height: calc(1.5em * 5); /* Maximum 5 lines visible */
             overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.5;
             white-space: pre-wrap;
-            font-family: monospace;
-            font-size: 11px;
-            color: var(--text-color);
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -210,6 +216,10 @@
             <label for="chk-sampler">Sampler</label>
         </div>
         <div class="option-group">
+            <input type="checkbox" id="chk-scheduler">
+            <label for="chk-scheduler">Scheduler</label>
+        </div>
+        <div class="option-group">
             <input type="checkbox" id="chk-steps">
             <label for="chk-steps">Steps</label>
         </div>
@@ -232,6 +242,20 @@
 
     <div id="log"></div>
 
+    <!-- Binary Extraction Layer -->
+    <script src="js/metadata-parser/binary-extraction/ImageMetadataReader.js"></script>
+    <script src="js/metadata-parser/binary-extraction/FormatDetector.js"></script>
+    
+    <!-- Parser Layer -->
+    <script src="js/metadata-parser/parsers/MetadataParser.js"></script>
+    <script src="js/metadata-parser/parsers/ParserRegistry.js"></script>
+    <script src="js/metadata-parser/parsers/ComfyUIParser.js"></script>
+    <script src="js/metadata-parser/parsers/A1111Parser.js"></script>
+    
+    <!-- Integration Layer -->
+    <script src="js/metadata-parser/integration/MetadataService.js"></script>
+    
+    <!-- Legacy core.js for processMetadata -->
     <script src="js/core.js"></script>
     <script src="js/plugin.js"></script>
 </body>

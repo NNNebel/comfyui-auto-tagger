@@ -1,0 +1,19 @@
+{
+  "format": "a1111",
+  "positive": "masterpiece, best quality, amazing quality, 1girl, solo, cowboy shot,(skinny :1.5), large breasts, lace-up clothes, (see-through clothes), priestess robe, elf ears, blonde hair, long hair, brown eyes, eyelashes, mature and alluring expression, tattoo, angelic wings",
+  "negative": "(worst quality, low quality), (zombie, interlocked fingers), animal, horn",
+  "steps": 60,
+  "sampler": "DPM++ 2M SDE",
+  "schedule_type": "Exponential",
+  "cfg": 3,
+  "seed": 76682904,
+  "size": "768x512",
+  "checkpoint": "meinamix_v12Final",
+  "vae": "kl-f8-anime2.safetensors",
+  "denoising_strength": 0.3,
+  "clip_skip": 2,
+  "hires_upscale": 2,
+  "hires_steps": 10,
+  "hires_upscaler": "R-ESRGAN 4x+ Anime6B",
+  "version": "f1.4.0dev-v1.10.1RC-latest-1442-g634cb7e4"
+}
