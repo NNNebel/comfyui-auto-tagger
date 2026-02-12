@@ -52,14 +52,13 @@ Unlike simple metadata readers, this plugin dynamically analyzes the ComfyUI nod
 
 ### 🏗️ Architecture
 
-This plugin features an advanced metadata parser with graph-based analysis and extensible handler systems.
+This plugin features an advanced metadata parser that intelligently extracts generation information from AI images.
 
-- **Graph-Based ComfyUI Parsing**: Explicitly constructs node graphs and uses traversal algorithms to accurately identify base samplers
-- **Extensible A1111 Parameter Parsing**: Handler system allows easy addition of new parameter types
-- **Structured Prompt Tokenization**: Accurately parses weighted text, LoRA tags, and nested brackets
-- **Detailed Error Handling**: Specific error types with context and suggestions for clear problem identification
+- **Multi-Format Support**: Automatically detects and extracts metadata from ComfyUI, A1111, and Civitai images
+- **Intelligent Analysis**: Uses advanced algorithms to accurately identify generation parameters even in complex workflows
+- **Reliable Extraction**: Robust error handling ensures the plugin continues working even with unusual or incomplete metadata
 
-For details, see [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md).
+For technical details, see [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md).
 
 ### ⚠️ Disclaimer & Bug Reports
 

@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.3.3] - 2026-02-12
 
 ### 🇬🇧 English
 #### ✨ Improvements
