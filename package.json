@@ -9,9 +9,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:property": "vitest run --grep 'Property'",
-    "test:unit": "vitest run --grep -v 'Property'"
+    "test:unit": "vitest run --grep -v 'Property'",
+    "bench": "vitest bench --run",
+    "bench:watch": "vitest bench"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "fast-check": "^3.15.0",
     "vitest": "^4.0.16"
   }

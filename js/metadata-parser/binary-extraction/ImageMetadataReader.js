@@ -3,6 +3,23 @@
 (function(global) {
   'use strict';
 
+  // Get dependencies for both environments
+  var BinaryUtils, ErrorHandler, ParsingUtils;
+  
+  if (typeof window !== 'undefined') {
+    // Browser environment
+    BinaryUtils = window.BinaryUtils;
+    ErrorHandler = window.ErrorHandler;
+    ParsingUtils = window.ParsingUtils;
+  } else if (typeof require !== 'undefined') {
+    // Node.js environment (testing)
+    BinaryUtils = require('../utils/BinaryUtils');
+    ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
+    ParsingUtils = require('../utils/ParsingUtils');
+  } else {
+    throw new Error('Required dependencies not found');
+  }
+
 /**
  * ImageMetadataReader
  * 
@@ -17,19 +34,21 @@ class ImageMetadataReader {
    * @returns {Object} Raw metadata chunks keyed by chunk name
    */
   static extractRawMetadata(buffer, mimeType) {
-    try {
-      if (mimeType === 'image/png') {
-        return this.extractPngChunks(buffer);
-      }
-      if (mimeType === 'image/webp') {
-        return this.extractWebpChunks(buffer);
-      }
-      console.warn(`Unsupported MIME type: ${mimeType}`);
-      return {};
-    } catch (error) {
-      console.error('Failed to extract raw metadata:', error);
-      return {};
-    }
+    return ErrorHandler.safeExecute(
+      () => {
+        if (mimeType === 'image/png') {
+          return this.extractPngChunks(buffer);
+        }
+        if (mimeType === 'image/webp') {
+          return this.extractWebpChunks(buffer);
+        }
+        ErrorHandler.logWarning('ImageMetadataReader', `Unsupported MIME type: ${mimeType}`);
+        return {};
+      },
+      {},
+      'ImageMetadataReader',
+      { mimeType, bufferSize: buffer.length }
+    );
   }
 
   /**
@@ -52,47 +71,47 @@ class ImageMetadataReader {
       // Check if we have enough bytes for chunk length
       if (offset + 4 > view.byteLength) break;
       
-      const length = view.getUint32(offset);
+      const length = BinaryUtils.readUInt32BE(buffer, offset);
       offset += 4;
       
       // Check if we have enough bytes for chunk type
       if (offset + 4 > view.byteLength) break;
       
-      const type = this._getFourCC(view, offset);
+      const type = BinaryUtils.readFourCC(buffer, offset);
       offset += 4;
       
       // Process tEXt chunks
       if (type === 'tEXt') {
-        const chunkData = buffer.slice(offset, offset + length);
+        const chunkData = BinaryUtils.slice(buffer, offset, offset + length);
         const { keyword, text } = this._decodePngText(chunkData);
         
-        try {
-          // Try to parse as JSON for workflow and prompt
-          if (keyword === 'workflow' || keyword === 'prompt') {
-            result[keyword] = JSON.parse(text);
+        // Try to parse as JSON for workflow and prompt
+        if (keyword === 'workflow' || keyword === 'prompt') {
+          const parsed = ParsingUtils.parseJsonSafely(text, null);
+          if (parsed !== null) {
+            result[keyword] = parsed;
           } else {
             result[keyword] = text;
           }
-        } catch (e) {
-          // If JSON parsing fails, store as text
+        } else {
           result[keyword] = text;
         }
       }
       
       // Process comf chunks (ComfyUI custom chunk)
       if (type === 'comf') {
-        const chunkData = buffer.slice(offset, offset + length);
+        const chunkData = BinaryUtils.slice(buffer, offset, offset + length);
         const { keyword, text } = this._decodeComfChunk(chunkData);
         
-        try {
-          // Try to parse as JSON for workflow and prompt
-          if (keyword === 'workflow' || keyword === 'prompt') {
-            result[keyword] = JSON.parse(text);
+        // Try to parse as JSON for workflow and prompt
+        if (keyword === 'workflow' || keyword === 'prompt') {
+          const parsed = ParsingUtils.parseJsonSafely(text, null);
+          if (parsed !== null) {
+            result[keyword] = parsed;
           } else {
             result[keyword] = text;
           }
-        } catch (e) {
-          // If JSON parsing fails, store as text
+        } else {
           result[keyword] = text;
         }
       }
@@ -114,7 +133,7 @@ class ImageMetadataReader {
     const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     
     // Verify WebP signature
-    if (this._getFourCC(view, 0) !== 'RIFF' || this._getFourCC(view, 8) !== 'WEBP') {
+    if (BinaryUtils.readFourCC(buffer, 0) !== 'RIFF' || BinaryUtils.readFourCC(buffer, 8) !== 'WEBP') {
       return result;
     }
     
@@ -124,14 +143,14 @@ class ImageMetadataReader {
       // Check if we have enough bytes for chunk header
       if (offset + 8 > view.byteLength) break;
       
-      const chunkType = this._getFourCC(view, offset);
-      const chunkSize = view.getUint32(offset + 4, true); // Little-endian
+      const chunkType = BinaryUtils.readFourCC(buffer, offset);
+      const chunkSize = BinaryUtils.readUInt32LE(buffer, offset + 4);
       const chunkDataOffset = offset + 8;
       
       // Process EXIF and XMP chunks
       if (chunkType === 'EXIF' || chunkType === 'XMP ') {
         this._extractFromBinary(
-          buffer.slice(chunkDataOffset, chunkDataOffset + chunkSize),
+          BinaryUtils.slice(buffer, chunkDataOffset, chunkDataOffset + chunkSize),
           result
         );
       }
@@ -273,21 +292,6 @@ class ImageMetadataReader {
     return null;
   }
 
-  /**
-   * Get FourCC code from DataView
-   * @private
-   * @param {DataView} view - DataView to read from
-   * @param {number} offset - Offset to read from
-   * @returns {string} Four-character code
-   */
-  static _getFourCC(view, offset) {
-    return String.fromCharCode(
-      view.getUint8(offset),
-      view.getUint8(offset + 1),
-      view.getUint8(offset + 2),
-      view.getUint8(offset + 3)
-    );
-  }
 }
 
   // Export for both browser and Node.js environments

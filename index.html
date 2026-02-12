@@ -242,9 +242,33 @@
 
     <div id="log"></div>
 
+    <!-- Utility Modules (must load first) -->
+    <script src="js/metadata-parser/utils/ParsingUtils.js"></script>
+    <script src="js/metadata-parser/utils/BinaryUtils.js"></script>
+    <script src="js/metadata-parser/utils/ErrorHandler.js"></script>
+    <script src="js/metadata-parser/utils/Validators.js"></script>
+    
+    <!-- Error Types -->
+    <script src="js/metadata-parser/errors/ParseError.js"></script>
+    
     <!-- Binary Extraction Layer -->
     <script src="js/metadata-parser/binary-extraction/ImageMetadataReader.js"></script>
     <script src="js/metadata-parser/binary-extraction/FormatDetector.js"></script>
+    
+    <!-- Graph Layer (for ComfyUI) -->
+    <script src="js/metadata-parser/graph/ComfyUIGraph.js"></script>
+    <script src="js/metadata-parser/graph/ComfyUISamplerAnalyzer.js"></script>
+    
+    <!-- Parameter Parsing Layer (for A1111) -->
+    <script src="js/metadata-parser/parameters/ParameterHandler.js"></script>
+    <script src="js/metadata-parser/parameters/StandardParameterHandler.js"></script>
+    <script src="js/metadata-parser/parameters/LoraHashHandler.js"></script>
+    <script src="js/metadata-parser/parameters/ADetailerHandler.js"></script>
+    <script src="js/metadata-parser/parameters/ParameterParser.js"></script>
+    
+    <!-- Prompt Tokenization Layer -->
+    <script src="js/metadata-parser/prompt/PromptToken.js"></script>
+    <script src="js/metadata-parser/prompt/PromptTokenizer.js"></script>
     
     <!-- Parser Layer -->
     <script src="js/metadata-parser/parsers/MetadataParser.js"></script>
@@ -254,6 +278,11 @@
     
     <!-- Integration Layer -->
     <script src="js/metadata-parser/integration/MetadataService.js"></script>
+    
+    <!-- Processing Layer -->
+    <script src="js/metadata-processor/TagGenerator.js"></script>
+    <script src="js/metadata-processor/AnnotationBuilder.js"></script>
+    <script src="js/metadata-processor/MetadataProcessor.js"></script>
     
     <!-- Legacy core.js for processMetadata -->
     <script src="js/core.js"></script>
