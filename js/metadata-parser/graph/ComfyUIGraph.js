@@ -5,6 +5,20 @@
 (function(global) {
   'use strict';
 
+  // Get dependencies for both environments
+  var GraphConstructionError, ErrorHandler;
+  
+  if (typeof window !== 'undefined') {
+    // Browser environment
+    GraphConstructionError = window.GraphConstructionError;
+    ErrorHandler = window.ErrorHandler;
+  } else if (typeof require !== 'undefined') {
+    // Node.js environment (testing)
+    const { GraphConstructionError: GCE } = require('../errors/ParseError');
+    GraphConstructionError = GCE;
+    ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
+  }
+
 /**
  * ComfyUIGraph - Represents a ComfyUI workflow as a directed graph
  * 
@@ -48,6 +62,12 @@ class ComfyUIGraph {
      */
     this.nodeTypes = new Map();
     
+    /**
+     * Set of missing node IDs that were referenced but not found
+     * @type {Set<string>}
+     */
+    this.missingNodes = new Set();
+    
     this._build(promptData);
   }
   
@@ -56,10 +76,27 @@ class ComfyUIGraph {
    * Time complexity: O(N + E) where N = nodes, E = edges
    * @private
    * @param {Object} promptData - ComfyUI prompt JSON object
+   * @throws {GraphConstructionError} When prompt data is invalid or malformed
    */
   _build(promptData) {
+    // Validate prompt data
+    if (!promptData || typeof promptData !== 'object') {
+      throw new GraphConstructionError(
+        'Invalid prompt data: must be an object',
+        { promptData: typeof promptData },
+        ['Ensure the prompt field contains valid JSON object']
+      );
+    }
+    
     // Step 1: Add all nodes
     for (const [id, node] of Object.entries(promptData)) {
+      if (!node || typeof node !== 'object') {
+        throw new GraphConstructionError(
+          `Invalid node data for node ${id}`,
+          { nodeId: id, nodeType: typeof node },
+          ['Check that all nodes in the prompt are valid objects']
+        );
+      }
       this.nodes.set(String(id), node);
     }
     
@@ -72,6 +109,25 @@ class ComfyUIGraph {
           // Check if value is a link [sourceNodeId, outputSlot]
           if (Array.isArray(value) && value.length === 2) {
             const parentId = String(value[0]);
+            
+            // Check if parent node exists
+            if (!this.nodes.has(parentId)) {
+              // Record missing node
+              this.missingNodes.add(parentId);
+              
+              // Log warning about missing node
+              const parentNode = this.nodes.get(id);
+              ErrorHandler.logWarning('ComfyUIGraph', 'Referenced node not found in workflow', {
+                nodeId: id,
+                nodeType: parentNode?.class_type || 'Unknown',
+                inputKey: key,
+                missingNodeId: parentId,
+                suggestion: 'This may be a custom node not saved in the workflow, or the workflow may be incomplete. Some metadata (like prompts or parameters) may not be extracted correctly.'
+              });
+              
+              continue;
+            }
+            
             parents.add(parentId);
             
             // Build reverse edges (parent -> children)
@@ -371,6 +427,22 @@ class ComfyUIGraph {
    */
   hasNode(nodeId) {
     return this.nodes.has(nodeId);
+  }
+  
+  /**
+   * Get set of missing node IDs that were referenced but not found
+   * @returns {Set<string>} Set of missing node IDs
+   */
+  getMissingNodes() {
+    return new Set(this.missingNodes);
+  }
+  
+  /**
+   * Check if there are any missing nodes in the workflow
+   * @returns {boolean} True if there are missing nodes
+   */
+  hasMissingNodes() {
+    return this.missingNodes.size > 0;
   }
 }
 

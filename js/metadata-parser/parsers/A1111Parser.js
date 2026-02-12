@@ -3,7 +3,7 @@
   'use strict';
 
   // Get dependencies for both environments
-  var MetadataParserBase, ParsingUtils, ErrorHandler, Validators, ParameterParser, StandardParameterHandler, LoraHashHandler, ADetailerHandler;
+  var MetadataParserBase, ParsingUtils, ErrorHandler, Validators, ParameterParser, StandardParameterHandler, LoraHashHandler, ADetailerHandler, ParameterParseError;
   
   if (typeof window !== 'undefined') {
     // Browser environment
@@ -15,16 +15,18 @@
     StandardParameterHandler = window.StandardParameterHandler;
     LoraHashHandler = window.LoraHashHandler;
     ADetailerHandler = window.ADetailerHandler;
+    ParameterParseError = window.ParameterParseError;
   } else if (typeof require !== 'undefined') {
     // Node.js environment (testing)
     MetadataParserBase = require('./MetadataParser');
     ParsingUtils = require('../utils/ParsingUtils');
-    ErrorHandler = require('../utils/ErrorHandler');
+    ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
     Validators = require('../utils/Validators');
     ParameterParser = require('../parameters/ParameterParser');
     StandardParameterHandler = require('../parameters/StandardParameterHandler');
     LoraHashHandler = require('../parameters/LoraHashHandler');
     ADetailerHandler = require('../parameters/ADetailerHandler');
+    ParameterParseError = require('../errors/ParseError').ParameterParseError;
   } else {
     throw new Error('Required dependencies not found');
   }
@@ -139,41 +141,63 @@ class A1111Parser extends MetadataParserBase {
    * Uses ParameterParser with registered handlers for extensibility.
    * @param {string} line - Parameter line string (e.g., "Steps: 20, Sampler: Euler a, CFG scale: 7, ...")
    * @returns {Object} Object containing parsed parameters
+   * @throws {ParameterParseError} When parameter parsing fails critically
    */
   parseParameterLine(line) {
-    // Create context with current metadata for LoRA extraction from prompts
-    const context = {
-      prompts: {
-        positive: this.currentMetadata?.positive || '',
-        negative: this.currentMetadata?.negative || ''
-      }
-    };
-    
-    // Parse using parameter parser
-    const params = this.parameterParser.parse(line, context);
-    
-    // Extract LoRA names from prompts if available
-    // Handles <lora:name:weight> format in positive/negative prompts
-    if (context.prompts.positive || context.prompts.negative) {
-      const loras = params.loras || [];
-      const promptTexts = [context.prompts.positive, context.prompts.negative].filter(Boolean);
+    try {
+      // Create context with current metadata for LoRA extraction from prompts
+      const context = {
+        prompts: {
+          positive: this.currentMetadata?.positive || '',
+          negative: this.currentMetadata?.negative || ''
+        }
+      };
       
-      for (const promptText of promptTexts) {
-        const promptLoras = promptText.matchAll(/<lora:([^:]+):[^>]+>/g);
-        for (const match of promptLoras) {
-          const name = match[1].trim();
-          if (!loras.includes(name)) {
-            loras.push(name);
+      // Parse using parameter parser
+      const params = this.parameterParser.parse(line, context);
+      
+      // Extract LoRA names from prompts if available
+      // Handles <lora:name:weight> format in positive/negative prompts
+      if (context.prompts.positive || context.prompts.negative) {
+        const loras = params.loras || [];
+        const promptTexts = [context.prompts.positive, context.prompts.negative].filter(Boolean);
+        
+        for (const promptText of promptTexts) {
+          const promptLoras = promptText.matchAll(/<lora:([^:]+):[^>]+>/g);
+          for (const match of promptLoras) {
+            const name = match[1].trim();
+            if (!loras.includes(name)) {
+              loras.push(name);
+            }
           }
+        }
+        
+        if (loras.length > 0) {
+          params.loras = loras;
         }
       }
       
-      if (loras.length > 0) {
-        params.loras = loras;
+      return params;
+    } catch (error) {
+      // If parsing fails critically, throw ParameterParseError
+      if (error instanceof ParameterParseError) {
+        throw error;
       }
+      
+      throw new ParameterParseError(
+        'Failed to parse A1111 parameter line',
+        { 
+          line: line.substring(0, 100) + (line.length > 100 ? '...' : ''),
+          lineLength: line.length
+        },
+        error,
+        [
+          'Check if the parameter line format is valid',
+          'Ensure key-value pairs are separated by commas',
+          'Verify that values are properly quoted if they contain special characters'
+        ]
+      );
     }
-    
-    return params;
   }
 
   /**

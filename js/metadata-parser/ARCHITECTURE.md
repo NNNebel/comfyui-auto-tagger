@@ -42,8 +42,8 @@ const rawChunks = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
 
 **Components**:
 - `MetadataParser.js` - Base class for all parsers
-- `ComfyUIParser.js` - Parses ComfyUI workflow and prompt data
-- `A1111Parser.js` - Parses Automatic1111 parameters
+- `ComfyUIParser.js` - Parses ComfyUI workflow and prompt data using graph-based analysis
+- `A1111Parser.js` - Parses Automatic1111 parameters using extensible handler system
 - `ParserRegistry.js` - Manages parser registration and delegation
 
 **Key Features**:
@@ -52,11 +52,23 @@ const rawChunks = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
 - Standardized output structure
 - Automatic parser selection based on detected formats
 
+**ComfyUI Parser Architecture**:
+- Uses `ComfyUIGraph` class for explicit graph data structure
+- Employs `ComfyUISamplerAnalyzer` for intelligent base sampler selection
+- Supports complex workflows with multiple samplers and refinement stages
+- Handles advanced samplers (SamplerCustomAdvanced) and Flux models (UNETLoader)
+
+**A1111 Parser Architecture**:
+- Uses `ParameterParser` with extensible handler system
+- Handlers: `StandardParameterHandler`, `LoraHashHandler`, `ADetailerHandler`
+- Supports extensions: Hires, TI, NGMS parameters
+- Eliminates ad-hoc string parsing with structured approach
+
 **Example**:
 ```javascript
 const parser = new ComfyUIParser();
 const metadata = parser.parse(rawChunks);
-// Returns: { format: 'comfyui', checkpoint: '...', loras: [...], ... }
+// Returns: { format: 'comfyui', checkpoint: '...', loras: [...], generationSteps: [...] }
 ```
 
 ### 3. Integration Layer
@@ -111,14 +123,43 @@ const result = MetadataProcessor.process(metadata, settings, t);
 **Components**:
 - `ParsingUtils.js` - JSON parsing, string manipulation, filename extraction
 - `BinaryUtils.js` - Binary operations (FourCC, uint32, CRC32, slicing)
-- `ErrorHandler.js` - Centralized error handling and logging
+- `ErrorHandler.js` - Centralized error handling with severity levels and error aggregation
 - `Validators.js` - Input validation for all data types
 
 **Key Features**:
 - Eliminate code duplication
-- Standardize error handling
+- Standardize error handling with structured logging
 - Provide consistent validation
 - Browser-compatible (IIFE pattern)
+
+**Error Handling**:
+- Severity levels: DEBUG, INFO, WARN, ERROR
+- Structured logging with context and timestamps
+- Error aggregation for batch operations
+- Specific error types: `ParseError`, `GraphConstructionError`, `SamplerNotFoundError`, `ParameterParseError`, `TokenizationError`
+
+## Supporting Modules
+
+**Location**: `js/metadata-parser/graph/`, `js/metadata-parser/parameters/`, `js/metadata-parser/prompt/`, `js/metadata-parser/errors/`
+
+**Graph Analysis** (`graph/`):
+- `ComfyUIGraph.js` - Explicit graph data structure with traversal algorithms
+- `ComfyUISamplerAnalyzer.js` - Intelligent base sampler selection and metadata extraction
+
+**Parameter Handling** (`parameters/`):
+- `ParameterHandler.js` - Base class for parameter handlers
+- `StandardParameterHandler.js` - Standard A1111 parameters
+- `LoraHashHandler.js` - LoRA hash parsing
+- `ADetailerHandler.js` - ADetailer extension parameters
+- `ParameterParser.js` - Orchestrates handler-based parsing
+
+**Prompt Tokenization** (`prompt/`):
+- `PromptToken.js` - Token data structure (text, weighted, lora, hypernet, embedding)
+- `PromptTokenizer.js` - Structured prompt parsing with reconstruction capability
+
+**Error Types** (`errors/`):
+- `ParseError.js` - Base error class with context and suggestions
+- Specific error types for different failure scenarios
 
 ## Data Flow
 
@@ -237,19 +278,39 @@ All modules in `js/metadata-parser/` use IIFE pattern for browser compatibility:
 
 ## Testing Strategy
 
-- **Unit Tests**: Test individual components in isolation
+- **Unit Tests**: Test individual components in isolation (730 tests)
 - **Integration Tests**: Test layer interactions
-- **Property Tests**: Test invariants and edge cases
+- **Property Tests**: Test invariants and edge cases with random data
 - **Sample Tests**: Test with real image files
+- **Performance Tests**: Benchmark parsing speed and memory usage
 
-Total test coverage: 474 tests across all layers.
+**Test Coverage**: 80.93% overall
+- All new classes have comprehensive unit tests
+- Property-based tests for graph algorithms and parameter parsing
+- Performance benchmarks show all operations < 1ms
+
+**Key Test Files**:
+- `tests/unit/ComfyUIGraph.test.js` - Graph construction and traversal (44 tests)
+- `tests/unit/ComfyUISamplerAnalyzer.test.js` - Sampler selection algorithm (19 tests)
+- `tests/unit/ParameterParser.test.js` - Parameter parsing (25 tests)
+- `tests/unit/PromptTokenizer.test.js` - Prompt tokenization (33 tests)
+- `tests/unit/ParseError.test.js` - Error types (16 tests)
+- `tests/unit/ErrorHandler.test.js` - Error handling (34 tests)
 
 ## Performance Considerations
 
 - Binary operations use `DataView` for efficient buffer access
 - Parsers process data in single pass where possible
-- Memoization avoided unless proven necessary
+- Graph-based ComfyUI parsing: < 0.25ms for workflows up to 55 nodes
+- A1111 parameter parsing: < 0.032ms for typical parameters
+- Prompt tokenization: < 0.057ms for complex prompts
+- Memory usage is stable across all operations
 - Error handling has minimal overhead
+
+**Profiling Results**:
+- A1111 parsing: 0.022-0.032ms
+- ComfyUI parsing: 0.048-0.219ms (55 nodes)
+- All operations well under 100ms requirement with significant margin
 
 ## Backward Compatibility
 

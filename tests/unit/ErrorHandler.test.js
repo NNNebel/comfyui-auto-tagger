@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import ErrorHandler from '../../js/metadata-parser/utils/ErrorHandler.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const { ErrorHandler } = require('../../js/metadata-parser/utils/ErrorHandler.js');
 
 describe('ErrorHandler', () => {
   let consoleErrorSpy;
@@ -28,7 +31,7 @@ describe('ErrorHandler', () => {
       
       expect(loggedData.level).toBe('error');
       expect(loggedData.component).toBe('TestComponent');
-      expect(loggedData.action).toBe('parse');
+      expect(loggedData.message).toBe('Parsing failed');
       expect(loggedData.error).toBe('Test error');
       expect(loggedData.context).toEqual({ key: 'value' });
       expect(loggedData.timestamp).toBeDefined();
@@ -254,3 +257,103 @@ describe('ErrorHandler', () => {
     });
   });
 });
+
+
+  describe('logDebug', () => {
+    it('should log debug message', () => {
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      ErrorHandler.setMinLevel('debug');
+      ErrorHandler.logDebug('TestComponent', 'Debug message', { key: 'value' });
+
+      expect(consoleDebugSpy).toHaveBeenCalledOnce();
+      const loggedData = JSON.parse(consoleDebugSpy.mock.calls[0][0]);
+      
+      expect(loggedData.level).toBe('debug');
+      expect(loggedData.component).toBe('TestComponent');
+      expect(loggedData.message).toBe('Debug message');
+      expect(loggedData.context).toEqual({ key: 'value' });
+      
+      consoleDebugSpy.mockRestore();
+      ErrorHandler.setMinLevel('info'); // Reset to default
+    });
+
+    it('should not log debug when min level is info', () => {
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      ErrorHandler.setMinLevel('info');
+      ErrorHandler.logDebug('TestComponent', 'Debug message', {});
+
+      expect(consoleDebugSpy).not.toHaveBeenCalled();
+      
+      consoleDebugSpy.mockRestore();
+    });
+  });
+
+  describe('error aggregation', () => {
+    beforeEach(() => {
+      ErrorHandler.clearErrors();
+    });
+
+    it('should collect errors', () => {
+      const error = new Error('Test error');
+      ErrorHandler.logParsingError('TestComponent', error, {});
+
+      const errors = ErrorHandler.getErrors();
+      expect(errors).toHaveLength(1);
+      expect(errors[0].level).toBe('error');
+      expect(errors[0].component).toBe('TestComponent');
+    });
+
+    it('should collect warnings', () => {
+      ErrorHandler.logWarning('TestComponent', 'Warning message', {});
+
+      const errors = ErrorHandler.getErrors();
+      expect(errors).toHaveLength(1);
+      expect(errors[0].level).toBe('warn');
+    });
+
+    it('should not collect info messages', () => {
+      ErrorHandler.logInfo('TestComponent', 'Info message', {});
+
+      const errors = ErrorHandler.getErrors();
+      expect(errors).toHaveLength(0);
+    });
+
+    it('should clear errors', () => {
+      ErrorHandler.logParsingError('TestComponent', new Error('Test'), {});
+      expect(ErrorHandler.getErrors()).toHaveLength(1);
+
+      ErrorHandler.clearErrors();
+      expect(ErrorHandler.getErrors()).toHaveLength(0);
+    });
+  });
+
+  describe('setMinLevel', () => {
+    afterEach(() => {
+      ErrorHandler.setMinLevel('info'); // Reset to default
+    });
+
+    it('should set minimum log level', () => {
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      
+      ErrorHandler.setMinLevel('debug');
+      ErrorHandler.logDebug('TestComponent', 'Debug message', {});
+      expect(consoleDebugSpy).toHaveBeenCalledOnce();
+
+      consoleDebugSpy.mockRestore();
+    });
+
+    it('should filter logs below min level', () => {
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const consoleInfoSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      ErrorHandler.setMinLevel('warn');
+      ErrorHandler.logDebug('TestComponent', 'Debug message', {});
+      ErrorHandler.logInfo('TestComponent', 'Info message', {});
+      
+      expect(consoleDebugSpy).not.toHaveBeenCalled();
+      expect(consoleInfoSpy).not.toHaveBeenCalled();
+
+      consoleDebugSpy.mockRestore();
+      consoleInfoSpy.mockRestore();
+    });
+  });

@@ -6,17 +6,19 @@
   'use strict';
 
   // Get dependencies for both environments
-  var TokenType, PromptToken;
+  var TokenType, PromptToken, TokenizationError;
   
   if (typeof window !== 'undefined') {
     // Browser environment
     TokenType = window.TokenType;
     PromptToken = window.PromptToken;
+    TokenizationError = window.TokenizationError;
   } else if (typeof require !== 'undefined') {
     // Node.js environment (testing)
     const promptToken = require('./PromptToken');
     TokenType = promptToken.TokenType;
     PromptToken = promptToken.PromptToken;
+    TokenizationError = require('../errors/ParseError').TokenizationError;
   } else {
     throw new Error('Required dependencies not found');
   }
@@ -43,56 +45,99 @@ class PromptTokenizer {
    * Tokenize prompt text into structured tokens
    * @param {string} text - Prompt text to tokenize
    * @returns {PromptToken[]} Array of tokens
+   * @throws {TokenizationError} When tokenization fails critically
    */
   tokenize(text) {
     if (!text || typeof text !== 'string') {
       return [];
     }
 
-    const tokens = [];
-    let i = 0;
+    try {
+      const tokens = [];
+      let i = 0;
+      let iterations = 0;
+      const maxIterations = text.length * 2; // Safety limit to prevent infinite loops
 
-    while (i < text.length) {
-      const char = text[i];
+      while (i < text.length) {
+        // Safety check for infinite loops
+        if (++iterations > maxIterations) {
+          throw new TokenizationError(
+            'Tokenization exceeded maximum iterations',
+            { 
+              position: i,
+              textLength: text.length,
+              textPreview: text.substring(Math.max(0, i - 20), i + 20)
+            },
+            null,
+            [
+              'The prompt may contain malformed syntax that causes infinite loops',
+              'Check for unmatched brackets or special characters',
+              'Try simplifying the prompt structure'
+            ]
+          );
+        }
 
-      // Skip whitespace at the beginning
-      if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
-        i++;
-        continue;
-      }
+        const char = text[i];
 
-      // Parse special tags <lora:...>, <hypernet:...>, etc.
-      if (char === '<') {
-        const result = this._parseTag(text, i);
+        // Skip whitespace at the beginning
+        if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+          i++;
+          continue;
+        }
+
+        // Parse special tags <lora:...>, <hypernet:...>, etc.
+        if (char === '<') {
+          const result = this._parseTag(text, i);
+          if (result) {
+            tokens.push(result.token);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        // Parse weighted text (text:weight) or (text)
+        if (char === '(') {
+          const result = this._parseWeighted(text, i);
+          if (result) {
+            tokens.push(result.token);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        // Parse plain text
+        const result = this._parsePlainText(text, i);
         if (result) {
           tokens.push(result.token);
           i = result.endIndex;
-          continue;
+        } else {
+          // Skip unrecognized character
+          i++;
         }
       }
 
-      // Parse weighted text (text:weight) or (text)
-      if (char === '(') {
-        const result = this._parseWeighted(text, i);
-        if (result) {
-          tokens.push(result.token);
-          i = result.endIndex;
-          continue;
-        }
+      return tokens;
+    } catch (error) {
+      // If it's already a TokenizationError, re-throw it
+      if (error instanceof TokenizationError) {
+        throw error;
       }
-
-      // Parse plain text
-      const result = this._parsePlainText(text, i);
-      if (result) {
-        tokens.push(result.token);
-        i = result.endIndex;
-      } else {
-        // Skip unrecognized character
-        i++;
-      }
+      
+      // Wrap other errors in TokenizationError
+      throw new TokenizationError(
+        'Failed to tokenize prompt text',
+        { 
+          textLength: text.length,
+          textPreview: text.substring(0, 100) + (text.length > 100 ? '...' : '')
+        },
+        error,
+        [
+          'Check if the prompt contains valid syntax',
+          'Ensure brackets are properly matched',
+          'Verify special tags are correctly formatted'
+        ]
+      );
     }
-
-    return tokens;
   }
 
   /**

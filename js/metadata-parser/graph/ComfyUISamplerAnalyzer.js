@@ -6,16 +6,19 @@
   'use strict';
 
   // Get dependencies for both environments
-  var ComfyUIGraph, ParsingUtils;
+  var ComfyUIGraph, ParsingUtils, SamplerNotFoundError;
   
   if (typeof window !== 'undefined') {
     // Browser environment
     ComfyUIGraph = window.ComfyUIGraph;
     ParsingUtils = window.ParsingUtils;
+    SamplerNotFoundError = window.SamplerNotFoundError;
   } else if (typeof require !== 'undefined') {
     // Node.js environment (testing)
     ComfyUIGraph = require('./ComfyUIGraph');
     ParsingUtils = require('../utils/ParsingUtils');
+    const { SamplerNotFoundError: SNFE } = require('../errors/ParseError');
+    SamplerNotFoundError = SNFE;
   } else {
     throw new Error('Required dependencies not found');
   }
@@ -36,6 +39,7 @@ class ComfyUISamplerAnalyzer {
   /**
    * Create a new ComfyUISamplerAnalyzer
    * @param {ComfyUIGraph} graph - ComfyUI workflow graph
+   * @throws {Error} When graph is invalid
    */
   constructor(graph) {
     if (!graph || typeof graph.getNodesByType !== 'function') {

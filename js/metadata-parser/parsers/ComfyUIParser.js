@@ -16,7 +16,7 @@
     // Node.js environment (testing)
     MetadataParserBase = require('./MetadataParser');
     ParsingUtils = require('../utils/ParsingUtils');
-    ErrorHandler = require('../utils/ErrorHandler');
+    ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
     ComfyUIGraph = require('../graph/ComfyUIGraph');
     ComfyUISamplerAnalyzer = require('../graph/ComfyUISamplerAnalyzer');
   } else {

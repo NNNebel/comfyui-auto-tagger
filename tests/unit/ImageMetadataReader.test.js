@@ -150,6 +150,286 @@ describe('ImageMetadataReader', () => {
     });
   });
 
+  describe('_decodeComfChunk', () => {
+    it('should decode comf chunk with keyword and JSON', () => {
+      const keyword = 'workflow';
+      const jsonText = '{"nodes":[]}';
+      const data = new TextEncoder().encode(keyword + jsonText);
+      
+      const result = ImageMetadataReader._decodeComfChunk(data);
+      expect(result.keyword).toBe(keyword);
+      expect(result.text).toBe(jsonText);
+    });
+
+    it('should handle comf chunk with whitespace before JSON', () => {
+      const keyword = 'prompt';
+      const jsonText = '{"test":"value"}';
+      const data = new TextEncoder().encode(keyword + '  ' + jsonText);
+      
+      const result = ImageMetadataReader._decodeComfChunk(data);
+      expect(result.keyword).toBe(keyword);
+      expect(result.text).toBe(jsonText);
+    });
+
+    it('should handle comf chunk with null characters', () => {
+      const keyword = 'workflow';
+      const jsonText = '{"key":"val"}';
+      const data = new TextEncoder().encode(keyword + '\0\0' + jsonText);
+      
+      const result = ImageMetadataReader._decodeComfChunk(data);
+      expect(result.keyword).toBe(keyword);
+      expect(result.text).toBe(jsonText);
+    });
+
+    it('should handle comf chunk without JSON', () => {
+      const data = new TextEncoder().encode('no json here');
+      const result = ImageMetadataReader._decodeComfChunk(data);
+      expect(result.keyword).toBe('');
+      expect(result.text).toBe('no json here');
+    });
+  });
+
+  describe('extractPngChunks - comf chunks', () => {
+    it('should extract comf chunks with JSON data', () => {
+      const pngSignature = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
+      ]);
+      
+      const keyword = 'workflow';
+      const jsonText = '{"nodes":[{"id":1}]}';
+      const chunkData = new TextEncoder().encode(keyword + jsonText);
+      
+      const chunkLength = chunkData.length;
+      const chunk = new Uint8Array(4 + 4 + chunkLength + 4);
+      const view = new DataView(chunk.buffer);
+      
+      view.setUint32(0, chunkLength);
+      // Type 'comf'
+      chunk[4] = 0x63; // 'c'
+      chunk[5] = 0x6f; // 'o'
+      chunk[6] = 0x6d; // 'm'
+      chunk[7] = 0x66; // 'f'
+      chunk.set(chunkData, 8);
+      view.setUint32(8 + chunkLength, 0);
+      
+      const buffer = new Uint8Array(pngSignature.length + chunk.length);
+      buffer.set(pngSignature, 0);
+      buffer.set(chunk, pngSignature.length);
+      
+      const result = ImageMetadataReader.extractPngChunks(buffer);
+      expect(result.workflow).toEqual({ nodes: [{ id: 1 }] });
+    });
+
+    it('should handle comf chunks with non-JSON text', () => {
+      const pngSignature = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
+      ]);
+      
+      const text = 'some text data without json';
+      const chunkData = new TextEncoder().encode(text);
+      
+      const chunkLength = chunkData.length;
+      const chunk = new Uint8Array(4 + 4 + chunkLength + 4);
+      const view = new DataView(chunk.buffer);
+      
+      view.setUint32(0, chunkLength);
+      chunk[4] = 0x63; chunk[5] = 0x6f; chunk[6] = 0x6d; chunk[7] = 0x66;
+      chunk.set(chunkData, 8);
+      view.setUint32(8 + chunkLength, 0);
+      
+      const buffer = new Uint8Array(pngSignature.length + chunk.length);
+      buffer.set(pngSignature, 0);
+      buffer.set(chunk, pngSignature.length);
+      
+      const result = ImageMetadataReader.extractPngChunks(buffer);
+      // When no JSON is found, the text is stored with empty keyword
+      // which means it's stored as result[''] = text
+      expect(result['']).toBe(text);
+    });
+  });
+
+  describe('extractPngChunks - edge cases', () => {
+    it('should handle truncated chunk length', () => {
+      const buffer = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00 // Incomplete length
+      ]);
+      const result = ImageMetadataReader.extractPngChunks(buffer);
+      expect(result).toEqual({});
+    });
+
+    it('should handle truncated chunk type', () => {
+      const buffer = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x05, // Length
+        0x74, 0x45 // Incomplete type
+      ]);
+      const result = ImageMetadataReader.extractPngChunks(buffer);
+      expect(result).toEqual({});
+    });
+
+    it('should skip non-tEXt/comf chunks', () => {
+      const pngSignature = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
+      ]);
+      
+      // Create IHDR chunk (not tEXt or comf)
+      const chunk = new Uint8Array([
+        0x00, 0x00, 0x00, 0x0d, // Length: 13
+        0x49, 0x48, 0x44, 0x52, // 'IHDR'
+        // 13 bytes of data
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00  // CRC
+      ]);
+      
+      const buffer = new Uint8Array(pngSignature.length + chunk.length);
+      buffer.set(pngSignature, 0);
+      buffer.set(chunk, pngSignature.length);
+      
+      const result = ImageMetadataReader.extractPngChunks(buffer);
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('extractWebpChunks - EXIF/XMP', () => {
+    it('should extract workflow from EXIF chunk', () => {
+      const webpHeader = new Uint8Array([
+        0x52, 0x49, 0x46, 0x46, // 'RIFF'
+        0x00, 0x00, 0x00, 0x00, // File size (placeholder)
+        0x57, 0x45, 0x42, 0x50  // 'WEBP'
+      ]);
+      
+      const jsonText = '{"nodes":[]}';
+      const exifData = new TextEncoder().encode('workflow: ' + jsonText);
+      
+      const exifChunk = new Uint8Array(8 + exifData.length);
+      const view = new DataView(exifChunk.buffer);
+      
+      // EXIF chunk header
+      exifChunk[0] = 0x45; exifChunk[1] = 0x58; // 'EX'
+      exifChunk[2] = 0x49; exifChunk[3] = 0x46; // 'IF'
+      view.setUint32(4, exifData.length, true); // Little-endian size
+      exifChunk.set(exifData, 8);
+      
+      const buffer = new Uint8Array(webpHeader.length + exifChunk.length);
+      buffer.set(webpHeader, 0);
+      buffer.set(exifChunk, webpHeader.length);
+      
+      const result = ImageMetadataReader.extractWebpChunks(buffer);
+      expect(result.workflow).toEqual({ nodes: [] });
+    });
+
+    it('should extract prompt from XMP chunk', () => {
+      const webpHeader = new Uint8Array([
+        0x52, 0x49, 0x46, 0x46,
+        0x00, 0x00, 0x00, 0x00,
+        0x57, 0x45, 0x42, 0x50
+      ]);
+      
+      const jsonText = '{"text":"test"}';
+      const xmpData = new TextEncoder().encode('prompt: ' + jsonText);
+      
+      const xmpChunk = new Uint8Array(8 + xmpData.length);
+      const view = new DataView(xmpChunk.buffer);
+      
+      // XMP chunk header (note the space after XMP)
+      xmpChunk[0] = 0x58; xmpChunk[1] = 0x4d; // 'XM'
+      xmpChunk[2] = 0x50; xmpChunk[3] = 0x20; // 'P '
+      view.setUint32(4, xmpData.length, true);
+      xmpChunk.set(xmpData, 8);
+      
+      const buffer = new Uint8Array(webpHeader.length + xmpChunk.length);
+      buffer.set(webpHeader, 0);
+      buffer.set(xmpChunk, webpHeader.length);
+      
+      const result = ImageMetadataReader.extractWebpChunks(buffer);
+      expect(result.prompt).toEqual({ text: 'test' });
+    });
+
+    it('should handle WebP with odd-sized chunks (padding)', () => {
+      const webpHeader = new Uint8Array([
+        0x52, 0x49, 0x46, 0x46,
+        0x00, 0x00, 0x00, 0x00,
+        0x57, 0x45, 0x42, 0x50
+      ]);
+      
+      // Create EXIF chunk with odd size (5 bytes)
+      const exifData = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05]);
+      const exifChunk = new Uint8Array(8 + exifData.length + 1); // +1 for padding
+      const view = new DataView(exifChunk.buffer);
+      
+      exifChunk[0] = 0x45; exifChunk[1] = 0x58;
+      exifChunk[2] = 0x49; exifChunk[3] = 0x46;
+      view.setUint32(4, exifData.length, true);
+      exifChunk.set(exifData, 8);
+      exifChunk[8 + exifData.length] = 0x00; // Padding byte
+      
+      const buffer = new Uint8Array(webpHeader.length + exifChunk.length);
+      buffer.set(webpHeader, 0);
+      buffer.set(exifChunk, webpHeader.length);
+      
+      const result = ImageMetadataReader.extractWebpChunks(buffer);
+      expect(result).toEqual({});
+    });
+
+    it('should handle truncated WebP chunk header', () => {
+      const buffer = new Uint8Array([
+        0x52, 0x49, 0x46, 0x46,
+        0x00, 0x00, 0x00, 0x00,
+        0x57, 0x45, 0x42, 0x50,
+        0x45, 0x58 // Incomplete chunk header
+      ]);
+      const result = ImageMetadataReader.extractWebpChunks(buffer);
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('_extractFromBinary', () => {
+    it('should extract workflow from binary data', () => {
+      const jsonText = '{"nodes":[]}';
+      const binaryData = new TextEncoder().encode('workflow: ' + jsonText);
+      const result = {};
+      
+      ImageMetadataReader._extractFromBinary(binaryData, result);
+      expect(result.workflow).toEqual({ nodes: [] });
+    });
+
+    it('should extract prompt from binary data', () => {
+      const jsonText = '{"text":"hello"}';
+      const binaryData = new TextEncoder().encode('prompt: ' + jsonText);
+      const result = {};
+      
+      ImageMetadataReader._extractFromBinary(binaryData, result);
+      expect(result.prompt).toEqual({ text: 'hello' });
+    });
+
+    it('should handle case-insensitive keyword matching', () => {
+      const jsonText = '{"key":"value"}';
+      const binaryData = new TextEncoder().encode('WORKFLOW: ' + jsonText);
+      const result = {};
+      
+      ImageMetadataReader._extractFromBinary(binaryData, result);
+      expect(result.workflow).toEqual({ key: 'value' });
+    });
+
+    it('should handle binary data without JSON', () => {
+      const binaryData = new TextEncoder().encode('no json here');
+      const result = {};
+      
+      ImageMetadataReader._extractFromBinary(binaryData, result);
+      expect(result).toEqual({});
+    });
+
+    it('should handle malformed JSON in binary data', () => {
+      const binaryData = new TextEncoder().encode('workflow: {invalid json}');
+      const result = {};
+      
+      ImageMetadataReader._extractFromBinary(binaryData, result);
+      expect(result).toEqual({});
+    });
+  });
+
 
 
   describe('_parseJsonFromPos', () => {

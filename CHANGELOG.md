@@ -5,32 +5,108 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### 🇬🇧 English
-#### 🐛 Bug Fixes
-- Fixed ComfyUI parser to support advanced sampler nodes (SamplerCustomAdvanced, Flux models) that don't have direct seed/steps/cfg inputs.
-- Improved parameter extraction for advanced samplers by tracing through connected nodes (RandomNoise, BasicScheduler, FluxGuidance).
-- Fixed prompt extraction for advanced samplers by tracing through guider and conditioning nodes.
+#### 🔧 Internal Refactoring
+- **Phase 1: Graph-Based ComfyUI Parsing**
+  - Introduced `ComfyUIGraph` class for explicit graph data structure and traversal algorithms
+  - Created `ComfyUISamplerAnalyzer` class with clear base sampler selection algorithm
+  - Refactored `ComfyUIParser` to use graph-based approach, eliminating ad-hoc logic
+  - Added support for advanced samplers (SamplerCustomAdvanced) and UNETLoader (Flux workflows)
+  - All parsing operations complete in < 1ms with stable memory usage
 
-#### ✨ Improvements
-- Enhanced ComfyUI parser to handle Flux model workflows with complex node structures.
-- Improved parameter resolution to support both traditional KSampler and modern advanced sampler architectures.
+- **Phase 2: Extensible A1111 Parameter Parsing**
+  - Created extensible parameter handler system with base class and specialized handlers
+  - Implemented `ParameterParser` class for structured parameter parsing
+  - Refactored `A1111Parser` to use handler-based architecture
+  - Added support for extensions: Hires, TI, NGMS parameters
+  - Eliminated switch statements and ad-hoc string parsing
+
+- **Phase 3: Structured Prompt Tokenization**
+  - Created `PromptToken` and `PromptTokenizer` classes for structured prompt parsing
+  - Refactored `TagGenerator` to use tokenization system
+  - Added prompt reconstruction capability
+  - Improved handling of weighted text, LoRA tags, and nested brackets
+
+- **Phase 4: Error Handling Improvements**
+  - Created detailed error types: `ParseError`, `GraphConstructionError`, `SamplerNotFoundError`, `ParameterParseError`, `TokenizationError`
+  - Enhanced `ErrorHandler` with severity levels (debug, info, warn, error) and error aggregation
+  - Updated all parsers to use specific error types with context and suggestions
+  - Added missing node detection with helpful suggestions for custom nodes
+
+- **Phase 5: Performance Optimization**
+  - Profiled current implementation and documented baseline metrics
+  - A1111 parsing: 0.022-0.032ms, ComfyUI parsing: 0.048-0.219ms
+  - All operations well under 100ms requirement with significant margin
+  - Deferred caching implementation to avoid premature optimization
 
 #### 🧪 Testing
-- Added test data for Flux model ComfyUI images (comfyui_flux.json) to validate advanced sampler support.
-- Updated integration tests to handle format-specific metadata structures (ComfyUI vs A1111).
+- Added comprehensive test suite: 730 tests passing
+- Created unit tests for all new classes and refactored components
+- Added property-based tests for graph algorithms and parameter parsing
+- Achieved 80.93% code coverage (up from 78.76%)
+- Added performance benchmarks and profiling scripts
+
+#### 🐛 Bug Fixes
+- Fixed ComfyUI parser to support advanced sampler nodes (SamplerCustomAdvanced, Flux models)
+- Improved parameter extraction by tracing through connected nodes (RandomNoise, BasicScheduler, FluxGuidance)
+- Fixed prompt extraction for advanced samplers via guider and conditioning nodes
+
+#### ✨ Improvements
+- Enhanced ComfyUI parser to handle Flux model workflows with complex node structures
+- Improved parameter resolution to support both traditional KSampler and modern advanced sampler architectures
+- Eliminated code duplication and ad-hoc logic across all parsers
+- Improved maintainability and extensibility of the entire metadata parsing system
 
 ### 🇯🇵 日本語
-#### 🐛 バグ修正
-- ComfyUIパーサーがSamplerCustomAdvancedやFluxモデルなどの高度なサンプラーノードに対応しました。
-- 接続されたノード（RandomNoise、BasicScheduler、FluxGuidance）を辿ることでパラメータ抽出を改善しました。
-- 高度なサンプラーのプロンプト抽出をguiderとconditioning ノードを辿ることで改善しました。
+#### 🔧 内部リファクタリング
+- **フェーズ1: グラフベースのComfyUIパース**
+  - 明示的なグラフデータ構造とトラバーサルアルゴリズムのための`ComfyUIGraph`クラスを導入
+  - 明確なベースサンプラー選択アルゴリズムを持つ`ComfyUISamplerAnalyzer`クラスを作成
+  - `ComfyUIParser`をグラフベースのアプローチにリファクタリングし、その場しのぎのロジックを排除
+  - 高度なサンプラー（SamplerCustomAdvanced）とUNETLoader（Fluxワークフロー）のサポートを追加
+  - すべてのパース処理が1ms未満で完了し、メモリ使用量も安定
 
-#### ✨ 改善
-- ComfyUIパーサーがFluxモデルの複雑なノード構造に対応しました。
-- 従来のKSamplerと最新の高度なサンプラーアーキテクチャの両方をサポートするようにパラメータ解決を改善しました。
+- **フェーズ2: 拡張可能なA1111パラメータパース**
+  - 基底クラスと特化したハンドラーを持つ拡張可能なパラメータハンドラーシステムを作成
+  - 構造化されたパラメータパースのための`ParameterParser`クラスを実装
+  - `A1111Parser`をハンドラーベースのアーキテクチャにリファクタリング
+  - 拡張機能のサポートを追加：Hires、TI、NGMSパラメータ
+  - switch文とその場しのぎの文字列パースを排除
+
+- **フェーズ3: 構造化されたプロンプトトークン化**
+  - 構造化されたプロンプトパースのための`PromptToken`と`PromptTokenizer`クラスを作成
+  - `TagGenerator`をトークン化システムを使用するようにリファクタリング
+  - プロンプト再構築機能を追加
+  - 重み付きテキスト、LoRAタグ、ネストされた括弧の処理を改善
+
+- **フェーズ4: エラーハンドリングの改善**
+  - 詳細なエラータイプを作成：`ParseError`、`GraphConstructionError`、`SamplerNotFoundError`、`ParameterParseError`、`TokenizationError`
+  - `ErrorHandler`に重要度レベル（debug、info、warn、error）とエラー集約機能を追加
+  - すべてのパーサーを、コンテキストと提案を含む特定のエラータイプを使用するように更新
+  - カスタムノードに関する有用な提案を含む、欠落ノード検出を追加
+
+- **フェーズ5: パフォーマンス最適化**
+  - 現在の実装をプロファイリングし、ベースラインメトリクスを文書化
+  - A1111パース：0.022-0.032ms、ComfyUIパース：0.048-0.219ms
+  - すべての操作が100ms要件を大幅に下回り、十分なマージンを確保
+  - 早すぎる最適化を避けるため、キャッシュ実装を延期
 
 #### 🧪 テスト
-- Fluxモデルの ComfyUI 画像用テストデータ（comfyui_flux.json）を追加して、高度なサンプラーサポートを検証しました。
-- 統合テストをフォーマット固有のメタデータ構造（ComfyUI vs A1111）に対応するように更新しました。
+- 包括的なテストスイートを追加：730テストが合格
+- すべての新しいクラスとリファクタリングされたコンポーネントのユニットテストを作成
+- グラフアルゴリズムとパラメータパースのプロパティベーステストを追加
+- コードカバレッジ80.93%を達成（78.76%から向上）
+- パフォーマンスベンチマークとプロファイリングスクリプトを追加
+
+#### 🐛 バグ修正
+- ComfyUIパーサーが高度なサンプラーノード（SamplerCustomAdvanced、Fluxモデル）に対応
+- 接続されたノード（RandomNoise、BasicScheduler、FluxGuidance）を辿ることでパラメータ抽出を改善
+- guiderとconditioning ノードを介した高度なサンプラーのプロンプト抽出を修正
+
+#### ✨ 改善
+- ComfyUIパーサーが複雑なノード構造を持つFluxモデルワークフローに対応
+- 従来のKSamplerと最新の高度なサンプラーアーキテクチャの両方をサポートするようにパラメータ解決を改善
+- すべてのパーサーでコードの重複とその場しのぎのロジックを排除
+- メタデータパースシステム全体の保守性と拡張性を向上
 
 ## [1.3.2] - 2026-01-30
 

@@ -22,7 +22,7 @@
     ParserRegistry = require('../parsers/ParserRegistry');
     ComfyUIParser = require('../parsers/ComfyUIParser');
     A1111Parser = require('../parsers/A1111Parser');
-    ErrorHandler = require('../utils/ErrorHandler');
+    ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
     Validators = require('../utils/Validators');
   } else {
     throw new Error('Dependencies not found');

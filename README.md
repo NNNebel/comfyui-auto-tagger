@@ -50,6 +50,17 @@ Unlike simple metadata readers, this plugin dynamically analyzes the ComfyUI nod
 *   **Multi-Stage Support**: Comprehensive extraction of seeds, prompts, and samplers from all stages, including KSampler, SAM Detailer, HiresFix, and FaceDetailer.
 *   **Full Audit in Notes**: Records detailed metadata for every detected generation step in the Eagle Notes section for precise reproduction.
 
+### 🏗️ Architecture
+
+This plugin features an advanced metadata parser with graph-based analysis and extensible handler systems.
+
+- **Graph-Based ComfyUI Parsing**: Explicitly constructs node graphs and uses traversal algorithms to accurately identify base samplers
+- **Extensible A1111 Parameter Parsing**: Handler system allows easy addition of new parameter types
+- **Structured Prompt Tokenization**: Accurately parses weighted text, LoRA tags, and nested brackets
+- **Detailed Error Handling**: Specific error types with context and suggestions for clear problem identification
+
+For details, see [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md).
+
 ### ⚠️ Disclaimer & Bug Reports
 
 *   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on the advanced trace logic to identify the most relevant generation parameters.
@@ -102,6 +113,17 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 2.  Eagleを起動
 3.  `.eagleplugin` ファイルをEagleウィンドウにドラッグ&ドロップ
 4.  必要に応じてEagleを再起動
+
+### 🏗️ アーキテクチャ
+
+本プラグインは、グラフベースの解析とハンドラーシステムを採用した高度なメタデータパーサーを搭載しています。
+
+- **グラフベースのComfyUI解析**: ノードグラフを明示的に構築し、トラバーサルアルゴリズムでベースサンプラーを正確に特定
+- **拡張可能なA1111パラメータパース**: ハンドラーシステムにより、新しいパラメータタイプを簡単に追加可能
+- **構造化されたプロンプトトークン化**: 重み付きテキスト、LoRAタグ、ネストされた括弧を正確に解析
+- **詳細なエラーハンドリング**: コンテキストと提案を含む特定のエラータイプで問題を明確化
+
+詳細は [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md) を参照してください。
 
 ### 🚀 使い方
 

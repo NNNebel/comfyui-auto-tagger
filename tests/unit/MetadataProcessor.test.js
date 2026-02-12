@@ -159,5 +159,74 @@ describe('MetadataProcessor', () => {
       expect(result.annotation).not.toContain('Checkpoint');
       expect(result.annotation).not.toContain('Seed');
     });
+
+    it('should process with buffer and mimeType using MetadataService', () => {
+      // Note: This test verifies the code path exists, but creating a valid PNG buffer
+      // with proper CRC32 checksums is complex. The actual parsing is tested in
+      // integration tests with real image files.
+      
+      // Create a minimal PNG buffer (just signature, will fail parsing but test the path)
+      const pngSignature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+      const settings = { checkpoint: true };
+      
+      const result = MetadataProcessor.process(null, settings, t, pngSignature, 'image/png');
+      
+      // Should not crash, returns empty result when parsing fails
+      expect(result.tags).toBeDefined();
+      expect(result.annotation).toBeDefined();
+      expect(result.stepCount).toBe(1);
+    });
+
+    it('should handle MetadataService parsing errors gracefully', () => {
+      // Invalid PNG buffer
+      const invalidBuffer = new Uint8Array([1, 2, 3, 4]);
+      const settings = { checkpoint: true };
+      
+      const result = MetadataProcessor.process(null, settings, t, invalidBuffer, 'image/png');
+      
+      // Should return empty result without crashing
+      expect(result.tags.size).toBe(0);
+      expect(result.annotation).toBe('');
+      expect(result.stepCount).toBe(1);
+    });
+
+    it('should prioritize parsedMeta over buffer when both provided', () => {
+      const metadata = {
+        checkpoint: 'explicit-model.safetensors',
+        positive: 'explicit prompt'
+      };
+      const buffer = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]); // PNG signature
+      const settings = { checkpoint: true, positive: true };
+      
+      const result = MetadataProcessor.process(metadata, settings, t, buffer, 'image/png');
+      
+      // Should use parsedMeta, not buffer
+      expect(result.tags.has('explicit-model')).toBe(true);
+      // PromptTokenizer treats "explicit prompt" as a single token (no comma separator)
+      expect(result.tags.has('explicit prompt')).toBe(true);
+      // Annotation uses getBaseName which removes extension
+      expect(result.annotation).toContain('Checkpoint: explicit-model');
+    });
+
+    it('should handle buffer without mimeType', () => {
+      const buffer = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+      const settings = { checkpoint: true };
+      
+      const result = MetadataProcessor.process(null, settings, t, buffer, null);
+      
+      // Should not attempt parsing without mimeType
+      expect(result.tags.size).toBe(0);
+      expect(result.stepCount).toBe(1);
+    });
+
+    it('should handle mimeType without buffer', () => {
+      const settings = { checkpoint: true };
+      
+      const result = MetadataProcessor.process(null, settings, t, null, 'image/png');
+      
+      // Should not attempt parsing without buffer
+      expect(result.tags.size).toBe(0);
+      expect(result.stepCount).toBe(1);
+    });
   });
 });

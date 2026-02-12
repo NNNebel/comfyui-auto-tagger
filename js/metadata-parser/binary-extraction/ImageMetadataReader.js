@@ -14,7 +14,7 @@
   } else if (typeof require !== 'undefined') {
     // Node.js environment (testing)
     BinaryUtils = require('../utils/BinaryUtils');
-    ErrorHandler = require('../utils/ErrorHandler');
+    ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
     ParsingUtils = require('../utils/ParsingUtils');
   } else {
     throw new Error('Required dependencies not found');
