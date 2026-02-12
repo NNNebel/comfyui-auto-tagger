@@ -2,11 +2,21 @@
 // Universal module (Browser + Node.js)
 
 // Load MetadataProcessor for processing
+// Note: In browser environment, MetadataProcessor is loaded lazily to avoid timing issues
 let MetadataProcessor;
 if (typeof window === 'undefined' && typeof require !== 'undefined') {
   MetadataProcessor = require('./metadata-processor/MetadataProcessor');
-} else if (typeof window !== 'undefined') {
-  MetadataProcessor = window.MetadataProcessor;
+}
+
+/**
+ * Get MetadataProcessor (lazy loading for browser environment)
+ * @private
+ */
+function getMetadataProcessor() {
+  if (!MetadataProcessor && typeof window !== 'undefined') {
+    MetadataProcessor = window.MetadataProcessor;
+  }
+  return MetadataProcessor;
 }
 
 // --- Data Formatting Functions ---
@@ -47,7 +57,11 @@ function cleanPrompt(text, prefix='') {
  * @returns {Object} Formatted metadata with tags, categories, and annotation
  */
 function processMetadata(parsedMeta, settings, t, buffer = null, mimeType = null) {
-    return MetadataProcessor.process(parsedMeta, settings, t, buffer, mimeType);
+    const processor = getMetadataProcessor();
+    if (!processor) {
+        throw new Error('MetadataProcessor is not loaded. Make sure MetadataProcessor.js is loaded before core.js');
+    }
+    return processor.process(parsedMeta, settings, t, buffer, mimeType);
 }
 
 /**
