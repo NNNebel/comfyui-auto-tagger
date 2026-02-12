@@ -15,7 +15,7 @@ describe('Sample Images Integration Tests', () => {
   const testCases = [
     {
       name: 'A1111 Simple PNG',
-      imagePath: 'tests/samples/a1111_simple.png',
+      imagePath: 'tests/fixtures/a1111_simple.png',
       expectedPath: 'tests/expected/a1111_simple.json',
       mimeType: 'image/png',
       format: 'a1111',
@@ -23,7 +23,7 @@ describe('Sample Images Integration Tests', () => {
     },
     {
       name: 'Civitai Generate1 PNG',
-      imagePath: 'tests/samples/civitai-generate1.png',
+      imagePath: 'tests/fixtures/civitai-generate1.png',
       expectedPath: 'tests/expected/civitai-generate1.json',
       mimeType: 'image/png',
       format: 'a1111',
@@ -31,7 +31,7 @@ describe('Sample Images Integration Tests', () => {
     },
     {
       name: 'Blank PNG (No Metadata)',
-      imagePath: 'tests/samples/blank.png',
+      imagePath: 'tests/fixtures/blank.png',
       expectedPath: null,
       mimeType: 'image/png',
       format: null,
@@ -39,7 +39,7 @@ describe('Sample Images Integration Tests', () => {
     },
     {
       name: 'Gemini Generate PNG (No Metadata)',
-      imagePath: 'tests/samples/gemini-generate.png',
+      imagePath: 'tests/fixtures/gemini-generate.png',
       expectedPath: null,
       mimeType: 'image/png',
       format: null,
@@ -47,16 +47,48 @@ describe('Sample Images Integration Tests', () => {
     },
     {
       name: 'ComfyUI Flux PNG',
-      imagePath: 'tests/samples/comfyui_flux.png',
+      imagePath: 'tests/fixtures/comfyui_flux.png',
       expectedPath: 'tests/expected/comfyui_flux.json',
       mimeType: 'image/png',
       format: 'comfyui',
       shouldSucceed: true
     },
     {
+      name: 'ComfyUI I2I WebP',
+      imagePath: 'tests/fixtures/comfyui_i2i.webp',
+      expectedPath: 'tests/expected/comfyui_i2i_webp.json',
+      mimeType: 'image/webp',
+      format: 'comfyui',
+      shouldSucceed: true
+    },
+    {
+      name: 'ComfyUI Multi PNG',
+      imagePath: 'tests/fixtures/comfyui_multi.png',
+      expectedPath: 'tests/expected/comfyui_multi_png.json',
+      mimeType: 'image/png',
+      format: 'comfyui',
+      shouldSucceed: true
+    },
+    {
       name: 'ComfyUI Multi WebP',
-      imagePath: 'tests/samples/comfyui_multi.webp',
+      imagePath: 'tests/fixtures/comfyui_multi.webp',
       expectedPath: 'tests/expected/comfyui_multi_webp.json',
+      mimeType: 'image/webp',
+      format: 'comfyui',
+      shouldSucceed: true
+    },
+    {
+      name: 'ComfyUI Simple PNG',
+      imagePath: 'tests/fixtures/comfyui_simple.png',
+      expectedPath: 'tests/expected/comfyui_simple_png.json',
+      mimeType: 'image/png',
+      format: 'comfyui',
+      shouldSucceed: true
+    },
+    {
+      name: 'ComfyUI Simple WebP',
+      imagePath: 'tests/fixtures/comfyui_simple.webp',
+      expectedPath: 'tests/expected/comfyui_simple_webp.json',
       mimeType: 'image/webp',
       format: 'comfyui',
       shouldSucceed: true
@@ -255,8 +287,8 @@ describe('Sample Images Integration Tests', () => {
 
   describe('Metadata extraction validation', () => {
     it('should return empty array for images without metadata', () => {
-      const blankPath = join(process.cwd(), 'tests/samples/blank.png');
-      const geminiPath = join(process.cwd(), 'tests/samples/gemini-generate.png');
+      const blankPath = join(process.cwd(), 'tests/fixtures/blank.png');
+      const geminiPath = join(process.cwd(), 'tests/fixtures/gemini-generate.png');
 
       if (!existsSync(blankPath) || !existsSync(geminiPath)) {
         console.log('Sample files not found, skipping validation test');
@@ -274,8 +306,8 @@ describe('Sample Images Integration Tests', () => {
     });
 
     it('should successfully extract A1111 metadata from different sources', () => {
-      const a1111Path = join(process.cwd(), 'tests/samples/a1111_simple.png');
-      const civitaiPath = join(process.cwd(), 'tests/samples/civitai-generate1.png');
+      const a1111Path = join(process.cwd(), 'tests/fixtures/a1111_simple.png');
+      const civitaiPath = join(process.cwd(), 'tests/fixtures/civitai-generate1.png');
 
       if (!existsSync(a1111Path) || !existsSync(civitaiPath)) {
         console.log('Sample files not found, skipping A1111 extraction test');

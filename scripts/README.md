@@ -16,13 +16,13 @@ node scripts/analyze-image.js <image-path> [output-path]
 **Examples:**
 ```bash
 # Display metadata in console
-node scripts/analyze-image.js tests/samples/comfyui_simple.png
+node scripts/analyze-image.js tests/fixtures/comfyui_simple.png
 
 # Save metadata to JSON file
-node scripts/analyze-image.js tests/samples/comfyui_simple.png output.json
+node scripts/analyze-image.js tests/fixtures/comfyui_simple.png output.json
 
 # Analyze WebP image
-node scripts/analyze-image.js tests/samples/comfyui_simple.webp
+node scripts/analyze-image.js tests/fixtures/comfyui_simple.webp
 ```
 
 **Output:**
@@ -45,7 +45,7 @@ python scripts/extract_metadata_standard.py
 ```
 
 **Behavior:**
-- Scans `tests/samples/` directory for `.png` and `.webp` files.
+- Scans `tests/fixtures/` directory for `.png` and `.webp` files.
 - Extracts standard text chunks (`tEXt`, `iTXt`) and private chunks (`comf`) from PNGs.
 - Extracts `EXIF` and `XMP` metadata from WebPs.
 - Saves raw metadata as JSON files in `tests/expected/raw-metadata/`.
@@ -66,7 +66,7 @@ node scripts/inspect-png-chunks.js <image-path>
 
 **Example:**
 ```bash
-node scripts/inspect-png-chunks.js tests/samples/comfyui_simple.png
+node scripts/inspect-png-chunks.js tests/fixtures/comfyui_simple.png
 ```
 
 **Output:**
@@ -93,7 +93,7 @@ node scripts/inspect-comfyui-structure.js <image-path>
 
 **Example:**
 ```bash
-node scripts/inspect-comfyui-structure.js tests/samples/comfyui_multi.png
+node scripts/inspect-comfyui-structure.js tests/fixtures/comfyui_multi.png
 ```
 
 **Output:**
@@ -123,7 +123,7 @@ node scripts/inspect-metadata.js <image-path>
 
 **Example:**
 ```bash
-node scripts/inspect-metadata.js tests/samples/comfyui_simple.png
+node scripts/inspect-metadata.js tests/fixtures/comfyui_simple.png
 ```
 
 **Output:**
@@ -150,10 +150,10 @@ node scripts/inspect-node-detail.js <image-path> <node-id>
 **Examples:**
 ```bash
 # Inspect node 325 in a workflow
-node scripts/inspect-node-detail.js tests/samples/comfyui_multi.webp 325
+node scripts/inspect-node-detail.js tests/fixtures/comfyui_multi.webp 325
 
 # Inspect a KSampler node
-node scripts/inspect-node-detail.js tests/samples/comfyui_multi.png 3
+node scripts/inspect-node-detail.js tests/fixtures/comfyui_multi.png 3
 ```
 
 **Output:**
@@ -215,10 +215,10 @@ For complex workflows with multiple samplers (HiresFix, FaceDetailer, etc.):
 
 ```bash
 # Get overview of all samplers and their connections
-node scripts/inspect-comfyui-structure.js tests/samples/comfyui_multi.png
+node scripts/inspect-comfyui-structure.js tests/fixtures/comfyui_multi.png
 
 # Check parsed metadata to verify base sampler selection
-node scripts/analyze-image.js tests/samples/comfyui_multi.png
+node scripts/analyze-image.js tests/fixtures/comfyui_multi.png
 ```
 
 ---

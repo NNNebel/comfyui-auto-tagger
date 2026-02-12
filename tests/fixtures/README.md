@@ -25,7 +25,7 @@ To test the metadata parser with your own images:
    
 3. **Generate expected output** (optional):
    ```bash
-   node scripts/analyze-image.js tests/samples/your_image.png > tests/expected/sample/your_image.json
+   node scripts/analyze-image.js tests/fixtures/your_image.png > tests/expected/sample/your_image.json
    ```
 
 4. **Run tests**:

@@ -9,11 +9,6 @@ All notable changes to this project will be documented in this file.
 - Fixed base sampler detection in ComfyUI workflows with DetailerForEach nodes
 - Improved distance calculation for samplers that work on images rather than latents
 
-#### 🧪 Testing
-- Added comprehensive integration test for multi-sampler ComfyUI workflows
-- Enhanced test validation to verify base sampler identification
-- Added checks for all sampler IDs and is_base flags
-
 #### ✨ Improvements
 - Optimized metadata parsing engine for better performance and reliability
 - Improved error handling with more informative error messages
@@ -28,11 +23,6 @@ All notable changes to this project will be documented in this file.
 #### 🐛 バグ修正
 - DetailerForEachノードを含むComfyUIワークフローでのbase sampler検出を修正
 - latentではなく画像を処理するサンプラーの距離計算を改善
-
-#### 🧪 テスト
-- マルチサンプラーComfyUIワークフローの包括的な統合テストを追加
-- base sampler識別を検証するテスト検証を強化
-- すべてのサンプラーIDとis_baseフラグのチェックを追加
 
 #### ✨ 改善
 - メタデータパースエンジンを最適化し、パフォーマンスと信頼性を向上

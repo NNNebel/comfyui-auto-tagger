@@ -87,7 +87,7 @@ Tests use programmatically generated PNG and WebP buffers with:
 - Malformed JSON for edge case testing
 
 ### Real Sample Data
-- `tests/samples/00151-76682904.png` - Real PNG file with A1111 parameters metadata
+- `tests/fixtures/00151-76682904.png` - Real PNG file with A1111 parameters metadata
 
 ## Coverage Summary
 

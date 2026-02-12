@@ -85,7 +85,7 @@ function profileComfyUI() {
   const parser = new ComfyUIParser();
   
   // Load sample workflows
-  const samplesDir = path.join(__dirname, '../tests/samples');
+  const samplesDir = path.join(__dirname, '../tests/fixtures');
   const samples = [
     'comfyui_simple.png',
     'comfyui_multi.png',

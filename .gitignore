@@ -39,11 +39,11 @@ AGENTS.md
 gemini.md
 .kiro/
 
-# Test sample files - developers should generate their own
-tests/samples/*.png
-tests/samples/*.webp
-tests/samples/*.jpg
-tests/samples/*.jpeg
+# Test fixture files - developers should generate their own
+tests/fixtures/*.png
+tests/fixtures/*.webp
+tests/fixtures/*.jpg
+tests/fixtures/*.jpeg
 
 # Test expected files - developers generate from their own samples
 tests/expected/*.json

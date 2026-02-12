@@ -8,7 +8,7 @@ const nodeId = process.argv[3];
 
 if (!imagePath || !nodeId) {
   console.error('Usage: node scripts/inspect-node-detail.js <image-path> <node-id>');
-  console.error('Example: node scripts/inspect-node-detail.js tests/samples/comfyui_multi.webp 325');
+  console.error('Example: node scripts/inspect-node-detail.js tests/fixtures/comfyui_multi.webp 325');
   process.exit(1);
 }
 

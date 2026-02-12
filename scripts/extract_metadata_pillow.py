@@ -4,7 +4,7 @@ import json
 from PIL import Image
 
 # 設定
-SAMPLES_DIR = os.path.join(os.path.dirname(__file__), '../tests/samples')
+SAMPLES_DIR = os.path.join(os.path.dirname(__file__), '../tests/fixtures')
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '../tests/expected/raw-metadata')
 
 # 出力ディレクトリの作成

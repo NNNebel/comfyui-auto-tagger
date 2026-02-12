@@ -6,7 +6,7 @@ const ImageMetadataReader = require('../js/metadata-parser/binary-extraction/Ima
 const imagePath = process.argv[2];
 if (!imagePath) {
   console.error('Usage: node scripts/inspect-comfyui-structure.js <image-path>');
-  console.error('Example: node scripts/inspect-comfyui-structure.js tests/samples/comfyui_multi.webp');
+  console.error('Example: node scripts/inspect-comfyui-structure.js tests/fixtures/comfyui_multi.webp');
   process.exit(1);
 }
 

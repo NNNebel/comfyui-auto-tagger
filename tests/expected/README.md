@@ -31,9 +31,9 @@ tests/expected/
 
 ### Actual Test Files (root `tests/expected/` directory)
 - **Purpose**: Integration testing with real sample images.
-- **Content**: **Actual** metadata extracted from test images in `tests/samples/`.
+- **Content**: **Actual** metadata extracted from test images in `tests/fixtures/`.
 - **Usage**: Automated tests compare parser output against these files.
-- **Version Control**: ❌ NOT committed (generated locally from sample images).
+- **Version Control**: ❌ NOT committed (generated locally from fixture images).
 - **Location**: `tests/expected/*.json` (excluded by `.gitignore`).
 
 ## Why aren't expected files committed?
@@ -41,11 +41,11 @@ tests/expected/
 1. **Privacy**: May contain project-specific prompts, paths, or settings from developers' environments.
 2. **File Size**: Reduces repository bloat.
 3. **Flexibility**: Each developer can test with their own workflows and images.
-4. **Consistency**: Sample images (`tests/samples/`) are not committed either.
+4. **Consistency**: Fixture images (`tests/fixtures/`) are not committed either.
 
 ## Generating Expected Output Files
 
-When you add sample images to `tests/samples/`, you need to generate corresponding expected output files.
+When you add fixture images to `tests/fixtures/`, you need to generate corresponding expected output files.
 
 > [!WARNING]
 > Do NOT use `analyze-image.js` to generate expected files, as it uses the parser code itself (circular logic).
@@ -64,11 +64,11 @@ When you add sample images to `tests/samples/`, you need to generate correspondi
 
 ## Usage in Tests
 
-Integration tests load sample images from `tests/samples/` and compare the parsed metadata against expected output files in `tests/expected/`:
+Integration tests load fixture images from `tests/fixtures/` and compare the parsed metadata against expected output files in `tests/expected/`:
 
 ```javascript
-// Load sample image
-const buffer = readFileSync('tests/samples/comfyui_simple.png');
+// Load fixture image
+const buffer = readFileSync('tests/fixtures/comfyui_simple.png');
 
 // Parse metadata
 const metadata = metadataService.extractMetadata(buffer, 'image/png');
@@ -85,8 +85,8 @@ if (existsSync(expectedPath)) {
 
 ## File Naming Convention
 
-Expected output files should match the sample image names with extension:
+Expected output files should match the fixture image names with extension:
 
-- `tests/samples/comfyui_simple.png` → `tests/expected/comfyui_simple_png.json`
-- `tests/samples/comfyui_simple.webp` → `tests/expected/comfyui_simple_webp.json`
-- `tests/samples/comfyui_multi.png` → `tests/expected/comfyui_multi_png.json`
+- `tests/fixtures/comfyui_simple.png` → `tests/expected/comfyui_simple_png.json`
+- `tests/fixtures/comfyui_simple.webp` → `tests/expected/comfyui_simple_webp.json`
+- `tests/fixtures/comfyui_multi.png` → `tests/expected/comfyui_multi_png.json`

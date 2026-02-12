@@ -3,7 +3,7 @@
 This directory contains sample expected output JSON files for documentation and reference. These files demonstrate the expected structure and format of parsed metadata for different image generation formats.
 
 > [!NOTE]
-> The files in this directory contain **fictional/generic data** (e.g., "horse running") and do not match the actual metadata of the test images in `tests/samples/`.
+> The files in this directory contain **fictional/generic data** (e.g., "horse running") and do not match the actual metadata of the test images in `tests/fixtures/`.
 > For integration testing, accurate JSON files matching the real images are generated in `tests/expected/` (parent directory).
 
 ## Purpose

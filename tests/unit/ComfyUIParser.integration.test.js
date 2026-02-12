@@ -7,7 +7,7 @@ import ImageMetadataReader from '../../js/metadata-parser/binary-extraction/Imag
 describe('ComfyUIParser Integration Tests', () => {
   it('should parse metadata from real ComfyUI PNG image', () => {
     // Read the sample image
-    const imagePath = join(process.cwd(), 'tests/samples/a1111_simple.png');
+    const imagePath = join(process.cwd(), 'tests/fixtures/a1111_simple.png');
     
     // Skip test if file doesn't exist
     if (!existsSync(imagePath)) {
