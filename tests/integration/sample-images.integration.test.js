@@ -52,6 +52,14 @@ describe('Sample Images Integration Tests', () => {
       mimeType: 'image/png',
       format: 'comfyui',
       shouldSucceed: true
+    },
+    {
+      name: 'ComfyUI Multi WebP',
+      imagePath: 'tests/samples/comfyui_multi.webp',
+      expectedPath: 'tests/expected/comfyui_multi_webp.json',
+      mimeType: 'image/webp',
+      format: 'comfyui',
+      shouldSucceed: true
     }
   ];
 
@@ -150,6 +158,21 @@ describe('Sample Images Integration Tests', () => {
           if (expected.extra_samplers) {
             expect(actual.extra_samplers).toBeDefined();
             expect(actual.extra_samplers.length).toBe(expected.extra_samplers.length);
+            
+            // Verify base sampler is correctly identified
+            const baseSamplers = actual.extra_samplers.filter(s => s.is_base);
+            expect(baseSamplers.length).toBe(1);
+            
+            // Verify base sampler ID matches expected
+            const expectedBaseSampler = expected.extra_samplers.find(s => s.is_base);
+            if (expectedBaseSampler) {
+              expect(baseSamplers[0].id).toBe(expectedBaseSampler.id);
+            }
+            
+            // Verify all sampler IDs are present
+            const actualIds = actual.extra_samplers.map(s => s.id).sort();
+            const expectedIds = expected.extra_samplers.map(s => s.id).sort();
+            expect(actualIds).toEqual(expectedIds);
           }
         }
       });
