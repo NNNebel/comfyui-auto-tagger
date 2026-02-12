@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [1.3.3] - 2026-02-12
 
 ### 🇬🇧 English
+#### 🐛 Bug Fixes
+- Fixed base sampler detection in ComfyUI workflows with DetailerForEach nodes
+- Improved distance calculation for samplers that work on images rather than latents
+
 #### ✨ Improvements
 - Optimized metadata parsing engine for better performance and reliability
 - Improved error handling with more informative error messages
@@ -16,6 +20,10 @@ All notable changes to this project will be documented in this file.
 - Improved code organization and reduced duplication
 
 ### 🇯🇵 日本語
+#### 🐛 バグ修正
+- DetailerForEachノードを含むComfyUIワークフローでのbase sampler検出を修正
+- latentではなく画像を処理するサンプラーの距離計算を改善
+
 #### ✨ 改善
 - メタデータパースエンジンを最適化し、パフォーマンスと信頼性を向上
 - エラーハンドリングを改善し、より詳細なエラーメッセージを提供

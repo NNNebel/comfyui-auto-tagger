@@ -155,6 +155,16 @@ class ComfyUISamplerAnalyzer {
         const parentId = String(latentInput[0]);
         queue.push([parentId, distance + 1]);
       }
+      
+      // For DetailerForEach nodes, trace through image input to find the sampler that generated it
+      const classType = node.class_type || '';
+      if (classType.includes('DetailerForEach') && node.inputs?.image) {
+        const imageInput = node.inputs.image;
+        if (Array.isArray(imageInput) && imageInput.length === 2) {
+          const parentId = String(imageInput[0]);
+          queue.push([parentId, distance + 1]);
+        }
+      }
     }
     
     return Infinity;
@@ -180,6 +190,12 @@ class ComfyUISamplerAnalyzer {
     // VAEEncode is an img2img source
     if (classType.includes('VAEEncode')) {
       return true;
+    }
+    
+    // DetailerForEach nodes work on images, not latents - they are NOT latent sources
+    // They should trace back through their image input chain
+    if (classType.includes('DetailerForEach')) {
+      return false;
     }
     
     // Node with no latent input is a source
