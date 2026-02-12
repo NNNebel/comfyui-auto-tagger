@@ -1,5 +1,7 @@
 // js/metadata-processor/AnnotationBuilder.js
 // Annotation generation from parsed metadata
+(function(global) {
+  'use strict';
 
 /**
  * AnnotationBuilder
@@ -247,7 +249,12 @@ class AnnotationBuilder {
   }
 }
 
-// Export for Node.js (testing)
+// Export for both browser and Node.js environments
+if (typeof window !== 'undefined') {
+  window.AnnotationBuilder = AnnotationBuilder;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = AnnotationBuilder;
 }
+
+})(typeof window !== 'undefined' ? window : global);

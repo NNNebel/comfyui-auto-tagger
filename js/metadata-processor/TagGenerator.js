@@ -1,5 +1,7 @@
 // js/metadata-processor/TagGenerator.js
 // Tag generation from parsed metadata
+(function(global) {
+  'use strict';
 
 /**
  * TagGenerator
@@ -129,7 +131,12 @@ class TagGenerator {
   }
 }
 
-// Export for Node.js (testing)
+// Export for both browser and Node.js environments
+if (typeof window !== 'undefined') {
+  window.TagGenerator = TagGenerator;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = TagGenerator;
 }
+
+})(typeof window !== 'undefined' ? window : global);

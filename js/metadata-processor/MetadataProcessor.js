@@ -1,19 +1,21 @@
 // js/metadata-processor/MetadataProcessor.js
 // Orchestrates metadata processing
+(function(global) {
+  'use strict';
 
 // Load dependencies
 let TagGenerator, AnnotationBuilder, MetadataService;
 
-if (typeof window === 'undefined' && typeof require !== 'undefined') {
-  // Node.js environment
-  TagGenerator = require('./TagGenerator');
-  AnnotationBuilder = require('./AnnotationBuilder');
-  MetadataService = require('../metadata-parser/integration/MetadataService');
-} else if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined') {
   // Browser environment
   TagGenerator = window.TagGenerator;
   AnnotationBuilder = window.AnnotationBuilder;
   MetadataService = window.MetadataService;
+} else if (typeof require !== 'undefined') {
+  // Node.js environment
+  TagGenerator = require('./TagGenerator');
+  AnnotationBuilder = require('./AnnotationBuilder');
+  MetadataService = require('../metadata-parser/integration/MetadataService');
 }
 
 /**
@@ -88,7 +90,12 @@ class MetadataProcessor {
   }
 }
 
-// Export for Node.js (testing)
+// Export for both browser and Node.js environments
+if (typeof window !== 'undefined') {
+  window.MetadataProcessor = MetadataProcessor;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = MetadataProcessor;
 }
+
+})(typeof window !== 'undefined' ? window : global);
