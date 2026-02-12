@@ -66,15 +66,16 @@ class ParserRegistry {
    * 
    * @param {string} format - Format name (e.g., 'comfyui', 'a1111')
    * @param {Object} rawChunks - Raw metadata chunks from ImageMetadataReader
+   * @param {Object} [options={}] - Parser-specific options
    * @returns {ParsedMetadata|null} Parsed metadata or null if parser not found or parsing failed
    * 
    * @example
-   * const metadata = registry.parse('comfyui', rawChunks);
+   * const metadata = registry.parse('comfyui', rawChunks, { suspiciousNodeHandling: 'exclude' });
    * if (metadata) {
    *   console.log('Checkpoint:', metadata.checkpoint);
    * }
    */
-  parse(format, rawChunks) {
+  parse(format, rawChunks, options = {}) {
     const parser = this.parsers.get(format);
     if (!parser) {
       console.warn(`No parser registered for format: ${format}`);
@@ -82,7 +83,7 @@ class ParserRegistry {
     }
 
     try {
-      return parser.parse(rawChunks);
+      return parser.parse(rawChunks, options);
     } catch (error) {
       console.error(`Parser error for format ${format}:`, error);
       return null;
@@ -98,19 +99,20 @@ class ParserRegistry {
    * 
    * @param {Array<string>} formats - Array of detected format names
    * @param {Object} rawChunks - Raw metadata chunks from ImageMetadataReader
+   * @param {Object} [options={}] - Parser-specific options
    * @returns {Array<ParsedMetadata>} Array of successfully parsed metadata (may be empty)
    * 
    * @example
    * const formats = ['comfyui', 'a1111'];
-   * const results = registry.parseAll(formats, rawChunks);
+   * const results = registry.parseAll(formats, rawChunks, { suspiciousNodeHandling: 'exclude' });
    * // results may contain 0, 1, or 2 ParsedMetadata objects
    * results.forEach(metadata => {
    *   console.log(`Format: ${metadata.format}`);
    * });
    */
-  parseAll(formats, rawChunks) {
+  parseAll(formats, rawChunks, options = {}) {
     return formats
-      .map(format => this.parse(format, rawChunks))
+      .map(format => this.parse(format, rawChunks, options))
       .filter(result => result !== null);
   }
 }

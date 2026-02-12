@@ -36,8 +36,20 @@ class ComfyUIGraph {
   /**
    * Create a new ComfyUIGraph from prompt data
    * @param {Object} promptData - ComfyUI prompt JSON object (nodeId -> node data)
+   * @param {Object} options - Configuration options
+   * @param {string} options.suspiciousNodeHandling - How to handle suspicious nodes: 'exclude' (default), 'include', 'warn'
+   * @param {Object} options.overrides - Node-specific overrides { nodeId: { forceInclude: boolean } }
    */
-  constructor(promptData) {
+  constructor(promptData, options = {}) {
+    /**
+     * Configuration options
+     * @type {Object}
+     */
+    this.options = {
+      suspiciousNodeHandling: options.suspiciousNodeHandling || 'exclude',
+      overrides: options.overrides || {}
+    };
+    
     /**
      * Map of node IDs to node data
      * @type {Map<string, Object>}
@@ -273,6 +285,7 @@ class ComfyUIGraph {
   /**
    * Trace back from a node to find all ancestors of a specific type
    * Uses BFS to find shortest paths
+   * Only includes nodes that have all their required inputs connected
    * @param {string} startId - Starting node ID
    * @param {string} targetType - Target node type to find
    * @param {number} [maxDepth=Infinity] - Maximum depth to search
@@ -287,6 +300,8 @@ class ComfyUIGraph {
     const queue = [[startId, 0]]; // [nodeId, depth]
     const visited = new Set();
     const results = [];
+    const executableCache = new Map(); // Cache for executable checks
+    const suspiciousNodes = new Set(); // Track suspicious nodes
     
     while (queue.length > 0) {
       const [currentId, depth] = queue.shift();
@@ -301,18 +316,214 @@ class ComfyUIGraph {
         results.push({ id: currentId, depth });
       }
       
-      // Add parents to queue
+      // Add parents to queue (only if they are reachable)
       const parents = this.edges.get(currentId);
       if (parents) {
         for (const parentId of parents) {
-          if (!visited.has(parentId)) {
+          if (!visited.has(parentId) && this._isNodeExecutable(parentId, executableCache, new Set(), suspiciousNodes)) {
             queue.push([parentId, depth + 1]);
           }
         }
       }
     }
     
-    return results;
+    // Log summary of suspicious nodes if any were found
+    if (suspiciousNodes.size > 0) {
+      const suspiciousArray = Array.from(suspiciousNodes);
+      ErrorHandler.logWarning('ComfyUIGraph', `Found ${suspiciousNodes.size} suspicious node(s) that may not execute correctly`, {
+        suspiciousNodes: suspiciousArray,
+        suggestion: 'These nodes were excluded from the trace. If this is incorrect, please report this as a bug with your workflow file.'
+      });
+    }
+    
+    // Return both results and suspicious nodes
+    return {
+      nodes: results,
+      suspiciousNodes: Array.from(suspiciousNodes).map(s => ({
+        nodeId: s.nodeId,
+        nodeType: this.nodes.get(s.nodeId)?.class_type || 'Unknown',
+        reasonKey: s.reasonKey,
+        reasonParams: s.reasonParams || {},
+        suggestionKey: s.suggestionKey
+      }))
+    };
+  }
+  
+  /**
+   * Check if a node is executable (has all required inputs connected)
+   * A node is executable if all its input dependencies are also executable
+   * @private
+   * @param {string} nodeId - Node ID to check
+   * @param {Map<string, boolean>} [cache=new Map()] - Cache for memoization
+   * @param {Set<string>} [visiting=new Set()] - Set of nodes currently being visited (for cycle detection)
+   * @returns {boolean} True if node appears to be executable
+   */
+  _isNodeExecutable(nodeId, cache = new Map(), visiting = new Set(), suspiciousNodes = new Set()) {
+    // Check cache first
+    if (cache.has(nodeId)) {
+      return cache.get(nodeId);
+    }
+    
+    // Check if this node has a force-exclude override
+    if (this.options.overrides[nodeId]?.forceExclude === true) {
+      cache.set(nodeId, false);
+      return false;
+    }
+    
+    // Check if this node has a force-include override
+    if (this.options.overrides[nodeId]?.forceInclude === true) {
+      cache.set(nodeId, true);
+      return true;
+    }
+    
+    // Detect cycles - if we're currently visiting this node, assume it's executable
+    // (the cycle will be resolved by other checks)
+    if (visiting.has(nodeId)) {
+      return true;
+    }
+    
+    const node = this.nodes.get(nodeId);
+    if (!node) {
+      cache.set(nodeId, false);
+      return false;
+    }
+    
+    // Mark as visiting
+    visiting.add(nodeId);
+    
+    // If node has no inputs, it's a source node and is executable
+    if (!node.inputs || Object.keys(node.inputs).length === 0) {
+      visiting.delete(nodeId);
+      cache.set(nodeId, true);
+      return true;
+    }
+    
+    // Heuristic check: detect suspicious nodes
+    // A node is suspicious if it's expected to output something (has consumers)
+    // but lacks typical inputs for that output type
+    const suspicion = this._detectSuspiciousNode(nodeId, node);
+    if (suspicion) {
+      suspiciousNodes.add({ nodeId, nodeType: node.class_type, ...suspicion });
+      
+      const handling = this.options.suspiciousNodeHandling;
+      
+      if (handling === 'exclude' && suspicion.isExecutable === false) {
+        // Exclude mode: treat suspicious nodes as non-executable
+        ErrorHandler.logWarning('ComfyUIGraph', 'Suspicious node detected - excluding from trace', {
+          nodeId,
+          nodeType: node.class_type,
+          suggestion: suspicion.suggestionKey + ' To include this node, set suspiciousNodeHandling to "include" or add an override.'
+        });
+        visiting.delete(nodeId);
+        cache.set(nodeId, false);
+        return false;
+      } else if (handling === 'warn' || handling === 'include') {
+        // Warn/Include mode: log warning but continue
+        ErrorHandler.logWarning('ComfyUIGraph', 'Suspicious node detected - including in trace', {
+          nodeId,
+          nodeType: node.class_type,
+          suggestion: suspicion.suggestionKey + ' This node is included because suspiciousNodeHandling is set to "' + handling + '".'
+        });
+      }
+    }
+    
+    // Check all link inputs - verify that linked nodes exist and are executable
+    for (const [key, value] of Object.entries(node.inputs)) {
+      if (Array.isArray(value) && value.length === 2) {
+        const linkedNodeId = String(value[0]);
+        
+        // If the linked node doesn't exist, this node is not executable
+        if (!this.nodes.has(linkedNodeId)) {
+          visiting.delete(nodeId);
+          cache.set(nodeId, false);
+          return false;
+        }
+        
+        // Recursively check if the linked node is executable
+        const isLinkedExecutable = this._isNodeExecutable(linkedNodeId, cache, visiting, suspiciousNodes);
+        if (!isLinkedExecutable) {
+          visiting.delete(nodeId);
+          cache.set(nodeId, false);
+          return false;
+        }
+      }
+    }
+    
+    visiting.delete(nodeId);
+    cache.set(nodeId, true);
+    return true;
+  }
+
+  /**
+   * Detect suspicious nodes using heuristics
+   * @param {string} nodeId - Node ID
+   * @param {Object} node - Node data
+   * @returns {Object|null} Suspicion details or null if node seems executable
+   */
+  _detectSuspiciousNode(nodeId, node) {
+    const nodeType = node.class_type;
+    const inputs = node.inputs || {};
+    const inputKeys = Object.keys(inputs);
+    
+    // Check for image processing nodes without image input
+    const imageProcessingNodes = [
+      'ImageUpscaleWithModel', 'ImageScaleBy', 'ImageScale', 
+      'ImageResize', 'ImageCrop', 'ImageBlur'
+    ];
+    
+    if (imageProcessingNodes.some(type => nodeType.includes(type))) {
+      const hasImageInput = inputKeys.some(key => 
+        key.toLowerCase().includes('image') || key.toLowerCase().includes('pixels')
+      );
+      
+      if (!hasImageInput) {
+        return {
+          reasonKey: 'suspiciousNode.reason.imageProcessingNoInput',
+          reasonParams: { nodeType },
+          suggestionKey: 'suspiciousNode.suggestion.disconnected',
+          isExecutable: false
+        };
+      }
+    }
+    
+    // Check for VAE nodes without proper inputs
+    if (nodeType.includes('VAEEncode')) {
+      const hasPixelsInput = inputKeys.some(key => key.toLowerCase().includes('pixels') || key.toLowerCase().includes('image'));
+      if (!hasPixelsInput) {
+        return {
+          reasonKey: 'suspiciousNode.reason.vaeEncodeNoInput',
+          suggestionKey: 'suspiciousNode.suggestion.vaeEncodeRequired',
+          isExecutable: false
+        };
+      }
+    }
+    
+    if (nodeType.includes('VAEDecode')) {
+      const hasSamplesInput = inputKeys.some(key => key.toLowerCase().includes('samples') || key.toLowerCase().includes('latent'));
+      if (!hasSamplesInput) {
+        return {
+          reasonKey: 'suspiciousNode.reason.vaeDecodeNoInput',
+          suggestionKey: 'suspiciousNode.suggestion.vaeDecodeRequired',
+          isExecutable: false
+        };
+      }
+    }
+    
+    // Check for sampler nodes without latent input
+    const samplerNodes = ['KSampler', 'SamplerCustom', 'SamplerCustomAdvanced'];
+    if (samplerNodes.some(type => nodeType.includes(type))) {
+      const hasLatentInput = inputKeys.some(key => key.toLowerCase().includes('latent'));
+      if (!hasLatentInput) {
+        return {
+          reasonKey: 'suspiciousNode.reason.samplerNoInput',
+          reasonParams: { nodeType },
+          suggestionKey: 'suspiciousNode.suggestion.samplerRequired',
+          isExecutable: false
+        };
+      }
+    }
+    
+    return null;
   }
   
   /**
@@ -509,6 +720,46 @@ class ComfyUIGraph {
     }
     return this._executionOrder.indexOf(nodeId);
   }
+  /**
+   * Get all ancestor nodes (dependencies) for a given node
+   * Uses BFS to traverse all parent nodes recursively
+   * @param {string} startId - Starting node ID
+   * @param {number} [maxDepth=Infinity] - Maximum depth to search
+   * @returns {Set<string>} Set of all ancestor node IDs
+   *
+   * @example
+   * // Get all dependencies for sampler node '5'
+   * const dependencies = graph.getAllAncestors('5');
+   * // Returns: Set(['1', '2', '3', '4']) (all nodes that '5' depends on)
+   */
+  getAllAncestors(startId, maxDepth = Infinity) {
+    const queue = [[startId, 0]]; // [nodeId, depth]
+    const visited = new Set();
+    const ancestors = new Set();
+
+    while (queue.length > 0) {
+      const [currentId, depth] = queue.shift();
+
+      if (visited.has(currentId) || depth > maxDepth) {
+        continue;
+      }
+      visited.add(currentId);
+
+      // Add all parents to ancestors (except the start node itself)
+      const parents = this.edges.get(currentId);
+      if (parents) {
+        for (const parentId of parents) {
+          ancestors.add(parentId);
+          if (!visited.has(parentId)) {
+            queue.push([parentId, depth + 1]);
+          }
+        }
+      }
+    }
+
+    return ancestors;
+  }
+
 }
 
   // Export for both browser and Node.js environments

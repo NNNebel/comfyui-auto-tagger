@@ -59,13 +59,10 @@ class ComfyUISamplerAnalyzer {
    * Algorithm:
    * 1. Find all sampler nodes
    * 2. Find all output nodes (SaveImage, PreviewImage, etc.)
-   * 3. For each output node, trace back to find reachable samplers using DFS
+   * 3. For each output node, trace back to find reachable samplers
    * 4. Calculate distance from each sampler to its latent source
    * 5. Select sampler with minimum distance (closest to source)
-   * 6. If tie, select by execution order (DFS backtrace naturally gives execution order)
-   * 
-   * Note: DFS backtrace from output nodes naturally discovers samplers in execution order
-   * because it follows the deepest path first (earliest samplers)
+   * 6. Sort samplers by execution order (topological sort)
    * 
    * Fallback: If no output nodes exist OR no samplers reachable from output nodes,
    * use all samplers (this handles incomplete workflows or workflows with
@@ -91,14 +88,30 @@ class ComfyUISamplerAnalyzer {
     // Step 2: Get output nodes (SaveImage, PreviewImage, etc.)
     const outputNodeIds = this.graph.getOutputNodes();
     
-    // Step 3: Find samplers reachable from output nodes using DFS
+    // Step 3: Find samplers reachable from output nodes
     let reachableSamplers = new Set();
-    const backtraceOrder = []; // Track order samplers are found (DFS = execution order)
+    let allSuspiciousNodes = [];
     
     if (outputNodeIds.length > 0) {
       for (const outputId of outputNodeIds) {
-        // Use DFS to find reachable samplers (maintains execution order)
-        this._findReachableSamplersDFS(outputId, reachableSamplers, backtraceOrder);
+        // Use BFS to find all reachable samplers
+        const result = this.graph.traceToType(outputId, 'sampler');
+        result.nodes.forEach(s => reachableSamplers.add(s.id));
+        
+        // Collect suspicious nodes
+        if (result.suspiciousNodes && result.suspiciousNodes.length > 0) {
+          allSuspiciousNodes.push(...result.suspiciousNodes);
+        }
+      }
+    }
+    
+    // Deduplicate suspicious nodes by nodeId
+    const uniqueSuspiciousNodes = [];
+    const seenNodeIds = new Set();
+    for (const node of allSuspiciousNodes) {
+      if (!seenNodeIds.has(node.nodeId)) {
+        seenNodeIds.add(node.nodeId);
+        uniqueSuspiciousNodes.push(node);
       }
     }
     
@@ -106,69 +119,30 @@ class ComfyUISamplerAnalyzer {
     const isFallback = outputNodeIds.length === 0 || reachableSamplers.size === 0;
     if (isFallback) {
       reachableSamplers = new Set(samplerIds);
-      // For fallback, use node ID order
-      backtraceOrder.length = 0;
-      backtraceOrder.push(...samplerIds.sort((a, b) => parseInt(a) - parseInt(b)));
     }
-    
-    // Create execution order map (backtrace with DFS gives execution order)
-    const executionOrderMap = new Map();
-    backtraceOrder.forEach((id, index) => {
-      executionOrderMap.set(id, index);
-    });
     
     // Step 4: Calculate distance to latent source for each sampler
     const scored = Array.from(reachableSamplers).map(id => ({
       id,
       distance: this._calculateDistanceToSource(id),
-      executionOrder: executionOrderMap.get(id) || 0
+      executionOrder: this.graph.getExecutionOrder(id)
     }));
     
-    // Step 5: Sort by distance, then by execution order
+    // Step 5: Sort by distance, then by execution order (topological sort)
     scored.sort((a, b) => {
       if (a.distance !== b.distance) {
         return a.distance - b.distance;
       }
-      // Use execution order (DFS backtrace) as tiebreaker
+      // Use topological execution order as tiebreaker
       return a.executionOrder - b.executionOrder;
     });
     
     return {
       baseSampler: scored[0]?.id || null,
       allSamplers: scored,
-      isFallback
+      isFallback,
+      suspiciousNodes: uniqueSuspiciousNodes
     };
-  }
-  
-  /**
-   * Find reachable samplers using DFS (Depth-First Search)
-   * This maintains execution order when backtracing from output nodes
-   * @private
-   * @param {string} nodeId - Starting node ID
-   * @param {Set<string>} reachableSamplers - Set to collect reachable sampler IDs
-   * @param {Array<string>} backtraceOrder - Array to track discovery order
-   * @param {Set<string>} visited - Set of visited nodes (for cycle detection)
-   */
-  _findReachableSamplersDFS(nodeId, reachableSamplers, backtraceOrder, visited = new Set()) {
-    if (visited.has(nodeId)) return;
-    visited.add(nodeId);
-    
-    const node = this.graph.getNode(nodeId);
-    if (!node) return;
-    
-    // Check if this node is a sampler
-    if (this.graph.getNodeType(nodeId) === 'sampler') {
-      if (!reachableSamplers.has(nodeId)) {
-        reachableSamplers.add(nodeId);
-        backtraceOrder.push(nodeId);
-      }
-    }
-    
-    // Recursively trace through all parent nodes (DFS)
-    const parents = this.graph.getParents(nodeId);
-    for (const parentId of parents) {
-      this._findReachableSamplersDFS(parentId, reachableSamplers, backtraceOrder, visited);
-    }
   }
   
   /**
@@ -196,20 +170,45 @@ class ComfyUISamplerAnalyzer {
         return distance;
       }
       
+      const classType = node.class_type || '';
+      
       // Trace through latent_image input
       const latentInput = node.inputs?.latent_image || node.inputs?.samples;
       if (Array.isArray(latentInput) && latentInput.length === 2) {
         const parentId = String(latentInput[0]);
-        queue.push([parentId, distance + 1]);
+        const parentNode = this.graph.getNode(parentId);
+        
+        // If parent is VAEEncode, trace through its image input
+        if (parentNode && parentNode.class_type === 'VAEEncode') {
+          const imageInput = parentNode.inputs?.pixels || parentNode.inputs?.image;
+          if (Array.isArray(imageInput) && imageInput.length === 2) {
+            const imageSourceId = String(imageInput[0]);
+            queue.push([imageSourceId, distance + 2]); // +2 because we go through VAEEncode
+          }
+        } else {
+          queue.push([parentId, distance + 1]);
+        }
       }
       
-      // For DetailerForEach nodes, trace through image input to find the sampler that generated it
-      const classType = node.class_type || '';
+      // For DetailerForEach nodes, trace through image input
+      // The image comes from VAEDecode, which comes from a sampler
       if (classType.includes('DetailerForEach') && node.inputs?.image) {
         const imageInput = node.inputs.image;
         if (Array.isArray(imageInput) && imageInput.length === 2) {
-          const parentId = String(imageInput[0]);
-          queue.push([parentId, distance + 1]);
+          const imageSourceId = String(imageInput[0]);
+          const imageSourceNode = this.graph.getNode(imageSourceId);
+          
+          // If image comes from VAEDecode, trace through its samples input
+          if (imageSourceNode && imageSourceNode.class_type === 'VAEDecode') {
+            const samplesInput = imageSourceNode.inputs?.samples;
+            if (Array.isArray(samplesInput) && samplesInput.length === 2) {
+              const samplerId = String(samplesInput[0]);
+              queue.push([samplerId, distance + 1]); // +1 for VAEDecode
+            }
+          } else {
+            // Otherwise, just trace through the image input
+            queue.push([imageSourceId, distance + 1]);
+          }
         }
       }
     }
@@ -448,14 +447,14 @@ class ComfyUISamplerAnalyzer {
    * @returns {string|null} Checkpoint filename or null if not found
    */
   _findCheckpoint(samplerId) {
-    const loaders = this.graph.traceToType(samplerId, 'checkpoint_loader');
-    if (loaders.length === 0) {
+    const result = this.graph.traceToType(samplerId, 'checkpoint_loader');
+    if (result.nodes.length === 0) {
       // Fallback: Try to find UNETLoader for Flux workflows
       return this._findUNETLoader(samplerId);
     }
     
     // Use closest checkpoint loader (minimum depth)
-    const closest = loaders.sort((a, b) => a.depth - b.depth)[0];
+    const closest = result.nodes.sort((a, b) => a.depth - b.depth)[0];
     const ckptPath = this.graph.resolveInput(closest.id, 'ckpt_name');
     
     if (!ckptPath || typeof ckptPath !== 'string') return null;

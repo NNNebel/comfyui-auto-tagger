@@ -345,4 +345,110 @@ describe('Sample Images Integration Tests', () => {
       expect(civitaiResults[0].loras.length).toBeGreaterThan(0);
     });
   });
+
+  // Suspicious Node Detection Tests
+  describe('Suspicious Node Detection', () => {
+    it('should detect suspicious nodes in comfyui_i2i.webp', () => {
+      const imagePath = 'tests/fixtures/comfyui_i2i.webp';
+      const fullImagePath = join(process.cwd(), imagePath);
+      
+      if (!existsSync(fullImagePath)) {
+        console.log(`Sample image not found: ${imagePath}, skipping test`);
+        return;
+      }
+
+      const imageBuffer = new Uint8Array(readFileSync(fullImagePath));
+      const results = metadataService.extractMetadata(imageBuffer, 'image/webp');
+
+      expect(results.length).toBeGreaterThan(0);
+      const metadata = results[0];
+      
+      // Should detect node 171 (ImageUpscaleWithModel) as suspicious
+      expect(metadata.suspiciousNodes).toBeDefined();
+      expect(metadata.suspiciousNodes.length).toBeGreaterThan(0);
+      
+      const suspiciousNode = metadata.suspiciousNodes.find(n => n.nodeId === '171');
+      expect(suspiciousNode).toBeDefined();
+      expect(suspiciousNode.nodeType).toBe('ImageUpscaleWithModel');
+      
+      // Verify that reasonKey and suggestionKey are present
+      expect(suspiciousNode.reasonKey).toBeDefined();
+      expect(typeof suspiciousNode.reasonKey).toBe('string');
+      expect(suspiciousNode.reasonKey.length).toBeGreaterThan(0);
+      expect(suspiciousNode.suggestionKey).toBeDefined();
+      expect(typeof suspiciousNode.suggestionKey).toBe('string');
+      expect(suspiciousNode.suggestionKey.length).toBeGreaterThan(0);
+      
+      // Verify expected keys
+      expect(suspiciousNode.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
+      expect(suspiciousNode.suggestionKey).toBe('suspiciousNode.suggestion.disconnected');
+    });
+    
+    it('should not detect suspicious nodes in comfyui_simple.png', () => {
+      const imagePath = 'tests/fixtures/comfyui_simple.png';
+      const fullImagePath = join(process.cwd(), imagePath);
+      
+      if (!existsSync(fullImagePath)) {
+        console.log(`Sample image not found: ${imagePath}, skipping test`);
+        return;
+      }
+
+      const imageBuffer = new Uint8Array(readFileSync(fullImagePath));
+      const results = metadataService.extractMetadata(imageBuffer, 'image/png');
+
+      expect(results.length).toBeGreaterThan(0);
+      const metadata = results[0];
+      
+      // Should have no suspicious nodes (or empty array)
+      if (metadata.suspiciousNodes) {
+        expect(metadata.suspiciousNodes).toEqual([]);
+      }
+    });
+    
+    it('should respect suspiciousNodeHandling option', () => {
+      const imagePath = 'tests/fixtures/comfyui_i2i.webp';
+      const fullImagePath = join(process.cwd(), imagePath);
+      
+      if (!existsSync(fullImagePath)) {
+        console.log(`Sample image not found: ${imagePath}, skipping test`);
+        return;
+      }
+
+      const imageBuffer = new Uint8Array(readFileSync(fullImagePath));
+      
+      // Test with 'exclude' mode (default)
+      const resultsExclude = metadataService.extractMetadata(imageBuffer, 'image/webp', {
+        suspiciousNodeHandling: 'exclude'
+      });
+      expect(resultsExclude.length).toBeGreaterThan(0);
+      const metadataExclude = resultsExclude[0];
+      
+      // Should have suspicious nodes detected
+      expect(metadataExclude.suspiciousNodes).toBeDefined();
+      expect(metadataExclude.suspiciousNodes.length).toBeGreaterThan(0);
+      
+      // Should only have 1 sampler (325) in generationSteps, not 2
+      expect(metadataExclude.generationSteps).toBeDefined();
+      expect(metadataExclude.generationSteps.length).toBe(1);
+      expect(metadataExclude.generationSteps[0].nodeId).toBe('325');
+      
+      // Test with 'include' mode
+      const resultsInclude = metadataService.extractMetadata(imageBuffer, 'image/webp', {
+        suspiciousNodeHandling: 'include'
+      });
+      expect(resultsInclude.length).toBeGreaterThan(0);
+      const metadataInclude = resultsInclude[0];
+      
+      // Should still have suspicious nodes detected (for information)
+      expect(metadataInclude.suspiciousNodes).toBeDefined();
+      
+      // Should have 2 samplers (32 and 325) in generationSteps
+      expect(metadataInclude.generationSteps).toBeDefined();
+      expect(metadataInclude.generationSteps.length).toBe(2);
+      
+      const samplerIds = metadataInclude.generationSteps.map(s => s.nodeId).sort();
+      expect(samplerIds).toEqual(['32', '325']);
+    });
+  });
+
 });

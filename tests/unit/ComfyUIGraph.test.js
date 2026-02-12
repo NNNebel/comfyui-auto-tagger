@@ -371,7 +371,7 @@ describe('ComfyUIGraph', () => {
     it('should find nodes of target type by backtracing', () => {
       const promptData = {
         '1': { class_type: 'CheckpointLoader', inputs: {} },
-        '2': { class_type: 'KSampler', inputs: { model: ['1', 0], seed: 123, steps: 20, cfg: 7, positive: ['3', 0], negative: ['4', 0] } },
+        '2': { class_type: 'KSampler', inputs: { model: ['1', 0], seed: 123, steps: 20, cfg: 7, positive: ['3', 0], negative: ['4', 0], latent_image: ['1', 1] } },
         '3': { class_type: 'CLIPTextEncode', inputs: {} },
         '4': { class_type: 'CLIPTextEncode', inputs: {} },
         '5': { class_type: 'SaveImage', inputs: { images: ['2', 0] } }
@@ -379,20 +379,21 @@ describe('ComfyUIGraph', () => {
       
       const graph = new ComfyUIGraph(promptData);
       
-      const samplers = graph.traceToType('5', 'sampler');
-      expect(samplers).toHaveLength(1);
-      expect(samplers[0].id).toBe('2');
-      expect(samplers[0].depth).toBe(1);
+      const result = graph.traceToType('5', 'sampler');
+      expect(result.nodes).toHaveLength(1);
+      expect(result.nodes[0].id).toBe('2');
+      expect(result.nodes[0].depth).toBe(1);
+      expect(result.suspiciousNodes).toHaveLength(0);
     });
     
     it('should find multiple nodes at different depths', () => {
       const promptData = {
         '1': { class_type: 'CheckpointLoader', inputs: {} },
-        '2': { class_type: 'KSampler', inputs: { model: ['1', 0], seed: 1, steps: 20, cfg: 7, positive: ['3', 0], negative: ['4', 0] } },
+        '2': { class_type: 'KSampler', inputs: { model: ['1', 0], seed: 1, steps: 20, cfg: 7, positive: ['3', 0], negative: ['4', 0], latent_image: ['1', 1] } },
         '3': { class_type: 'CLIPTextEncode', inputs: {} },
         '4': { class_type: 'CLIPTextEncode', inputs: {} },
-        '5': { class_type: 'VAEDecode', inputs: { samples: ['2', 0] } },
-        '6': { class_type: 'KSampler', inputs: { latent_image: ['5', 0], seed: 2, steps: 20, cfg: 7, positive: ['7', 0], negative: ['8', 0] } },
+        '5': { class_type: 'VAEDecode', inputs: { samples: ['2', 0], vae: ['1', 2] } },
+        '6': { class_type: 'KSampler', inputs: { latent_image: ['5', 0], seed: 2, steps: 20, cfg: 7, positive: ['7', 0], negative: ['8', 0], model: ['1', 0] } },
         '7': { class_type: 'CLIPTextEncode', inputs: {} },
         '8': { class_type: 'CLIPTextEncode', inputs: {} },
         '9': { class_type: 'SaveImage', inputs: { images: ['6', 0] } }
@@ -400,10 +401,10 @@ describe('ComfyUIGraph', () => {
       
       const graph = new ComfyUIGraph(promptData);
       
-      const samplers = graph.traceToType('9', 'sampler');
-      expect(samplers).toHaveLength(2);
+      const result = graph.traceToType('9', 'sampler');
+      expect(result.nodes).toHaveLength(2);
       
-      const depths = samplers.map(s => s.depth).sort();
+      const depths = result.nodes.map(s => s.depth).sort();
       expect(depths).toEqual([1, 3]);
     });
     
@@ -419,8 +420,8 @@ describe('ComfyUIGraph', () => {
       
       const graph = new ComfyUIGraph(promptData);
       
-      const loaders = graph.traceToType('6', 'checkpoint_loader', 2);
-      expect(loaders).toEqual([]); // Loader is at depth 3, beyond maxDepth
+      const result = graph.traceToType('6', 'checkpoint_loader', 2);
+      expect(result.nodes).toEqual([]); // Loader is at depth 3, beyond maxDepth
     });
     
     it('should return empty array if no nodes found', () => {
@@ -430,8 +431,9 @@ describe('ComfyUIGraph', () => {
       
       const graph = new ComfyUIGraph(promptData);
       
-      const samplers = graph.traceToType('1', 'sampler');
-      expect(samplers).toEqual([]);
+      const result = graph.traceToType('1', 'sampler');
+      expect(result.nodes).toEqual([]);
+      expect(result.suspiciousNodes).toEqual([]);
     });
     
     it('should handle cycles gracefully', () => {
@@ -444,7 +446,8 @@ describe('ComfyUIGraph', () => {
       
       // Should not hang due to cycle detection
       const result = graph.traceToType('1', 'sampler');
-      expect(result).toEqual([]);
+      expect(result.nodes).toEqual([]);
+      expect(result.suspiciousNodes).toEqual([]);
     });
   });
   

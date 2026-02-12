@@ -44,6 +44,7 @@ describe('ComfyUISamplerAnalyzer', () => {
           class_type: 'KSampler', 
           inputs: { 
             latent_image: ['1', 0],
+            model: ['1', 1],
             seed: 123, 
             steps: 20, 
             cfg: 7, 
@@ -178,9 +179,9 @@ describe('ComfyUISamplerAnalyzer', () => {
       const analyzer = new ComfyUISamplerAnalyzer(graph);
       const result = analyzer.findBaseSampler();
       
-      // VAEEncode is a source, so distance should be 1
+      // VAEEncode is a source, and we add +2 when tracing through VAEEncode
       expect(result.baseSampler).toBe('3');
-      expect(result.allSamplers[0].distance).toBe(1);
+      expect(result.allSamplers[0].distance).toBe(2);
     });
     
     it('should use fallback if no output nodes exist', () => {
@@ -508,3 +509,161 @@ describe('ComfyUISamplerAnalyzer', () => {
     });
   });
 });
+
+  describe('Suspicious Node Detection', () => {
+    it('should detect suspicious nodes with missing inputs', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { class_type: 'VAEDecode', inputs: { samples: ['2', 0] } },
+        '171': { 
+          class_type: 'ImageUpscaleWithModel', 
+          inputs: { 
+            upscale_model: ['170', 0]
+            // Missing 'image' input - this is suspicious
+          } 
+        },
+        '175': { class_type: 'ImageScale', inputs: { image: ['171', 0] } },
+        '170': { class_type: 'VAEEncode', inputs: { pixels: ['175', 0] } },
+        '32': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['170', 0],
+            seed: 456, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '100': { class_type: 'SaveImage', inputs: { images: ['32', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should detect node 171 as suspicious
+      expect(result.suspiciousNodes).toBeDefined();
+      expect(result.suspiciousNodes.length).toBeGreaterThan(0);
+      
+      const suspiciousNode = result.suspiciousNodes.find(n => n.nodeId === '171');
+      expect(suspiciousNode).toBeDefined();
+      expect(suspiciousNode.nodeType).toBe('ImageUpscaleWithModel');
+      expect(suspiciousNode.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
+    });
+    
+    it('should detect KSampler without latent_image input when connected to output', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { class_type: 'VAEDecode', inputs: { samples: ['2', 0] } },
+        '32': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            // Missing latent_image input - this is suspicious
+            seed: 456, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '33': { class_type: 'VAEDecode', inputs: { samples: ['32', 0] } },
+        '100': { class_type: 'SaveImage', inputs: { images: ['33', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should detect node 32 as suspicious
+      expect(result.suspiciousNodes).toBeDefined();
+      expect(result.suspiciousNodes.length).toBeGreaterThan(0);
+      
+      const suspiciousNode = result.suspiciousNodes.find(n => n.nodeId === '32');
+      expect(suspiciousNode).toBeDefined();
+      expect(suspiciousNode.nodeType).toBe('KSampler');
+      expect(suspiciousNode.reasonKey).toBe('suspiciousNode.reason.samplerNoInput');
+    });
+    
+    it('should return empty suspiciousNodes array when all nodes are valid', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { class_type: 'VAEDecode', inputs: { samples: ['2', 0] } },
+        '100': { class_type: 'SaveImage', inputs: { images: ['3', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should have no suspicious nodes
+      expect(result.suspiciousNodes).toBeDefined();
+      expect(result.suspiciousNodes).toEqual([]);
+    });
+    
+    it('should deduplicate suspicious nodes from multiple output traces', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { class_type: 'VAEDecode', inputs: { samples: ['2', 0] } },
+        '171': { 
+          class_type: 'ImageUpscaleWithModel', 
+          inputs: { 
+            upscale_model: ['170', 0]
+            // Missing 'image' input
+          } 
+        },
+        '100': { class_type: 'SaveImage', inputs: { images: ['3', 0] } },
+        '101': { class_type: 'PreviewImage', inputs: { images: ['3', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should have suspicious nodes but deduplicated
+      expect(result.suspiciousNodes).toBeDefined();
+      
+      // Count occurrences of each nodeId
+      const nodeIdCounts = {};
+      result.suspiciousNodes.forEach(node => {
+        nodeIdCounts[node.nodeId] = (nodeIdCounts[node.nodeId] || 0) + 1;
+      });
+      
+      // Each nodeId should appear only once
+      Object.values(nodeIdCounts).forEach(count => {
+        expect(count).toBe(1);
+      });
+    });
+  });

@@ -74,6 +74,7 @@ class MetadataService {
    * 
    * @param {Uint8Array} buffer - Image file buffer
    * @param {string} mimeType - Image MIME type ('image/png' or 'image/webp')
+   * @param {Object} [options={}] - Parser options (e.g., suspiciousNodeHandling for ComfyUI)
    * @returns {Array<ParsedMetadata>} Array of parsed metadata from all detected formats
    * 
    * @example
@@ -85,7 +86,7 @@ class MetadataService {
    *   console.log(`Checkpoint: ${metadata.checkpoint}`);
    * });
    */
-  extractMetadata(buffer, mimeType) {
+  extractMetadata(buffer, mimeType, options = {}) {
     return ErrorHandler.safeExecute(
       () => {
         // Validate inputs
@@ -102,7 +103,7 @@ class MetadataService {
         const formats = FormatDetector.detectFormats(rawChunks);
         
         // Step 3: Parse all detected formats
-        const results = this.registry.parseAll(formats, rawChunks);
+        const results = this.registry.parseAll(formats, rawChunks, options);
         
         return results;
       },
@@ -125,6 +126,7 @@ class MetadataService {
    * @param {Uint8Array} buffer - Image file buffer
    * @param {string} mimeType - Image MIME type ('image/png' or 'image/webp')
    * @param {string} [preferredFormat='comfyui'] - Preferred format name (e.g., 'comfyui', 'a1111')
+   * @param {Object} [options={}] - Parser options (e.g., suspiciousNodeHandling for ComfyUI)
    * @returns {ParsedMetadata|null} Parsed metadata from preferred format, or first available, or null if no metadata found
    * 
    * @example
@@ -140,7 +142,7 @@ class MetadataService {
    *   console.log('No metadata found');
    * }
    */
-  extractPreferredMetadata(buffer, mimeType, preferredFormat = 'comfyui') {
+  extractPreferredMetadata(buffer, mimeType, preferredFormat = 'comfyui', options = {}) {
     return ErrorHandler.safeExecute(
       () => {
         // Validate inputs
@@ -148,7 +150,7 @@ class MetadataService {
         Validators.validateMimeType(mimeType);
         Validators.validateFormat(preferredFormat);
         
-        const results = this.extractMetadata(buffer, mimeType);
+        const results = this.extractMetadata(buffer, mimeType, options);
         
         // Try preferred format first
         const preferred = results.find(r => r.format === preferredFormat);

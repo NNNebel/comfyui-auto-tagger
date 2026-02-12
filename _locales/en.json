@@ -7,6 +7,9 @@
         "title": "ComfyUI Auto Tagger",
         "outputSettings": "Output Settings",
         "extractionTarget": "Extraction Target",
+        "suspiciousNodeHandling": "Suspicious Node Handling",
+        "processingMethod": "Processing Method:",
+        "suspiciousNodeDescription": "How to handle nodes with missing required inputs",
         "option": {
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
@@ -18,7 +21,10 @@
             "cfg": "CFG",
             "addTags": "Add to Tags",
             "writeNotes": "Add to Notes",
-            "debugMode": "Debug Mode"
+            "debugMode": "Debug Mode",
+            "exclude": "Exclude",
+            "ask": "Ask",
+            "include": "Include"
         },
         "config": {
             "chunkSize": "Process Items per Batch:"
@@ -27,6 +33,18 @@
             "start": "Start Tagging",
             "deleteInfo": "Delete Info",
             "cancel": "Cancel"
+        },
+        "dialog": {
+            "title": "⚠️ Suspicious Node Detected",
+            "filename": "Filename:",
+            "imagePreview": "Image Preview",
+            "nodeInfo": "Node #{{nodeId}} ({{nodeType}})",
+            "affectedSteps": "Affected Steps: {{steps}}",
+            "excludeNode": "Exclude This Node",
+            "includeNode": "Include This Node",
+            "excludeImage": "Exclude All in This Image",
+            "includeImage": "Include All in This Image",
+            "shiftHint": "💡 Hold Shift while clicking to apply to all remaining images"
         }
     },
     "log": {
@@ -43,7 +61,9 @@
         "completed": "All processes completed. (Success: {{successCount}}, Caution: {{cautionCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
         "caution": {
             "sampler_fallback": "Base Sampler could not be determined. Used the oldest node ID as fallback.",
-            "sampler_fallback_item": "[Caution] {{name}}: Base Sampler was determined by fallback (Min ID)."
+            "sampler_fallback_item": "[Caution] {{name}}: Base Sampler was determined by fallback (Min ID).",
+            "suspicious_nodes_excluded": "[Caution] {{name}}: {{count}} suspicious node(s) excluded.",
+            "suspicious_nodes_included": "[Info] {{name}}: All nodes included (including {{count}} suspicious node(s))."
         },
         "error": {
             "generic": "[Error] {{name}}: {{message}}",
@@ -64,5 +84,19 @@
     "confirm": {
         "deleteAll": "Are you sure you want to delete all plugin-generated info from {{count}} items?",
         "forceDeleteAll": "[FORCE DELETE MODE] This will delete ALL tags from {{count}} items without analysis. Are you sure?"
+    },
+    "suspiciousNode": {
+        "reason": {
+            "imageProcessingNoInput": "Image processing node '{{nodeType}}' has no image/pixels input",
+            "vaeEncodeNoInput": "VAEEncode node has no pixels/image input",
+            "vaeDecodeNoInput": "VAEDecode node has no samples/latent input",
+            "samplerNoInput": "Sampler node '{{nodeType}}' has no latent_image input"
+        },
+        "suggestion": {
+            "disconnected": "This node may be disconnected or have missing connections. Check if this node should be included in the workflow.",
+            "vaeEncodeRequired": "VAEEncode requires an image input to encode. This node may not execute.",
+            "vaeDecodeRequired": "VAEDecode requires latent samples to decode. This node may not execute.",
+            "samplerRequired": "Samplers require a latent image input. This node may not execute."
+        }
     }
 }

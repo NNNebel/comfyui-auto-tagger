@@ -7,6 +7,9 @@
         "title": "ComfyUI Auto Tagger",
         "outputSettings": "出力設定",
         "extractionTarget": "取得対象",
+        "suspiciousNodeHandling": "疑わしいノードの処理",
+        "processingMethod": "処理方法:",
+        "suspiciousNodeDescription": "必須入力が欠けているノードの扱いを選択",
         "option": {
             "checkpoint": "Checkpoint",
             "lora": "LoRA",
@@ -18,7 +21,10 @@
             "cfg": "CFG",
             "addTags": "タグに追加",
             "writeNotes": "メモに追加",
-            "debugMode": "デバッグモード"
+            "debugMode": "デバッグモード",
+            "exclude": "除外する",
+            "ask": "確認する",
+            "include": "含める"
         },
         "config": {
             "chunkSize": "一度に処理する数:"
@@ -27,6 +33,18 @@
             "start": "タグ付け開始",
             "deleteInfo": "情報を削除",
             "cancel": "キャンセル"
+        },
+        "dialog": {
+            "title": "⚠️ 疑わしいノードが検出されました",
+            "filename": "ファイル名:",
+            "imagePreview": "画像プレビュー",
+            "nodeInfo": "ノード #{{nodeId}} ({{nodeType}})",
+            "affectedSteps": "影響を受けるステップ: {{steps}}",
+            "excludeNode": "このノードを除外",
+            "includeNode": "このノードを含める",
+            "excludeImage": "この画像は全て除外",
+            "includeImage": "この画像は全て含める",
+            "shiftHint": "💡 Shiftキーを押しながらクリックすると、残りの全画像に適用されます"
         }
     },
     "log": {
@@ -43,7 +61,9 @@
         "completed": "全ての処理が完了しました。 (成功: {{successCount}}, 要確認: {{cautionCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
         "caution": {
             "sampler_fallback": "Base Samplerを特定できなかったため、最小IDのノードを採用しました。",
-            "sampler_fallback_item": "[要確認] {{name}}: Base Samplerを特定できず、最小IDで代用しました。"
+            "sampler_fallback_item": "[要確認] {{name}}: Base Samplerを特定できず、最小IDで代用しました。",
+            "suspicious_nodes_excluded": "[要確認] {{name}}: {{count}}個の疑わしいノードを除外しました。",
+            "suspicious_nodes_included": "[情報] {{name}}: すべてのノードを含めます（{{count}}個の疑わしいノードを含む）。"
         },
         "error": {
             "generic": "[エラー] {{name}}: {{message}}",
@@ -64,5 +84,19 @@
     "confirm": {
         "deleteAll": "選択中の{{count}} 件のアイテムから、このプラグインが生成したタグとメモを削除します。よろしいですか？",
         "forceDeleteAll": "【強制削除モード】\n選択中の{{count}} 件のアイテムのタグを「全て」削除し、アノテーション情報を除去します。\n解析処理を行わないため高速ですが、ユーザーが付与したタグも消える可能性があります。\n\n実行しますか？"
+    },
+    "suspiciousNode": {
+        "reason": {
+            "imageProcessingNoInput": "画像処理ノード '{{nodeType}}' に画像/ピクセル入力がありません",
+            "vaeEncodeNoInput": "VAEEncodeノードに画像/ピクセル入力がありません",
+            "vaeDecodeNoInput": "VAEDecodeノードにサンプル/潜在入力がありません",
+            "samplerNoInput": "サンプラーノード '{{nodeType}}' に潜在画像入力がありません"
+        },
+        "suggestion": {
+            "disconnected": "このノードは接続が切れているか、必要な接続が欠けている可能性があります。このノードをワークフローに含めるべきか確認してください。",
+            "vaeEncodeRequired": "VAEEncodeはエンコードするために画像入力が必要です。このノードは実行されない可能性があります。",
+            "vaeDecodeRequired": "VAEDecodeはデコードするために潜在サンプルが必要です。このノードは実行されない可能性があります。",
+            "samplerRequired": "サンプラーは潜在画像入力が必要です。このノードは実行されない可能性があります。"
+        }
     }
 }

@@ -51,10 +51,52 @@ Promise.all([
         
         const sectionTitles = document.querySelectorAll('.section-title');
         if(sectionTitles[0]) sectionTitles[0].textContent = t('ui.outputSettings');
-        if(sectionTitles[1]) sectionTitles[1].textContent = t('ui.extractionTarget');
+        if(sectionTitles[1]) sectionTitles[1].textContent = t('ui.suspiciousNodeHandling');
+        if(sectionTitles[2]) sectionTitles[2].textContent = t('ui.extractionTarget');
 
         const chunkSizeLabel = document.querySelector('label[for="chunk-size"]');
         if (chunkSizeLabel) chunkSizeLabel.textContent = t('ui.config.chunkSize');
+        
+        // Suspicious node handling
+        const suspiciousNodeLabel = document.querySelector('label[for="suspicious-node-handling"]');
+        if (suspiciousNodeLabel) suspiciousNodeLabel.textContent = t('ui.processingMethod');
+        
+        const suspiciousNodeDesc = document.querySelector('.section-title + div div[style*="font-size: 11px"]');
+        if (suspiciousNodeDesc) suspiciousNodeDesc.textContent = t('ui.suspiciousNodeDescription');
+        
+        // Suspicious node handling select options
+        const suspiciousNodeSelect = document.getElementById('suspicious-node-handling');
+        if (suspiciousNodeSelect) {
+            const options = suspiciousNodeSelect.querySelectorAll('option');
+            if (options[0]) options[0].textContent = t('ui.option.exclude');
+            if (options[1]) options[1].textContent = t('ui.option.ask');
+            if (options[2]) options[2].textContent = t('ui.option.include');
+        }
+        
+        // Dialog translations
+        const dialogHeader = document.querySelector('.dialog-header');
+        if (dialogHeader) dialogHeader.textContent = t('ui.dialog.title');
+        
+        const dialogFilenameLabel = document.querySelector('.dialog-info strong');
+        if (dialogFilenameLabel) dialogFilenameLabel.textContent = t('ui.dialog.filename');
+        
+        const dialogImage = document.getElementById('dialog-image');
+        if (dialogImage) dialogImage.alt = t('ui.dialog.imagePreview');
+        
+        const btnExcludeNode = document.getElementById('btn-exclude-node');
+        if (btnExcludeNode) btnExcludeNode.textContent = t('ui.dialog.excludeNode');
+        
+        const btnIncludeNode = document.getElementById('btn-include-node');
+        if (btnIncludeNode) btnIncludeNode.textContent = t('ui.dialog.includeNode');
+        
+        const btnExcludeImage = document.getElementById('btn-exclude-image');
+        if (btnExcludeImage) btnExcludeImage.textContent = t('ui.dialog.excludeImage');
+        
+        const btnIncludeImage = document.getElementById('btn-include-image');
+        if (btnIncludeImage) btnIncludeImage.textContent = t('ui.dialog.includeImage');
+        
+        const shiftHint = document.querySelector('.dialog-actions + div');
+        if (shiftHint) shiftHint.textContent = t('ui.dialog.shiftHint');
 
         document.getElementById('startButton').textContent = t('ui.button.start');
         document.getElementById('deleteInfoButton').textContent = t('ui.button.deleteInfo');
@@ -83,6 +125,8 @@ Promise.all([
         writeNotes: document.getElementById('chk-write-notes'),
         debug: document.getElementById('chk-debug-log')
     };
+    
+    const suspiciousNodeHandlingSelect = document.getElementById('suspicious-node-handling');
 
     // --- 2.1 Debug Logging ---
     const LOG_DIR = path.join(os.tmpdir(), 'comfyui-auto-tagger');
@@ -148,8 +192,8 @@ Promise.all([
     }
 
     // --- 4. Chunk Processing Logic ---
-    async function processItemsInChunks(items, processFn) {
-        const chunkSize = parseInt(chunkSizeInput.value, 10) || 5;
+    async function processItemsInChunks(items, processFn, forceSequential = false) {
+        const chunkSize = forceSequential ? 1 : (parseInt(chunkSizeInput.value, 10) || 5);
         let successCount = 0;
         let skippedCount = 0;
         let errorCount = 0;
@@ -162,7 +206,21 @@ Promise.all([
             if (isCancelled) break;
             const chunk = items.slice(i, i + chunkSize);
             
-            const results = await Promise.allSettled(chunk.map(processFn));
+            // If forceSequential, process one by one without Promise.allSettled
+            let results;
+            if (forceSequential) {
+                results = [];
+                for (const item of chunk) {
+                    try {
+                        const result = await processFn(item);
+                        results.push({ status: 'fulfilled', value: result });
+                    } catch (error) {
+                        results.push({ status: 'rejected', reason: error });
+                    }
+                }
+            } else {
+                results = await Promise.allSettled(chunk.map(processFn));
+            }
 
             results.forEach(result => {
                 processedCount++;
@@ -170,7 +228,10 @@ Promise.all([
                     const status = result.value; // 'success', 'skipped', 'error', 'caution'
                     if (status === 'success') successCount++;
                     else if (status === 'skipped') skippedCount++;
-                    else if (status === 'caution') { successCount++; cautionCount++; }
+                    else if (status === 'caution') { 
+                        successCount++; 
+                        cautionCount++; 
+                    }
                     else errorCount++;
                 } else {
                     errorCount++;
@@ -188,6 +249,11 @@ Promise.all([
         isCancelled = false;
         logArea.innerHTML = '';
         log('log.start');
+        
+        // Reset global suspicious node decision
+        if (window.resetGlobalSuspiciousNodeDecision) {
+            window.resetGlobalSuspiciousNodeDecision();
+        }
         
         const items = await eagle.item.getSelected();
         if (!items.length) { log('log.noItemSelected'); return; }
@@ -208,13 +274,71 @@ Promise.all([
                 const buffer = await fsp.readFile(item.filePath);
                 const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
                 
-                // Use new MetadataService
-                const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui');
+                // Get suspicious node handling option from UI
+                const suspiciousNodeHandling = window.getSuspiciousNodeHandling ? window.getSuspiciousNodeHandling() : 'exclude';
+                
+                // Use new MetadataService with options
+                const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui', {
+                    suspiciousNodeHandling: suspiciousNodeHandling
+                });
                 await debugLog(`Metadata: ${JSON.stringify(metadata)}`, item);
 
                 if (!metadata) {
                     log('log.noMetadata', {name: item.name});
                     return 'skipped';
+                }
+
+                // Track if suspicious nodes were detected
+                let hasSuspiciousNodes = false;
+
+                // Check if there are suspicious nodes and handle them
+                if (metadata.suspiciousNodes && metadata.suspiciousNodes.length > 0) {
+                    hasSuspiciousNodes = true;
+                    await debugLog(`Suspicious nodes detected: ${JSON.stringify(metadata.suspiciousNodes)}`, item);
+                    
+                    if (suspiciousNodeHandling === 'exclude') {
+                        log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
+                    } else if (suspiciousNodeHandling === 'include') {
+                        log('log.caution.suspicious_nodes_included', {name: item.name, count: metadata.suspiciousNodes.length});
+                    } else if (suspiciousNodeHandling === 'ask') {
+                        // Check if handleSuspiciousNodes is available
+                        if (typeof window.handleSuspiciousNodes !== 'function') {
+                            await debugLog('ERROR: window.handleSuspiciousNodes is not defined!', item);
+                            log('log.error.generic', { name: item.name, message: 'Dialog function not available' });
+                            // Fallback to exclude mode
+                            log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
+                        } else {
+                            await debugLog('Showing suspicious node dialog', item);
+                            
+                            try {
+                                // Show dialog and wait for user decision
+                                const decision = await window.handleSuspiciousNodes(item, metadata.suspiciousNodes);
+                                
+                                await debugLog(`User decision: ${JSON.stringify(decision)}`, item);
+                                
+                                if (decision) {
+                                    // Re-parse with user decision
+                                    const metadataWithDecision = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui', {
+                                        suspiciousNodeHandling: decision.action, // Use user's decision ('exclude' or 'include')
+                                        overrides: decision.overrides || {} // Apply per-node overrides if any
+                                    });
+                                    if (metadataWithDecision) {
+                                        Object.assign(metadata, metadataWithDecision);
+                                    }
+                                    
+                                    // Log the decision
+                                    if (decision.action === 'exclude') {
+                                        log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
+                                    } else if (decision.action === 'include') {
+                                        log('log.caution.suspicious_nodes_included', {name: item.name, count: metadata.suspiciousNodes.length});
+                                    }
+                                }
+                            } catch (error) {
+                                await debugLog(`ERROR in handleSuspiciousNodes: ${error.message}`, item);
+                                log('log.error.generic', { name: item.name, message: error.message });
+                            }
+                        }
+                    }
                 }
 
                 // Pass parsed metadata directly to processMetadata
@@ -249,7 +373,8 @@ Promise.all([
                     } else {
                         log('log.success', {name: item.name});
                     }
-                    return res.sampler_fallback ? 'caution' : 'success';
+                    // Return caution if suspicious nodes were detected or sampler fallback was used
+                    return (hasSuspiciousNodes || res.sampler_fallback) ? 'caution' : 'success';
                 } else { 
                     log('log.skip', {name: item.name});
                     return 'skipped';
@@ -261,7 +386,11 @@ Promise.all([
             }
         };
 
-        const result = await processItemsInChunks(items, processItem);
+        // Check if we need sequential processing (ask mode)
+        const suspiciousNodeHandling = window.getSuspiciousNodeHandling ? window.getSuspiciousNodeHandling() : 'exclude';
+        const forceSequential = suspiciousNodeHandling === 'ask';
+        
+        const result = await processItemsInChunks(items, processItem, forceSequential);
         log(isCancelled ? 'log.cancelled' : 'log.completed', result);
         setUIState(false); 
         
@@ -375,6 +504,10 @@ Promise.all([
     function saveSettings() {
         const s = {};
         for(const k in checkboxes) if(checkboxes[k]) s[k] = checkboxes[k].checked;
+        // Save suspicious node handling setting
+        if (suspiciousNodeHandlingSelect) {
+            s.suspiciousNodeHandling = suspiciousNodeHandlingSelect.value;
+        }
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
     }
     function loadSettings() {
@@ -383,6 +516,10 @@ Promise.all([
             if(s) {
                 for(const k in checkboxes) {
                     if(checkboxes[k] && s[k] !== undefined) checkboxes[k].checked = s[k];
+                }
+                // Restore suspicious node handling setting
+                if (suspiciousNodeHandlingSelect && s.suspiciousNodeHandling !== undefined) {
+                    suspiciousNodeHandlingSelect.value = s.suspiciousNodeHandling;
                 }
             }
         } catch(e) { console.error("Failed to load settings", e); }
@@ -411,6 +548,11 @@ Promise.all([
     // チェックボックス変更時にも保存
     for(const k in checkboxes) {
         if(checkboxes[k]) checkboxes[k].onchange = saveSettings;
+    }
+    
+    // 疑わしいノードの処理方法変更時にも保存
+    if (suspiciousNodeHandlingSelect) {
+        suspiciousNodeHandlingSelect.onchange = saveSettings;
     }
     
     console.log("Initialized.");

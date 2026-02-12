@@ -39,9 +39,10 @@ class ComfyUIParser extends MetadataParserBase {
   /**
    * Parse raw metadata chunks into structured ComfyUI metadata.
    * @param {Object} rawChunks - Raw metadata chunks containing 'prompt' and/or 'workflow'
+   * @param {Object} [options={}] - Parser options (e.g., suspiciousNodeHandling)
    * @returns {ParsedMetadata} Structured metadata object
    */
-  parse(rawChunks) {
+  parse(rawChunks, options = {}) {
     const metadata = {
       format: 'comfyui'
     };
@@ -49,7 +50,7 @@ class ComfyUIParser extends MetadataParserBase {
     // Extract from prompt JSON (contains generation parameters)
     if (rawChunks.prompt) {
       ErrorHandler.safeExecute(
-        () => this.extractFromPrompt(rawChunks.prompt, metadata),
+        () => this.extractFromPrompt(rawChunks.prompt, metadata, options),
         null,
         'ComfyUIParser',
         { source: 'prompt' }
@@ -73,15 +74,74 @@ class ComfyUIParser extends MetadataParserBase {
    * Extract metadata from ComfyUI prompt JSON using graph-based analysis.
    * @param {Object} promptData - ComfyUI prompt JSON object
    * @param {Object} metadata - Metadata object to populate
+   * @param {Object} [options={}] - Parser options (e.g., suspiciousNodeHandling)
    */
-  extractFromPrompt(promptData, metadata) {
-    // Create graph and analyzer instances
-    const graph = new ComfyUIGraph(promptData);
+  extractFromPrompt(promptData, metadata, options = {}) {
+    // Create graph and analyzer instances with options
+    const graph = new ComfyUIGraph(promptData, options);
     const analyzer = new ComfyUISamplerAnalyzer(graph);
     
     // Find base sampler and extract all sampler metadata
-    const { baseSampler, allSamplers, isFallback } = analyzer.findBaseSampler();
+    const { baseSampler, allSamplers, isFallback, suspiciousNodes } = analyzer.findBaseSampler();
     const allSamplersMetadata = analyzer.extractAllSamplersMetadata();
+    
+    // Store suspicious nodes in metadata with affected steps
+    if (suspiciousNodes && suspiciousNodes.length > 0) {
+      // For each suspicious node, find which steps are affected
+      metadata.suspiciousNodes = suspiciousNodes.map(suspNode => {
+        const affectedSteps = [];
+        
+        // Create a temporary graph with this suspicious node force-included
+        const tempOptions = {
+          ...options,
+          overrides: {
+            ...options.overrides,
+            [suspNode.nodeId]: { forceInclude: true }
+          }
+        };
+        
+        const tempGraph = new ComfyUIGraph(promptData, tempOptions);
+        const tempAnalyzer = new ComfyUISamplerAnalyzer(tempGraph);
+        
+        // Extract all samplers with the suspicious node included
+        const tempSamplersMetadata = tempAnalyzer.extractAllSamplersMetadata();
+        
+        // Compare with original samplers to find which steps would be affected
+        // A step is affected if it appears in tempSamplersMetadata but not in allSamplersMetadata
+        // OR if it exists in both but would have different dependencies
+        tempSamplersMetadata.forEach((tempStep, index) => {
+          // Check if this sampler exists in the original metadata
+          const originalStep = allSamplersMetadata.find(s => s.nodeId === tempStep.nodeId);
+          
+          if (!originalStep) {
+            // This sampler only appears when suspicious node is included
+            // So it's definitely affected
+            affectedSteps.push({
+              stepIndex: index + 1,
+              stepNodeId: tempStep.nodeId,
+              stepNodeType: tempStep.nodeType
+            });
+          } else {
+            // Sampler exists in both - check if suspicious node is in its dependency chain
+            const ancestors = tempGraph.getAllAncestors(tempStep.nodeId);
+            if (ancestors.has(suspNode.nodeId)) {
+              // Find the step index in the original metadata
+              const originalIndex = allSamplersMetadata.findIndex(s => s.nodeId === tempStep.nodeId);
+              affectedSteps.push({
+                stepIndex: originalIndex + 1,
+                stepNodeId: tempStep.nodeId,
+                stepNodeType: tempStep.nodeType
+              });
+            }
+          }
+        });
+        
+        return {
+          ...suspNode,
+          affectedSteps: affectedSteps.length > 0 ? affectedSteps : undefined
+        };
+      });
+    }
     
     // Adjust fallback flag: If analyzer says it's fallback but all samplers have valid paths,
     // then it's not truly a fallback (just missing output nodes)

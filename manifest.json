@@ -12,7 +12,7 @@
     "main": {
         "url": "index.html",
         "width": 640,
-        "height": 500
+        "height": 550
     },
     "app": {
         "desktop": {
