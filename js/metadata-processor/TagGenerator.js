@@ -3,6 +3,17 @@
 (function(global) {
   'use strict';
 
+  // Get dependencies for both environments
+  var PromptTokenizer;
+  
+  if (typeof window !== 'undefined') {
+    // Browser environment
+    PromptTokenizer = window.PromptTokenizer;
+  } else if (typeof require !== 'undefined') {
+    // Node.js environment (testing)
+    PromptTokenizer = require('../metadata-parser/prompt/PromptTokenizer');
+  }
+
 /**
  * TagGenerator
  * 
@@ -19,16 +30,28 @@ class TagGenerator {
    */
   static cleanPrompt(text, prefix = '') {
     if (!text || typeof text !== 'string') return [];
-    const tags = new Set();
-    text.split(/[\n,]/).forEach(t => {
-      const v = t.trim();
-      if (v && !v.startsWith('(') && !v.endsWith(')')) {
-        tags.add((prefix + v).toLowerCase());
-      } else if (v) {
-        tags.add((prefix + v.replace(/[()]/g, '')).toLowerCase());
-      }
-    });
-    return [...tags];
+    
+    // Split by newline first
+    const lines = text.split(/\n/);
+    const allTags = new Set();
+    
+    // Use PromptTokenizer for better parsing
+    const tokenizer = new PromptTokenizer();
+    
+    for (const line of lines) {
+      const tokens = tokenizer.tokenize(line);
+      
+      // Extract tags (plain text and weighted text, no special tags)
+      const tags = tokenizer.extractTags(tokens, {
+        includeWeighted: true,  // Include weighted text as tags
+        includeSpecialTags: false,
+        prefix: prefix
+      });
+      
+      tags.forEach(tag => allTags.add(tag));
+    }
+    
+    return [...allTags];
   }
 
   /**
