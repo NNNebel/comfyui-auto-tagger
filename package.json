@@ -9,7 +9,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:property": "vitest run --grep 'Property'",
-    "test:unit": "vitest run --grep -v 'Property'"
+    "test:unit": "vitest run --grep -v 'Property'",
+    "bench": "vitest bench --run",
+    "bench:watch": "vitest bench"
   },
   "devDependencies": {
     "fast-check": "^3.15.0",

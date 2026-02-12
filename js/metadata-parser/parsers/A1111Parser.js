@@ -3,7 +3,7 @@
   'use strict';
 
   // Get dependencies for both environments
-  var MetadataParserBase, ParsingUtils, ErrorHandler, Validators;
+  var MetadataParserBase, ParsingUtils, ErrorHandler, Validators, ParameterParser, StandardParameterHandler, LoraHashHandler, ADetailerHandler;
   
   if (typeof window !== 'undefined') {
     // Browser environment
@@ -11,12 +11,20 @@
     ParsingUtils = window.ParsingUtils;
     ErrorHandler = window.ErrorHandler;
     Validators = window.Validators;
+    ParameterParser = window.ParameterParser;
+    StandardParameterHandler = window.StandardParameterHandler;
+    LoraHashHandler = window.LoraHashHandler;
+    ADetailerHandler = window.ADetailerHandler;
   } else if (typeof require !== 'undefined') {
     // Node.js environment (testing)
     MetadataParserBase = require('./MetadataParser');
     ParsingUtils = require('../utils/ParsingUtils');
     ErrorHandler = require('../utils/ErrorHandler');
     Validators = require('../utils/Validators');
+    ParameterParser = require('../parameters/ParameterParser');
+    StandardParameterHandler = require('../parameters/StandardParameterHandler');
+    LoraHashHandler = require('../parameters/LoraHashHandler');
+    ADetailerHandler = require('../parameters/ADetailerHandler');
   } else {
     throw new Error('Required dependencies not found');
   }
@@ -31,6 +39,16 @@
  * Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 123456, Size: 512x512, Model: model_name"
  */
 class A1111Parser extends MetadataParserBase {
+  constructor() {
+    super();
+    
+    // Initialize parameter parser with handlers
+    this.parameterParser = new ParameterParser();
+    this.parameterParser.registerHandler(new StandardParameterHandler());
+    this.parameterParser.registerHandler(new LoraHashHandler());
+    this.parameterParser.registerHandler(new ADetailerHandler());
+  }
+  
   /**
    * Get the format name this parser handles.
    * @returns {string} Format identifier 'a1111'
@@ -118,126 +136,27 @@ class A1111Parser extends MetadataParserBase {
 
   /**
    * Parse the parameter line containing key-value pairs.
-   * Extracts Steps, Sampler, CFG scale, Seed, Model, and other parameters.
-   * Also handles A1111 extensions like ADetailer, Lora hashes, TI, NGMS.
+   * Uses ParameterParser with registered handlers for extensibility.
    * @param {string} line - Parameter line string (e.g., "Steps: 20, Sampler: Euler a, CFG scale: 7, ...")
    * @returns {Object} Object containing parsed parameters
    */
   parseParameterLine(line) {
-    const params = {};
-    const adetailer = {};
-    const loraHashes = {};
-    const loras = []; // Array for consistency with ComfyUI format
+    // Create context with current metadata for LoRA extraction from prompts
+    const context = {
+      prompts: {
+        positive: this.currentMetadata?.positive || '',
+        negative: this.currentMetadata?.negative || ''
+      }
+    };
     
-    // Split by comma, but be careful with quoted values
-    const pairs = this.splitParameters(line);
-    
-    for (const pair of pairs) {
-      const colonIndex = pair.indexOf(':');
-      if (colonIndex === -1) continue;
-      
-      const key = pair.substring(0, colonIndex).trim();
-      let value = pair.substring(colonIndex + 1).trim();
-      
-      // Remove quotes from values
-      if ((value.startsWith('"') && value.endsWith('"')) || 
-          (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      
-      // Handle ADetailer parameters
-      if (key.startsWith('ADetailer ')) {
-        const adetailerKey = key.substring(10); // Remove "ADetailer " prefix
-        adetailer[adetailerKey] = this.parseValue(value);
-        continue;
-      }
-      
-      // Handle Lora hashes
-      if (key === 'Lora hashes') {
-        // Parse "name1: hash1, name2: hash2" format
-        // Improved regex: match name (non-colon), colon, hash (non-comma)
-        const loraMatches = value.matchAll(/([^:,]+):\s*([^, ]+)/g);
-        for (const match of loraMatches) {
-          const name = match[1].trim();
-          const hash = match[2].trim();
-          loraHashes[name] = hash;
-          if (!loras.includes(name)) {
-            loras.push(name);
-          }
-        }
-        continue;
-      }
-      
-      // Handle standard and extension parameters
-      switch (key) {
-        case 'Steps':
-          params.steps = parseInt(value, 10);
-          break;
-        case 'Sampler':
-          params.sampler = value;
-          break;
-        case 'Schedule type':
-          params.schedule_type = value;
-          break;
-        case 'CFG scale':
-          params.cfg = parseFloat(value);
-          break;
-        case 'Seed':
-          params.seed = parseInt(value, 10);
-          break;
-        case 'Size':
-          params.size = value;
-          break;
-        case 'Model':
-          // Only use 'Model' (actual model name), ignore 'Model hash'
-          params.checkpoint = value;
-          break;
-        case 'Model hash':
-          params.model_hash = value;
-          break;
-        case 'VAE':
-          params.vae = value;
-          break;
-        case 'Denoising strength':
-          params.denoising_strength = parseFloat(value);
-          break;
-        case 'Clip skip':
-          params.clip_skip = parseInt(value, 10);
-          break;
-        case 'Hires upscale':
-          params.hires_upscale = parseFloat(value);
-          break;
-        case 'Hires steps':
-          params.hires_steps = parseInt(value, 10);
-          break;
-        case 'Hires upscaler':
-          params.hires_upscaler = value;
-          break;
-        case 'Version':
-          params.version = value;
-          break;
-        case 'TI':
-          params.textual_inversion = value;
-          break;
-        case 'NGMS':
-          params.ngms = parseFloat(value);
-          break;
-        case 'NGMS all steps':
-          params.ngms_all_steps = value === 'True';
-          break;
-      }
-    }
+    // Parse using parameter parser
+    const params = this.parameterParser.parse(line, context);
     
     // Extract LoRA names from prompts if available
     // Handles <lora:name:weight> format in positive/negative prompts
-    if (this.currentMetadata) {
-      const promptTexts = [];
-      if (this.currentMetadata.positive) {
-        promptTexts.push(this.currentMetadata.positive);
-      }
-      if (this.currentMetadata.negative) {
-        promptTexts.push(this.currentMetadata.negative);
-      }
+    if (context.prompts.positive || context.prompts.negative) {
+      const loras = params.loras || [];
+      const promptTexts = [context.prompts.positive, context.prompts.negative].filter(Boolean);
       
       for (const promptText of promptTexts) {
         const promptLoras = promptText.matchAll(/<lora:([^:]+):[^>]+>/g);
@@ -248,70 +167,26 @@ class A1111Parser extends MetadataParserBase {
           }
         }
       }
-    }
-    
-    // Add ADetailer if present
-    if (Object.keys(adetailer).length > 0) {
-      params.adetailer = adetailer;
-    }
-    
-    // Add Lora hashes if present
-    if (Object.keys(loraHashes).length > 0) {
-      params.lora_hashes = loraHashes;
-    }
-    
-    // Add loras array for consistency with ComfyUI format
-    if (loras.length > 0) {
-      params.loras = loras;
+      
+      if (loras.length > 0) {
+        params.loras = loras;
+      }
     }
     
     return params;
   }
 
   /**
-   * Split parameter string by commas, respecting quoted values.
-   * @param {string} line - Parameter line
-   * @returns {string[]} Array of parameter pairs
+   * @deprecated Use ParameterParser instead
+   * Kept for backward compatibility
    */
   splitParameters(line) {
-    const pairs = [];
-    let current = '';
-    let inQuotes = false;
-    let quoteChar = null;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if ((char === '"' || char === "'") && (i === 0 || line[i - 1] !== '\\')) {
-        if (!inQuotes) {
-          inQuotes = true;
-          quoteChar = char;
-        } else if (char === quoteChar) {
-          inQuotes = false;
-          quoteChar = null;
-        }
-        current += char;
-      } else if (char === ',' && !inQuotes) {
-        if (current.trim()) {
-          pairs.push(current.trim());
-        }
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    
-    if (current.trim()) {
-      pairs.push(current.trim());
-    }
-    
-    return pairs;
+    return this.parameterParser._tokenize(line);
   }
 
   /**
-   * Parse a value to its appropriate type.
-   * @param {string} value - String value to parse
-   * @returns {*} Parsed value (number, boolean, or string)
+   * @deprecated Use ParsingUtils.parseValue instead
+   * Kept for backward compatibility
    */
   parseValue(value) {
     return ParsingUtils.parseValue(value);
