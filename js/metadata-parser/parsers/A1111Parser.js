@@ -2,14 +2,23 @@
 (function(global) {
   'use strict';
 
-  // Get MetadataParser reference for both environments
-  var MetadataParserBase;
-  if (typeof window !== 'undefined' && window.MetadataParser) {
+  // Get dependencies for both environments
+  var MetadataParserBase, ParsingUtils, ErrorHandler, Validators;
+  
+  if (typeof window !== 'undefined') {
+    // Browser environment
     MetadataParserBase = window.MetadataParser;
+    ParsingUtils = window.ParsingUtils;
+    ErrorHandler = window.ErrorHandler;
+    Validators = window.Validators;
   } else if (typeof require !== 'undefined') {
+    // Node.js environment (testing)
     MetadataParserBase = require('./MetadataParser');
+    ParsingUtils = require('../utils/ParsingUtils');
+    ErrorHandler = require('../utils/ErrorHandler');
+    Validators = require('../utils/Validators');
   } else {
-    throw new Error('MetadataParser not found');
+    throw new Error('Required dependencies not found');
   }
 
 /**
@@ -36,6 +45,19 @@ class A1111Parser extends MetadataParserBase {
    * @returns {ParsedMetadata} Structured metadata object
    */
   parse(rawChunks) {
+    return ErrorHandler.safeExecute(
+      () => this._parseInternal(rawChunks),
+      null,
+      'A1111Parser',
+      { hasParameters: !!rawChunks?.parameters }
+    );
+  }
+
+  /**
+   * Internal parse implementation with error handling
+   * @private
+   */
+  _parseInternal(rawChunks) {
     const parameters = rawChunks.parameters;
     if (!parameters || typeof parameters !== 'string') {
       return null;
@@ -45,55 +67,51 @@ class A1111Parser extends MetadataParserBase {
       format: 'a1111'
     };
 
-    try {
-      const lines = parameters.split('\n');
+    const lines = ParsingUtils.splitLines(parameters);
+    
+    // Extract positive prompt (lines before "Negative prompt:" or "Steps:")
+    const positiveLines = [];
+    let i = 0;
+    while (i < lines.length && !lines[i].startsWith('Negative prompt:') && !lines[i].includes('Steps:')) {
+      positiveLines.push(lines[i]);
+      i++;
+    }
+    // Join lines, preserving structure but trimming each line
+    metadata.positive = positiveLines
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .join('\n');
+
+    // Extract negative prompt (lines after "Negative prompt:")
+    if (i < lines.length && lines[i].startsWith('Negative prompt:')) {
+      const negStart = i;
+      i++;
+      const negativeLines = [lines[negStart].replace('Negative prompt:', '').trim()];
       
-      // Extract positive prompt (lines before "Negative prompt:" or "Steps:")
-      const positiveLines = [];
-      let i = 0;
-      while (i < lines.length && !lines[i].startsWith('Negative prompt:') && !lines[i].includes('Steps:')) {
-        positiveLines.push(lines[i]);
+      // Continue collecting negative prompt lines until we hit the parameters line
+      while (i < lines.length && !lines[i].includes('Steps:')) {
+        negativeLines.push(lines[i]);
         i++;
       }
       // Join lines, preserving structure but trimming each line
-      metadata.positive = positiveLines
+      metadata.negative = negativeLines
         .map(line => line.trim())
         .filter(line => line.length > 0)
         .join('\n');
-
-      // Extract negative prompt (lines after "Negative prompt:")
-      if (i < lines.length && lines[i].startsWith('Negative prompt:')) {
-        const negStart = i;
-        i++;
-        const negativeLines = [lines[negStart].replace('Negative prompt:', '').trim()];
-        
-        // Continue collecting negative prompt lines until we hit the parameters line
-        while (i < lines.length && !lines[i].includes('Steps:')) {
-          negativeLines.push(lines[i]);
-          i++;
-        }
-        // Join lines, preserving structure but trimming each line
-        metadata.negative = negativeLines
-          .map(line => line.trim())
-          .filter(line => line.length > 0)
-          .join('\n');
-      }
-
-      // Store metadata temporarily for LoRA extraction from prompts
-      this.currentMetadata = metadata;
-
-      // Parse parameters line (contains Steps, Sampler, CFG, Seed, Model, etc.)
-      const paramLine = lines.find(line => line.includes('Steps:'));
-      if (paramLine) {
-        const params = this.parseParameterLine(paramLine);
-        Object.assign(metadata, params);
-      }
-
-      // Clean up temporary reference
-      this.currentMetadata = null;
-    } catch (e) {
-      console.error("A1111 parsing failed:", e);
     }
+
+    // Store metadata temporarily for LoRA extraction from prompts
+    this.currentMetadata = metadata;
+
+    // Parse parameters line (contains Steps, Sampler, CFG, Seed, Model, etc.)
+    const paramLine = lines.find(line => line.includes('Steps:'));
+    if (paramLine) {
+      const params = this.parseParameterLine(paramLine);
+      Object.assign(metadata, params);
+    }
+
+    // Clean up temporary reference
+    this.currentMetadata = null;
 
     return metadata;
   }
@@ -296,24 +314,7 @@ class A1111Parser extends MetadataParserBase {
    * @returns {*} Parsed value (number, boolean, or string)
    */
   parseValue(value) {
-    // Try to parse as number
-    if (/^-?\d+$/.test(value)) {
-      return parseInt(value, 10);
-    }
-    if (/^-?\d+\.\d+$/.test(value)) {
-      return parseFloat(value);
-    }
-    
-    // Parse boolean
-    if (value === 'True' || value === 'true') {
-      return true;
-    }
-    if (value === 'False' || value === 'false') {
-      return false;
-    }
-    
-    // Return as string
-    return value;
+    return ParsingUtils.parseValue(value);
   }
 }
 

@@ -2,14 +2,21 @@
 (function(global) {
   'use strict';
 
-  // Get MetadataParser reference for both environments
-  var MetadataParserBase;
-  if (typeof window !== 'undefined' && window.MetadataParser) {
+  // Get dependencies for both environments
+  var MetadataParserBase, ParsingUtils, ErrorHandler;
+  
+  if (typeof window !== 'undefined') {
+    // Browser environment
     MetadataParserBase = window.MetadataParser;
+    ParsingUtils = window.ParsingUtils;
+    ErrorHandler = window.ErrorHandler;
   } else if (typeof require !== 'undefined') {
+    // Node.js environment (testing)
     MetadataParserBase = require('./MetadataParser');
+    ParsingUtils = require('../utils/ParsingUtils');
+    ErrorHandler = require('../utils/ErrorHandler');
   } else {
-    throw new Error('MetadataParser not found');
+    throw new Error('Required dependencies not found');
   }
 
 /**
@@ -37,20 +44,22 @@ class ComfyUIParser extends MetadataParserBase {
 
     // Extract from prompt JSON (contains generation parameters)
     if (rawChunks.prompt) {
-      try {
-        this.extractFromPrompt(rawChunks.prompt, metadata);
-      } catch (e) {
-        console.error("ComfyUI prompt parsing failed:", e);
-      }
+      ErrorHandler.safeExecute(
+        () => this.extractFromPrompt(rawChunks.prompt, metadata),
+        null,
+        'ComfyUIParser',
+        { source: 'prompt' }
+      );
     }
 
     // Extract from workflow JSON (contains UI state and additional info)
     if (rawChunks.workflow) {
-      try {
-        this.extractFromWorkflow(rawChunks.workflow, metadata);
-      } catch (e) {
-        console.error("ComfyUI workflow parsing failed:", e);
-      }
+      ErrorHandler.safeExecute(
+        () => this.extractFromWorkflow(rawChunks.workflow, metadata),
+        null,
+        'ComfyUIParser',
+        { source: 'workflow' }
+      );
     }
 
     return metadata;
@@ -504,7 +513,7 @@ class ComfyUIParser extends MetadataParserBase {
           // Check if this node is a CheckpointLoader
           if (currentNode.class_type && currentNode.class_type.includes('CheckpointLoader')) {
             const ckptName = resolve(currentNodeId, 'ckpt_name');
-            return ckptName ? ckptName.split(/[/\\]/).pop() : null;
+            return ckptName ? ParsingUtils.extractFilename(ckptName) : null;
           }
           
           // If preferredInputKey is specified, check it first
@@ -620,7 +629,7 @@ class ComfyUIParser extends MetadataParserBase {
       if (node.class_type.includes("CheckpointLoader") && !metadata.checkpoint) {
         const ckptName = resolve(id, "ckpt_name");
         if (ckptName) {
-          metadata.checkpoint = ckptName.split(/[/\\]/).pop();
+          metadata.checkpoint = ParsingUtils.extractFilename(ckptName);
         }
       }
       
@@ -630,7 +639,7 @@ class ComfyUIParser extends MetadataParserBase {
         if (node.class_type.includes("LoraLoader")) {
           const l = resolve(id, "lora_name");
           if (l) {
-            loras.add(l.split(/[/\\]/).pop());
+            loras.add(ParsingUtils.extractFilename(l));
           }
         }
         // Custom LoRA loader variants (e.g., "Lora Loader Stack (rgthree)")
@@ -641,7 +650,7 @@ class ComfyUIParser extends MetadataParserBase {
               const loraValue = resolve(id, inputKey);
               if (loraValue && typeof loraValue === 'string' && loraValue !== 'None') {
                 // Extract filename from path
-                const filename = loraValue.split(/[/\\]/).pop();
+                const filename = ParsingUtils.extractFilename(loraValue);
                 if (filename && filename.toLowerCase().endsWith('.safetensors')) {
                   loras.add(filename);
                 }
@@ -689,7 +698,7 @@ class ComfyUIParser extends MetadataParserBase {
       if (type.includes("CheckpointLoader") && !metadata.checkpoint && node.widgets_values) {
         const fullPath = node.widgets_values?.[0] || '';
         // Extract just the filename from the path (handles both / and \ separators)
-        metadata.checkpoint = fullPath.split(/[/\\]/).pop();
+        metadata.checkpoint = ParsingUtils.extractFilename(fullPath);
       }
     });
     
