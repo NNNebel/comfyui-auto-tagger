@@ -4,7 +4,7 @@
   'use strict';
 
   // Get dependencies for both environments
-  var ImageMetadataReader, FormatDetector, ParserRegistry, ComfyUIParser, A1111Parser;
+  var ImageMetadataReader, FormatDetector, ParserRegistry, ComfyUIParser, A1111Parser, ErrorHandler, Validators;
   
   if (typeof window !== 'undefined') {
     // Browser environment
@@ -13,6 +13,8 @@
     ParserRegistry = window.ParserRegistry;
     ComfyUIParser = window.ComfyUIParser;
     A1111Parser = window.A1111Parser;
+    ErrorHandler = window.ErrorHandler;
+    Validators = window.Validators;
   } else if (typeof require !== 'undefined') {
     // Node.js environment
     ImageMetadataReader = require('../binary-extraction/ImageMetadataReader');
@@ -20,6 +22,8 @@
     ParserRegistry = require('../parsers/ParserRegistry');
     ComfyUIParser = require('../parsers/ComfyUIParser');
     A1111Parser = require('../parsers/A1111Parser');
+    ErrorHandler = require('../utils/ErrorHandler');
+    Validators = require('../utils/Validators');
   } else {
     throw new Error('Dependencies not found');
   }
@@ -82,16 +86,30 @@ class MetadataService {
    * });
    */
   extractMetadata(buffer, mimeType) {
-    // Step 1: Extract raw chunks from the image
-    const rawChunks = ImageMetadataReader.extractRawMetadata(buffer, mimeType);
-    
-    // Step 2: Detect which formats are present
-    const formats = FormatDetector.detectFormats(rawChunks);
-    
-    // Step 3: Parse all detected formats
-    const results = this.registry.parseAll(formats, rawChunks);
-    
-    return results;
+    return ErrorHandler.safeExecute(
+      () => {
+        // Validate inputs
+        Validators.validateBuffer(buffer);
+        Validators.validateMimeType(mimeType);
+        
+        // Step 1: Extract raw chunks from the image
+        const rawChunks = ImageMetadataReader.extractRawMetadata(buffer, mimeType);
+        
+        // Validate raw chunks
+        Validators.validateRawChunks(rawChunks);
+        
+        // Step 2: Detect which formats are present
+        const formats = FormatDetector.detectFormats(rawChunks);
+        
+        // Step 3: Parse all detected formats
+        const results = this.registry.parseAll(formats, rawChunks);
+        
+        return results;
+      },
+      [],
+      'MetadataService',
+      { mimeType, bufferSize: buffer.length }
+    );
   }
 
   /**
@@ -123,14 +141,26 @@ class MetadataService {
    * }
    */
   extractPreferredMetadata(buffer, mimeType, preferredFormat = 'comfyui') {
-    const results = this.extractMetadata(buffer, mimeType);
-    
-    // Try preferred format first
-    const preferred = results.find(r => r.format === preferredFormat);
-    if (preferred) return preferred;
-    
-    // Fall back to first available
-    return results.length > 0 ? results[0] : null;
+    return ErrorHandler.safeExecute(
+      () => {
+        // Validate inputs
+        Validators.validateBuffer(buffer);
+        Validators.validateMimeType(mimeType);
+        Validators.validateFormat(preferredFormat);
+        
+        const results = this.extractMetadata(buffer, mimeType);
+        
+        // Try preferred format first
+        const preferred = results.find(r => r.format === preferredFormat);
+        if (preferred) return preferred;
+        
+        // Fall back to first available
+        return results.length > 0 ? results[0] : null;
+      },
+      null,
+      'MetadataService',
+      { mimeType, preferredFormat, bufferSize: buffer.length }
+    );
   }
 }
 

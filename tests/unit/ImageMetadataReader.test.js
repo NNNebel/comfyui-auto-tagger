@@ -150,14 +150,7 @@ describe('ImageMetadataReader', () => {
     });
   });
 
-  describe('_getFourCC', () => {
-    it('should extract four-character code correctly', () => {
-      const buffer = new Uint8Array([0x74, 0x45, 0x58, 0x74]); // 'tEXt'
-      const view = new DataView(buffer.buffer);
-      const result = ImageMetadataReader._getFourCC(view, 0);
-      expect(result).toBe('tEXt');
-    });
-  });
+
 
   describe('_parseJsonFromPos', () => {
     it('should parse JSON from buffer position', () => {

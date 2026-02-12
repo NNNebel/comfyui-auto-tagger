@@ -44,59 +44,77 @@
      * });
      * // Returns: true
      */
-    static validateParsedMetadata(metadata) {
-      if (!metadata || typeof metadata !== 'object') {
-        throw new Error('Parsed metadata must be an object');
-      }
-      
-      if (Array.isArray(metadata)) {
-        throw new Error('Parsed metadata must be an object, not an array');
-      }
-      
-      // Format is required
-      if (!metadata.format || typeof metadata.format !== 'string') {
-        throw new Error('Parsed metadata must have a format string');
-      }
-      
-      // Validate optional fields if present
-      if ('checkpoint' in metadata && metadata.checkpoint !== null && typeof metadata.checkpoint !== 'string') {
-        throw new Error('Checkpoint must be a string or null');
-      }
-      
-      if ('loras' in metadata && metadata.loras !== null && !Array.isArray(metadata.loras)) {
-        throw new Error('LoRAs must be an array or null');
-      }
-      
-      if ('positive' in metadata && metadata.positive !== null && typeof metadata.positive !== 'string') {
-        throw new Error('Positive prompt must be a string or null');
-      }
-      
-      if ('negative' in metadata && metadata.negative !== null && typeof metadata.negative !== 'string') {
-        throw new Error('Negative prompt must be a string or null');
-      }
-      
-      if ('seed' in metadata && metadata.seed !== null && typeof metadata.seed !== 'number') {
-        throw new Error('Seed must be a number or null');
-      }
-      
-      if ('steps' in metadata && metadata.steps !== null && typeof metadata.steps !== 'number') {
-        throw new Error('Steps must be a number or null');
-      }
-      
-      if ('cfg' in metadata && metadata.cfg !== null && typeof metadata.cfg !== 'number') {
-        throw new Error('CFG must be a number or null');
-      }
-      
-      if ('sampler' in metadata && metadata.sampler !== null && typeof metadata.sampler !== 'string') {
-        throw new Error('Sampler must be a string or null');
-      }
-      
-      if ('scheduler' in metadata && metadata.scheduler !== null && typeof metadata.scheduler !== 'string') {
-        throw new Error('Scheduler must be a string or null');
-      }
-      
-      return true;
-    }
+    /**
+         * Validate parsed metadata structure
+         * @param {Object} metadata - Parsed metadata to validate
+         * @returns {boolean} True if valid
+         * @throws {Error} If invalid with descriptive message
+         * 
+         * @example
+         * Validators.validateParsedMetadata({
+         *   format: 'comfyui',
+         *   checkpoint: 'model.safetensors',
+         *   steps: 20
+         * });
+         * // Returns: true
+         */
+        static validateParsedMetadata(metadata) {
+          if (!metadata || typeof metadata !== 'object') {
+            throw new Error('Parsed metadata must be an object');
+          }
+
+          if (Array.isArray(metadata)) {
+            throw new Error('Parsed metadata must be an object, not an array');
+          }
+
+          // Format is required
+          if (!metadata.format || typeof metadata.format !== 'string') {
+            throw new Error('Parsed metadata must have a format string');
+          }
+
+          // Validate optional top-level fields if present
+          // Note: We don't validate nested arrays like extra_samplers or generationSteps
+          // as they have their own internal structure
+          if ('checkpoint' in metadata && metadata.checkpoint !== null && typeof metadata.checkpoint !== 'string') {
+            throw new Error('Checkpoint must be a string or null');
+          }
+
+          if ('loras' in metadata && metadata.loras !== null && !Array.isArray(metadata.loras)) {
+            throw new Error('LoRAs must be an array or null');
+          }
+
+          if ('positive' in metadata && metadata.positive !== null && typeof metadata.positive !== 'string') {
+            throw new Error('Positive prompt must be a string or null');
+          }
+
+          if ('negative' in metadata && metadata.negative !== null && typeof metadata.negative !== 'string') {
+            throw new Error('Negative prompt must be a string or null');
+          }
+
+          // Only validate top-level seed, not nested ones in arrays
+          if ('seed' in metadata && metadata.seed !== null && metadata.seed !== undefined && typeof metadata.seed !== 'number') {
+            throw new Error('Seed must be a number or null');
+          }
+
+          if ('steps' in metadata && metadata.steps !== null && typeof metadata.steps !== 'number') {
+            throw new Error('Steps must be a number or null');
+          }
+
+          if ('cfg' in metadata && metadata.cfg !== null && typeof metadata.cfg !== 'number') {
+            throw new Error('CFG must be a number or null');
+          }
+
+          if ('sampler' in metadata && metadata.sampler !== null && typeof metadata.sampler !== 'string') {
+            throw new Error('Sampler must be a string or null');
+          }
+
+          if ('scheduler' in metadata && metadata.scheduler !== null && typeof metadata.scheduler !== 'string') {
+            throw new Error('Scheduler must be a string or null');
+          }
+
+          return true;
+        }
+
 
     /**
      * Validate settings object
