@@ -24,6 +24,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 * **Selective Import**: Allows toggling specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
 * **Batch Processing**: Efficiently processes multiple images with a progress bar.
 * **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
+* **Suspicious Node Detection**: Automatically detects nodes with missing required inputs in ComfyUI workflows and alerts you with a dialog showing affected generation steps. Choose to exclude, include, or ask for each suspicious node.
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
 * **No External Dependencies**: Parses PNG/WebP chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
 * **Utility**: Provides a dedicated button to safely remove only the tags/notes added by this plugin.
@@ -46,8 +47,13 @@ Unlike simple metadata readers, this plugin dynamically analyzes the ComfyUI nod
 | :---: | :---: |
 | <img src="assets/workflow_image.png" width="500" alt="Complex Workflow"> | <img src="assets/workflow_trace_result.png" width="300" alt="Trace Result"> |
 
+| Suspicious Node Detection |
+| :---: |
+| <img src="assets/suspicious_node detecter.png" width="500" alt="Suspicious Node Detection"> |
+
 *   **Path-Based Extraction**: Automatically traces the latent/image chain back from the output nodes to filter out inactive nodes or unused branches.
 *   **Multi-Stage Support**: Comprehensive extraction of seeds, prompts, and samplers from all stages, including KSampler, SAM Detailer, HiresFix, and FaceDetailer.
+*   **Suspicious Node Detection**: Identifies nodes with missing required inputs (e.g., ImageUpscaleWithModel without image input) and shows which generation steps would be affected. You can choose to exclude these nodes or include them in the analysis.
 *   **Full Audit in Notes**: Records detailed metadata for every detected generation step in the Eagle Notes section for precise reproduction.
 
 ### 🏗️ Architecture
@@ -92,6 +98,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 * **選択的取り込み**: チェックボックスで必要な情報のみ（例: チェックポイントのみ）を選択して取り込み可能。
 * **バッチ処理**: 複数画像をまとめて効率的に処理し、進捗状況を表示。
 * **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
+* **疑わしいノード検出**: ComfyUIワークフロー内で必須入力が不足しているノードを自動検出し、影響を受ける生成ステップを表示するダイアログで通知します。各疑わしいノードについて、除外、含める、または確認を選択できます。
 * **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
 * **外部依存なし**: PNG/WebPの内部データ（tEXt, comf, Exif）を直接解析するため、重い外部ライブラリに依存せず動作。
 * **ユーティリティ**: このプラグインが生成したタグやメモのみを安全に削除する機能を提供。
@@ -139,8 +146,13 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 | :---: | :---: |
 | <img src="assets/workflow_image.png" width="500" alt="Complex Workflow"> | <img src="assets/workflow_trace_result.png" width="300" alt="Trace Result"> |
 
+| 疑わしいノード検出 |
+| :---: |
+| <img src="assets/suspicious_node detecter.png" width="500" alt="Suspicious Node Detection"> |
+
 *   **実行経路の動的探索**: 出力ノードから潜在空間や画像の連鎖を逆引きし、画像生成に使用されていない不要なブランチの情報は除外します。
 *   **マルチステージ対応**: KSampler、SAM Detailer、HiresFix、FaceDetailerなど、経路上のあらゆる工程からシード値、プロンプト、サンプラー情報を網羅的に取得します。
+*   **疑わしいノード検出**: 必須入力が不足しているノード（例：画像入力がないImageUpscaleWithModel）を自動検出し、どの生成ステップに影響するかを表示します。これらのノードを除外するか、解析に含めるかを選択できます。
 *   **詳細な履歴保存**: Eagleのメモ欄には、検出されたすべての生成ステップごとのメタデータが記録され、後からの正確な振り返りが可能です。
 
 ### ⚠️ 免責事項・不具合報告
