@@ -205,6 +205,13 @@ describe('Sample Images Integration Tests', () => {
             const actualIds = actual.extra_samplers.map(s => s.id).sort();
             const expectedIds = expected.extra_samplers.map(s => s.id).sort();
             expect(actualIds).toEqual(expectedIds);
+            
+            // Verify execution order (generationSteps order should match expected)
+            if (actual.generationSteps && expected.generationSteps) {
+              const actualOrder = actual.generationSteps.map(s => s.nodeId);
+              const expectedOrder = expected.generationSteps.map(s => s.nodeId);
+              expect(actualOrder).toEqual(expectedOrder);
+            }
           }
         }
       });

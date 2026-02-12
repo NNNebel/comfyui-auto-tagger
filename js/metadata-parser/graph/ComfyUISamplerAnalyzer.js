@@ -59,10 +59,13 @@ class ComfyUISamplerAnalyzer {
    * Algorithm:
    * 1. Find all sampler nodes
    * 2. Find all output nodes (SaveImage, PreviewImage, etc.)
-   * 3. For each output node, trace back to find reachable samplers
+   * 3. For each output node, trace back to find reachable samplers using DFS
    * 4. Calculate distance from each sampler to its latent source
    * 5. Select sampler with minimum distance (closest to source)
-   * 6. If tie, select by smallest node ID
+   * 6. If tie, select by execution order (DFS backtrace naturally gives execution order)
+   * 
+   * Note: DFS backtrace from output nodes naturally discovers samplers in execution order
+   * because it follows the deepest path first (earliest samplers)
    * 
    * Fallback: If no output nodes exist OR no samplers reachable from output nodes,
    * use all samplers (this handles incomplete workflows or workflows with
@@ -88,12 +91,14 @@ class ComfyUISamplerAnalyzer {
     // Step 2: Get output nodes (SaveImage, PreviewImage, etc.)
     const outputNodeIds = this.graph.getOutputNodes();
     
-    // Step 3: Find samplers reachable from output nodes
+    // Step 3: Find samplers reachable from output nodes using DFS
     let reachableSamplers = new Set();
+    const backtraceOrder = []; // Track order samplers are found (DFS = execution order)
+    
     if (outputNodeIds.length > 0) {
       for (const outputId of outputNodeIds) {
-        const samplers = this.graph.traceToType(outputId, 'sampler');
-        samplers.forEach(s => reachableSamplers.add(s.id));
+        // Use DFS to find reachable samplers (maintains execution order)
+        this._findReachableSamplersDFS(outputId, reachableSamplers, backtraceOrder);
       }
     }
     
@@ -101,20 +106,31 @@ class ComfyUISamplerAnalyzer {
     const isFallback = outputNodeIds.length === 0 || reachableSamplers.size === 0;
     if (isFallback) {
       reachableSamplers = new Set(samplerIds);
+      // For fallback, use node ID order
+      backtraceOrder.length = 0;
+      backtraceOrder.push(...samplerIds.sort((a, b) => parseInt(a) - parseInt(b)));
     }
+    
+    // Create execution order map (backtrace with DFS gives execution order)
+    const executionOrderMap = new Map();
+    backtraceOrder.forEach((id, index) => {
+      executionOrderMap.set(id, index);
+    });
     
     // Step 4: Calculate distance to latent source for each sampler
     const scored = Array.from(reachableSamplers).map(id => ({
       id,
-      distance: this._calculateDistanceToSource(id)
+      distance: this._calculateDistanceToSource(id),
+      executionOrder: executionOrderMap.get(id) || 0
     }));
     
-    // Step 5: Sort by distance, then by ID
+    // Step 5: Sort by distance, then by execution order
     scored.sort((a, b) => {
       if (a.distance !== b.distance) {
         return a.distance - b.distance;
       }
-      return parseInt(a.id) - parseInt(b.id);
+      // Use execution order (DFS backtrace) as tiebreaker
+      return a.executionOrder - b.executionOrder;
     });
     
     return {
@@ -122,6 +138,37 @@ class ComfyUISamplerAnalyzer {
       allSamplers: scored,
       isFallback
     };
+  }
+  
+  /**
+   * Find reachable samplers using DFS (Depth-First Search)
+   * This maintains execution order when backtracing from output nodes
+   * @private
+   * @param {string} nodeId - Starting node ID
+   * @param {Set<string>} reachableSamplers - Set to collect reachable sampler IDs
+   * @param {Array<string>} backtraceOrder - Array to track discovery order
+   * @param {Set<string>} visited - Set of visited nodes (for cycle detection)
+   */
+  _findReachableSamplersDFS(nodeId, reachableSamplers, backtraceOrder, visited = new Set()) {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+    
+    const node = this.graph.getNode(nodeId);
+    if (!node) return;
+    
+    // Check if this node is a sampler
+    if (this.graph.getNodeType(nodeId) === 'sampler') {
+      if (!reachableSamplers.has(nodeId)) {
+        reachableSamplers.add(nodeId);
+        backtraceOrder.push(nodeId);
+      }
+    }
+    
+    // Recursively trace through all parent nodes (DFS)
+    const parents = this.graph.getParents(nodeId);
+    for (const parentId of parents) {
+      this._findReachableSamplersDFS(parentId, reachableSamplers, backtraceOrder, visited);
+    }
   }
   
   /**

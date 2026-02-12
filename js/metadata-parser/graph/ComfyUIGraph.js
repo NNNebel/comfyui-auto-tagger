@@ -444,6 +444,71 @@ class ComfyUIGraph {
   hasMissingNodes() {
     return this.missingNodes.size > 0;
   }
+  /**
+   * Get topological sort order of nodes (execution order)
+   * Uses Kahn's algorithm for topological sorting
+   * @returns {Array<string>} Array of node IDs in execution order
+   *
+   * @example
+   * const executionOrder = graph.getTopologicalOrder();
+   * // Returns: ['1', '2', '3', '5', '8', '10'] (nodes in execution order)
+   */
+  getTopologicalOrder() {
+    // Calculate in-degree for each node
+    const inDegree = new Map();
+    for (const id of this.nodes.keys()) {
+      inDegree.set(id, 0);
+    }
+
+    for (const [id, parents] of this.edges) {
+      inDegree.set(id, parents.size);
+    }
+
+    // Queue of nodes with no dependencies
+    const queue = [];
+    for (const [id, degree] of inDegree) {
+      if (degree === 0) {
+        queue.push(id);
+      }
+    }
+
+    // Process nodes in topological order
+    const result = [];
+    while (queue.length > 0) {
+      // Sort queue by node ID for deterministic order when multiple nodes have same in-degree
+      queue.sort((a, b) => parseInt(a) - parseInt(b));
+
+      const currentId = queue.shift();
+      result.push(currentId);
+
+      // Reduce in-degree of children
+      const children = this.reverseEdges.get(currentId);
+      if (children) {
+        for (const childId of children) {
+          const newDegree = inDegree.get(childId) - 1;
+          inDegree.set(childId, newDegree);
+
+          if (newDegree === 0) {
+            queue.push(childId);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get execution order index for a specific node
+   * @param {string} nodeId - Node ID
+   * @returns {number} Execution order index (0-based), or -1 if not found
+   */
+  getExecutionOrder(nodeId) {
+    if (!this._executionOrder) {
+      this._executionOrder = this.getTopologicalOrder();
+    }
+    return this._executionOrder.indexOf(nodeId);
+  }
 }
 
   // Export for both browser and Node.js environments

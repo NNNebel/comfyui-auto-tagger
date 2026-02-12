@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 #### 🐛 Bug Fixes
 - Fixed base sampler detection in ComfyUI workflows with DetailerForEach nodes
 - Improved distance calculation for samplers that work on images rather than latents
+- Fixed sampler execution order in generationSteps by restoring DFS (Depth-First Search) algorithm
 
 #### ✨ Improvements
 - Optimized metadata parsing engine for better performance and reliability
@@ -18,11 +19,18 @@ All notable changes to this project will be documented in this file.
 - Refactored internal parsing architecture for improved code quality
 - Optimized parsing algorithms for faster metadata extraction
 - Improved code organization and reduced duplication
+- Restored DFS-based sampler discovery to maintain correct execution order
+
+#### 🧪 Testing
+- Added comprehensive integration tests for all fixture images
+- Enhanced test validation to verify sampler execution order
+- Renamed tests/samples to tests/fixtures for better clarity
 
 ### 🇯🇵 日本語
 #### 🐛 バグ修正
 - DetailerForEachノードを含むComfyUIワークフローでのbase sampler検出を修正
 - latentではなく画像を処理するサンプラーの距離計算を改善
+- DFS（深さ優先探索）アルゴリズムを復元し、generationStepsのサンプラー実行順序を修正
 
 #### ✨ 改善
 - メタデータパースエンジンを最適化し、パフォーマンスと信頼性を向上
@@ -33,6 +41,12 @@ All notable changes to this project will be documented in this file.
 - 内部パースアーキテクチャをリファクタリングしてコード品質を向上
 - パースアルゴリズムを最適化してメタデータ抽出を高速化
 - コード構成を改善し、重複を削減
+- 正しい実行順序を維持するため、DFSベースのサンプラー発見を復元
+
+#### 🧪 テスト
+- 全てのフィクスチャ画像に対する包括的な統合テストを追加
+- サンプラー実行順序を検証するテストを強化
+- tests/samplesをtests/fixturesに名称変更し、明確化
 
 ## [1.3.2] - 2026-01-30
 
