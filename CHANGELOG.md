@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4] - 2026-02-13
+
+### 🇬🇧 English
+#### 🎉 New Features
+- **Suspicious Node Detection with UI Integration**:
+  - Implemented heuristic detection to identify nodes with missing required inputs in ComfyUI workflows.
+  - Added user-configurable handling modes: exclude (default), include, or ask via dialog.
+  - Dialog displays affected generation steps for each suspicious node.
+  - Shift+Click functionality to apply decisions to all remaining images.
+  - Settings persistence via localStorage.
+
+#### ✨ Improvements
+- Enhanced workflow validation to detect non-executable nodes before processing.
+- Improved user feedback with visual indicators for suspicious nodes.
+- Better handling of complex workflows with multiple refinement stages.
+
+#### 🧪 Testing
+- Added comprehensive unit tests for suspicious node detection logic.
+- Added integration tests for suspicious node workflows.
+- Fixed test assertions to match actual translation key format.
+- All tests passing (760/760).
+
+### 🇯🇵 日本語
+#### 🎉 新機能
+- **疑わしいノード検出とUI統合**:
+  - ComfyUIワークフロー内で必須入力が不足しているノードを検出するヒューリスティック検出を実装しました。
+  - ユーザー設定可能な処理モード: 除外（デフォルト）、含める、またはダイアログで確認。
+  - 各疑わしいノードに影響を受ける生成ステップをダイアログに表示します。
+  - Shift+クリック機能で、残りの全ての画像に決定を適用できます。
+  - localStorageを使用した設定の永続化。
+
+#### ✨ 改善
+- ワークフロー検証を強化し、処理前に実行不可能なノードを検出します。
+- 疑わしいノードの視覚的インジケータでユーザーフィードバックを改善しました。
+- 複数の改善ステージを持つ複雑なワークフローの処理を改善しました。
+
+#### 🧪 テスト
+- 疑わしいノード検出ロジックの包括的なユニットテストを追加しました。
+- 疑わしいノードワークフローの統合テストを追加しました。
+- テストアサーションを実際の翻訳キー形式に合わせて修正しました。
+- 全テスト成功（760/760）。
+
 ## [1.3.3] - 2026-02-12
 
 ### 🇬🇧 English
