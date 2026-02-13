@@ -24,6 +24,9 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 * **Selective Import**: Allows toggling specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
 * **Batch Processing**: Efficiently processes multiple images with a progress bar.
 * **Advanced Workflow Analysis**: Dynamically analyzes ComfyUI node graphs to trace the actual execution path, accurately extracting parameters even from complex multi-stage workflows (HiresFix, FaceDetailer, etc.).
+    * Traces through complex node connections to identify the actual generation pipeline
+    * Handles multi-stage workflows with multiple samplers and refinement stages
+    * See workflow analysis examples below
 * **Suspicious Node Detection**: Automatically detects nodes with missing required inputs in ComfyUI workflows and alerts you with a dialog showing affected generation steps. Choose to exclude, include, or ask for each suspicious node.
 * **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
@@ -39,6 +42,26 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 | Output Result | Settings UI |
 | :---: | :---: |
 | <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Settings Window"> |
+
+#### Advanced Workflow Analysis
+
+The plugin traces complex ComfyUI workflows to identify the actual generation pipeline:
+
+<p align="center">
+  <img src="assets/workflow_image.png" alt="Workflow Example" width="100%">
+</p>
+
+<p align="center">
+  <img src="assets/workflow_trace_result.png" alt="Workflow Trace Result" width="100%">
+</p>
+
+#### Suspicious Node Detection
+
+Automatically detects nodes with missing required inputs and alerts you with a dialog:
+
+<p align="center">
+  <img src="assets/suspicious_node detecter.png" alt="Suspicious Node Detection" width="100%">
+</p>
 
 ### 🚀 Usage
 
@@ -87,6 +110,9 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 * **選択的取り込み**: チェックボックスで必要な情報のみ（例: チェックポイントのみ）を選択して取り込み可能。
 * **バッチ処理**: 複数画像をまとめて効率的に処理し、進捗状況を表示。
 * **高度なワークフロー解析**: ComfyUIのノードグラフを動的に解析し、実際の実行ルートを特定。複雑なマルチステージワークフロー（HiresFix、FaceDetailer等）からも正確にパラメータを抽出。
+    * 複雑なノード接続を追跡して実際の生成パイプラインを特定
+    * 複数のサンプラーと改善ステージを持つマルチステージワークフローに対応
+    * 下記のワークフロー解析例を参照
 * **疑わしいノード検出**: ComfyUIワークフロー内で必須入力が不足しているノードを自動検出し、影響を受ける生成ステップを表示するダイアログで通知します。各疑わしいノードについて、除外、含める、または確認を選択できます。
 * **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
 * **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
@@ -102,6 +128,26 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 | 出力結果 | 設定画面 |
 | :---: | :---: |
 | <img src="assets/preview-result.png" width="400" alt="結果概要"> | <img src="assets/preview-settings.png" width="400" alt="設定ウィンドウ"> |
+
+#### 高度なワークフロー解析
+
+複雑なComfyUIワークフローを追跡して、実際の生成パイプラインを特定します：
+
+<p align="center">
+  <img src="assets/workflow_image.png" alt="ワークフロー例" width="100%">
+</p>
+
+<p align="center">
+  <img src="assets/workflow_trace_result.png" alt="ワークフロー追跡結果" width="100%">
+</p>
+
+#### 疑わしいノード検出
+
+必須入力が不足しているノードを自動検出し、ダイアログで通知します：
+
+<p align="center">
+  <img src="assets/suspicious_node detecter.png" alt="疑わしいノード検出" width="100%">
+</p>
 
 ### � 使い方
 
