@@ -1,0 +1,75 @@
+{
+  "format": "comfyui",
+  "suspiciousNodes": [
+    {
+      "nodeId": "171",
+      "nodeType": "ImageUpscaleWithModel",
+      "reasonKey": "suspiciousNode.reason.imageProcessingNoInput",
+      "reasonParams": {
+        "nodeType": "ImageUpscaleWithModel"
+      },
+      "suggestionKey": "suspiciousNode.suggestion.disconnected",
+      "affectedSteps": [
+        {
+          "stepIndex": 2,
+          "stepNodeId": "32",
+          "stepNodeType": "KSampler"
+        }
+      ]
+    },
+    {
+      "nodeId": "383",
+      "nodeType": "ImageUpscaleWithModel",
+      "reasonKey": "suspiciousNode.reason.imageProcessingNoInput",
+      "reasonParams": {
+        "nodeType": "ImageUpscaleWithModel"
+      },
+      "suggestionKey": "suspiciousNode.suggestion.disconnected",
+      "affectedSteps": [
+        {
+          "stepIndex": 2,
+          "stepNodeId": "378",
+          "stepNodeType": "KSampler"
+        }
+      ]
+    }
+  ],
+  "sampler_fallback": false,
+  "generationSteps": [
+    {
+      "nodeId": "325",
+      "nodeName": "DetailerForEachDebug",
+      "nodeType": "DetailerForEachDebug",
+      "isBase": true,
+      "seed": 20739250659067,
+      "steps": 30,
+      "cfg": 8,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "positive": "blue hair, red eyes, pout",
+      "negative": "bad face, bad anatomy,",
+      "checkpoint": "perfectdeliberate_v60.safetensors",
+      "distance": 1,
+      "stepIndex": 1
+    }
+  ],
+  "extra_samplers": [
+    {
+      "id": "325",
+      "seed": 20739250659067,
+      "steps": 30,
+      "cfg": 8,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": true
+    }
+  ],
+  "seed": 20739250659067,
+  "steps": 30,
+  "cfg": 8,
+  "sampler": "dpmpp_2m",
+  "scheduler": "normal",
+  "checkpoint": "perfectdeliberate_v60.safetensors",
+  "positive": "blue hair, red eyes, pout",
+  "negative": "bad face, bad anatomy,"
+}
