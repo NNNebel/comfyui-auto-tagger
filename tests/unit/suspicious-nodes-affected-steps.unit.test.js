@@ -8,6 +8,12 @@ const ComfyUIGraph = require('../../js/metadata-parser/graph/ComfyUIGraph.js');
 const ComfyUISamplerAnalyzer = require('../../js/metadata-parser/graph/ComfyUISamplerAnalyzer.js');
 const ImageMetadataReader = require('../../js/metadata-parser/binary-extraction/ImageMetadataReader.js');
 
+// Helper function to check if fixture file exists
+function fixtureExists(filename) {
+  const fixturePath = path.join(__dirname, '../fixtures', filename);
+  return fs.existsSync(fixturePath);
+}
+
 describe('Suspicious Nodes - Affected Steps Detection', () => {
   let parser;
 
@@ -16,7 +22,7 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
   });
 
   describe('affectedSteps field in suspicious nodes', () => {
-    it('should include affectedSteps when suspicious nodes are detected', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should include affectedSteps when suspicious nodes are detected', () => {
       // Load test fixture with suspicious nodes from actual image
       const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
@@ -45,7 +51,7 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
       });
     });
 
-    it('should correctly identify which steps are affected by suspicious nodes', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should correctly identify which steps are affected by suspicious nodes', () => {
       // Load comfyui_suspicious_node fixture from actual image
       const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
@@ -116,7 +122,7 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
   });
 
   describe('integration with suspiciousNodeHandling options', () => {
-    it('should include affectedSteps regardless of handling mode', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should include affectedSteps regardless of handling mode', () => {
       // Load from actual image
       const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
@@ -135,7 +141,7 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
       expect(metadataInclude.suspiciousNodes[0].affectedSteps).toBeDefined();
     });
 
-    it('should work with overrides', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should work with overrides', () => {
       // Load from actual image
       const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
