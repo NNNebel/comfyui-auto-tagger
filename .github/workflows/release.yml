@@ -31,7 +31,7 @@ jobs:
         run: |
           # CHANGELOG.md から最新の [##] セクションを抽出して RELEASE_NOTES.md に保存
           # 最初の ## から、次の ## の直前までを切り出す
-          sed -n '/^## \[[0-9.]*\]/,/^## \[[0-9.]*\]/p' CHANGELOG.md | sed '$d' > RELEASE_NOTES.md
+          awk '/^## \[[0-9.]*\]/{if(found){exit}else{found=1}} found' CHANGELOG.md > RELEASE_NOTES.md
 
       - name: Create Eagle Plugin Package
         run: |
