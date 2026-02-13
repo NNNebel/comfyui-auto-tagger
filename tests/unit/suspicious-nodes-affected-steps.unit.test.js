@@ -6,6 +6,7 @@ import path from 'path';
 const ComfyUIParser = require('../../js/metadata-parser/parsers/ComfyUIParser.js');
 const ComfyUIGraph = require('../../js/metadata-parser/graph/ComfyUIGraph.js');
 const ComfyUISamplerAnalyzer = require('../../js/metadata-parser/graph/ComfyUISamplerAnalyzer.js');
+const ImageMetadataReader = require('../../js/metadata-parser/binary-extraction/ImageMetadataReader.js');
 
 describe('Suspicious Nodes - Affected Steps Detection', () => {
   let parser;
@@ -16,10 +17,10 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
 
   describe('affectedSteps field in suspicious nodes', () => {
     it('should include affectedSteps when suspicious nodes are detected', () => {
-      // Load test fixture with suspicious nodes
-      const fixtureData = JSON.parse(
-        fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_prompt.json'), 'utf8')
-      );
+      // Load test fixture with suspicious nodes from actual image
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
+      const fixtureData = rawMetadata.prompt;
 
       const metadata = {};
       parser.extractFromPrompt(fixtureData, metadata, { suspiciousNodeHandling: 'exclude' });
@@ -45,10 +46,10 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
     });
 
     it('should correctly identify which steps are affected by suspicious nodes', () => {
-      // Load comfyui_suspicious_node fixture
-      const fixtureData = JSON.parse(
-        fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_prompt.json'), 'utf8')
-      );
+      // Load comfyui_suspicious_node fixture from actual image
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
+      const fixtureData = rawMetadata.prompt;
 
       const metadata = {};
       parser.extractFromPrompt(fixtureData, metadata, { suspiciousNodeHandling: 'exclude' });
@@ -116,9 +117,10 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
 
   describe('integration with suspiciousNodeHandling options', () => {
     it('should include affectedSteps regardless of handling mode', () => {
-      const fixtureData = JSON.parse(
-        fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_prompt.json'), 'utf8')
-      );
+      // Load from actual image
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
+      const fixtureData = rawMetadata.prompt;
 
       // Test with 'exclude' mode
       const metadataExclude = {};
@@ -134,9 +136,10 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
     });
 
     it('should work with overrides', () => {
-      const fixtureData = JSON.parse(
-        fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_prompt.json'), 'utf8')
-      );
+      // Load from actual image
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
+      const fixtureData = rawMetadata.prompt;
 
       const metadata = {};
       parser.extractFromPrompt(fixtureData, metadata, {

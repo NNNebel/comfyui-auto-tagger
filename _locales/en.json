@@ -82,8 +82,8 @@
         "noItemSelected": "No items selected."
     },
     "confirm": {
-        "deleteAll": "Are you sure you want to delete all plugin-generated info from {{count}} items?",
-        "forceDeleteAll": "[FORCE DELETE MODE] This will delete ALL tags from {{count}} items without analysis. Are you sure?"
+        "deleteAll": "Are you sure you want to delete all plugin-generated tags and notes from {{count}} items?",
+        "forceDeleteAll": "[FORCE DELETE MODE]\nThis will delete ALL tags and remove note information from {{count}} items.\nThis is fast but may also remove user-added tags.\n\nAre you sure?"
     },
     "suspiciousNode": {
         "reason": {

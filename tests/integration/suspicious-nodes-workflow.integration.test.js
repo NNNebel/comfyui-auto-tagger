@@ -190,6 +190,66 @@ describe('Suspicious Nodes Integration Tests', () => {
     });
   });
 
+  describe('all fixture images', () => {
+    const supportedTestCases = [
+      { file: 'a1111_simple.png', format: 'a1111', mimeType: 'image/png' },
+      { file: 'civitai-generate1.png', format: 'comfyui', mimeType: 'image/png' },
+      { file: 'comfyui_flux.png', format: 'comfyui', mimeType: 'image/png' },
+      { file: 'comfyui_multi.png', format: 'comfyui', mimeType: 'image/png' },
+      { file: 'comfyui_multi.webp', format: 'comfyui', mimeType: 'image/webp' },
+      { file: 'comfyui_simple.png', format: 'comfyui', mimeType: 'image/png' },
+      { file: 'comfyui_simple.webp', format: 'comfyui', mimeType: 'image/webp' }
+    ];
+
+    supportedTestCases.forEach(({ file, format, mimeType }) => {
+      it(`should extract metadata from ${file}`, async () => {
+        const fixturePath = path.join(__dirname, `../fixtures/${file}`);
+        
+        // Skip if file doesn't exist
+        if (!fs.existsSync(fixturePath)) {
+          console.log(`Skipping ${file} - file not found`);
+          return;
+        }
+
+        const buffer = fs.readFileSync(fixturePath);
+        const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, format, {
+          suspiciousNodeHandling: 'exclude'
+        });
+
+        // Should successfully extract metadata
+        expect(metadata).not.toBeNull();
+        expect(metadata).toHaveProperty('format');
+      });
+    });
+  });
+
+  describe('unsupported image formats', () => {
+    const unsupportedTestCases = [
+      { file: 'blank.png', description: 'blank image created with Paint' },
+      { file: 'gemini-generate.png', description: 'Gemini-generated image' }
+    ];
+
+    unsupportedTestCases.forEach(({ file, description }) => {
+      it(`should return null for ${file} (${description})`, async () => {
+        const fixturePath = path.join(__dirname, `../fixtures/${file}`);
+        
+        // Skip if file doesn't exist
+        if (!fs.existsSync(fixturePath)) {
+          console.log(`Skipping ${file} - file not found`);
+          return;
+        }
+
+        const buffer = fs.readFileSync(fixturePath);
+        const metadata = metadataService.extractPreferredMetadata(buffer, 'image/png', 'comfyui', {
+          suspiciousNodeHandling: 'exclude'
+        });
+
+        // Should return null for unsupported format
+        expect(metadata).toBeNull();
+      });
+    });
+  });
+
   describe('workflows without suspicious nodes', () => {
     it('should not have suspiciousNodes field for clean workflows', async () => {
       const fixturePath = path.join(__dirname, '../fixtures/comfyui_simple.webp');

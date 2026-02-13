@@ -30,9 +30,8 @@ jobs:
       - name: Extract Release Notes
         run: |
           # CHANGELOG.md から最新の [##] セクションを抽出して RELEASE_NOTES.md に保存
-          # 最初の ## から、次の ## の直前までを切り出し、日付プレースホルダーを現在の日付に置換する
-          TODAY=$(date +'%Y-%m-%d')
-          sed -n '/^## \[[0-9.]*\]/,/^## \[[0-9.]*\]/p' CHANGELOG.md | sed '$d' | sed "s/[0-9]\{4\}-XX-XX/$TODAY/g" > RELEASE_NOTES.md
+          # 最初の ## から、次の ## の直前までを切り出す
+          sed -n '/^## \[[0-9.]*\]/,/^## \[[0-9.]*\]/p' CHANGELOG.md | sed '$d' > RELEASE_NOTES.md
 
       - name: Create Eagle Plugin Package
         run: |
@@ -40,22 +39,12 @@ jobs:
           FILENAME="ComfyUI-Auto-Tagger-${TAG_NAME}.eagleplugin"
 
           # Create directory structure for plugin
-          mkdir -p dist/js/metadata-parser/binary-extraction
-          mkdir -p dist/js/metadata-parser/parsers
-          mkdir -p dist/js/metadata-parser/integration
-          mkdir -p dist/_locales
+          mkdir -p dist
 
           # Copy only essential files for Eagle plugin runtime
           cp index.html manifest.json logo.png LICENSE dist/
-          
-          # Copy JavaScript files
-          cp js/core.js js/plugin.js dist/js/
-          cp js/metadata-parser/binary-extraction/*.js dist/js/metadata-parser/binary-extraction/
-          cp js/metadata-parser/parsers/*.js dist/js/metadata-parser/parsers/
-          cp js/metadata-parser/integration/*.js dist/js/metadata-parser/integration/
-          
-          # Copy localization files
-          cp _locales/*.json dist/_locales/
+          cp -r js dist/
+          cp -r _locales dist/
 
           # Create plugin package
           cd dist
