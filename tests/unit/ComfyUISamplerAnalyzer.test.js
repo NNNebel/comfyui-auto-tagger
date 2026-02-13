@@ -666,4 +666,172 @@ describe('ComfyUISamplerAnalyzer', () => {
         expect(count).toBe(1);
       });
     });
+
+    it('should detect VAEEncode without pixels/image input', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { class_type: 'VAEDecode', inputs: { samples: ['2', 0] } },
+        '170': { 
+          class_type: 'VAEEncode', 
+          inputs: { 
+            vae: ['4', 0]
+            // Missing 'pixels' input - this is suspicious
+          } 
+        },
+        '4': { class_type: 'VAELoader', inputs: {} },
+        '100': { class_type: 'SaveImage', inputs: { images: ['170', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should detect node 170 as suspicious
+      expect(result.suspiciousNodes).toBeDefined();
+      const suspiciousNode = result.suspiciousNodes.find(n => n.nodeId === '170');
+      expect(suspiciousNode).toBeDefined();
+      expect(suspiciousNode.nodeType).toBe('VAEEncode');
+      expect(suspiciousNode.reasonKey).toBe('suspiciousNode.reason.vaeEncodeNoInput');
+    });
+
+    it('should detect VAEDecode without samples/latent input', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { 
+          class_type: 'VAEDecode', 
+          inputs: { 
+            vae: ['4', 0]
+            // Missing 'samples' input - this is suspicious
+          } 
+        },
+        '4': { class_type: 'VAELoader', inputs: {} },
+        '100': { class_type: 'SaveImage', inputs: { images: ['3', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should detect node 3 as suspicious
+      expect(result.suspiciousNodes).toBeDefined();
+      const suspiciousNode = result.suspiciousNodes.find(n => n.nodeId === '3');
+      expect(suspiciousNode).toBeDefined();
+      expect(suspiciousNode.nodeType).toBe('VAEDecode');
+      expect(suspiciousNode.reasonKey).toBe('suspiciousNode.reason.vaeDecodeNoInput');
+    });
+
+    it('should detect ImageScale without image input', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { class_type: 'VAEDecode', inputs: { samples: ['2', 0] } },
+        '175': { 
+          class_type: 'ImageScale', 
+          inputs: { 
+            upscale_method: 'lanczos',
+            scale_by: 0.5
+            // Missing 'image' input - this is suspicious
+          } 
+        },
+        '100': { class_type: 'SaveImage', inputs: { images: ['175', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should detect node 175 as suspicious
+      expect(result.suspiciousNodes).toBeDefined();
+      const suspiciousNode = result.suspiciousNodes.find(n => n.nodeId === '175');
+      expect(suspiciousNode).toBeDefined();
+      expect(suspiciousNode.nodeType).toBe('ImageScale');
+      expect(suspiciousNode.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
+    });
+
+    it('should detect multiple suspicious nodes of different types', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': { 
+          class_type: 'KSampler', 
+          inputs: { 
+            latent_image: ['1', 0],
+            seed: 123, 
+            steps: 20, 
+            cfg: 7
+          } 
+        },
+        '3': { 
+          class_type: 'VAEDecode', 
+          inputs: { 
+            vae: ['4', 0]
+            // Missing 'samples' input
+          } 
+        },
+        '4': { class_type: 'VAELoader', inputs: {} },
+        '170': { 
+          class_type: 'VAEEncode', 
+          inputs: { 
+            vae: ['4', 0]
+            // Missing 'pixels' input
+          } 
+        },
+        '175': { 
+          class_type: 'ImageScale', 
+          inputs: { 
+            upscale_method: 'lanczos'
+            // Missing 'image' input
+          } 
+        },
+        '100': { class_type: 'SaveImage', inputs: { images: ['3', 0] } },
+        '101': { class_type: 'PreviewImage', inputs: { images: ['170', 0] } },
+        '102': { class_type: 'PreviewImage', inputs: { images: ['175', 0] } }
+      };
+      
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const result = analyzer.findBaseSampler();
+      
+      // Should detect all three suspicious nodes
+      expect(result.suspiciousNodes).toBeDefined();
+      expect(result.suspiciousNodes.length).toBe(3);
+      
+      const nodeIds = result.suspiciousNodes.map(n => n.nodeId).sort();
+      expect(nodeIds).toEqual(['170', '175', '3']);
+      
+      // Verify each node has correct reason
+      const vaeDecodeNode = result.suspiciousNodes.find(n => n.nodeId === '3');
+      expect(vaeDecodeNode.reasonKey).toBe('suspiciousNode.reason.vaeDecodeNoInput');
+      
+      const vaeEncodeNode = result.suspiciousNodes.find(n => n.nodeId === '170');
+      expect(vaeEncodeNode.reasonKey).toBe('suspiciousNode.reason.vaeEncodeNoInput');
+      
+      const imageScaleNode = result.suspiciousNodes.find(n => n.nodeId === '175');
+      expect(imageScaleNode.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
+    });
   });
