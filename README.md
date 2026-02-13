@@ -23,8 +23,9 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
     * **Notes (Annotation)**: Saves full prompts and parameters in the Note section for easy reference.
 * **Selective Import**: Allows toggling specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
 * **Batch Processing**: Efficiently processes multiple images with a progress bar.
-* **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
+* **Advanced Workflow Analysis**: Dynamically analyzes ComfyUI node graphs to trace the actual execution path, accurately extracting parameters even from complex multi-stage workflows (HiresFix, FaceDetailer, etc.).
 * **Suspicious Node Detection**: Automatically detects nodes with missing required inputs in ComfyUI workflows and alerts you with a dialog showing affected generation steps. Choose to exclude, include, or ask for each suspicious node.
+* **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
 * **No External Dependencies**: Parses PNG/WebP chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
 * **Utility**: Provides a dedicated button to safely remove only the tags/notes added by this plugin.
@@ -39,22 +40,27 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 | :---: | :---: |
 | <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Settings Window"> |
 
-### 🧠 Advanced Workflow Trace Logic
+### 🚀 Usage
 
-Unlike simple metadata readers, this plugin dynamically analyzes the ComfyUI node graph to trace the actual execution path leading to the final image. Even within a massive "All-in-One" workflow, it accurately identifies and extracts parameters from the nodes that contributed to the generation.
+1.  Select one or more AI-generated images (ComfyUI/A1111/Civitai) in Eagle
+2.  Right-click and select **"Plugins"** > **"ComfyUI Auto Tagger"**
+3.  In the popup window:
+    * **Output Settings**: Choose to add to "Tags", "Notes", or both
+    * **Target**: Check the metadata items you want to extract (Checkpoint, LoRA, Prompts, etc.)
 
-| Workflow Overview | Extraction Result (Multi-Stage) |
-| :---: | :---: |
-| <img src="assets/workflow_image.png" width="500" alt="Complex Workflow"> | <img src="assets/workflow_trace_result.png" width="300" alt="Trace Result"> |
+### 📦 Installation
 
-| Suspicious Node Detection |
-| :---: |
-| <img src="assets/suspicious_node detecter.png" width="500" alt="Suspicious Node Detection"> |
+1.  Download the latest `.eagleplugin` file from [Releases](https://github.com/NNNebel/comfyui-auto-tagger/releases)
+2.  Launch Eagle
+3.  Drag and drop the `.eagleplugin` file into the Eagle window
+4.  Restart Eagle if necessary
 
-*   **Path-Based Extraction**: Automatically traces the latent/image chain back from the output nodes to filter out inactive nodes or unused branches.
-*   **Multi-Stage Support**: Comprehensive extraction of seeds, prompts, and samplers from all stages, including KSampler, SAM Detailer, HiresFix, and FaceDetailer.
-*   **Suspicious Node Detection**: Identifies nodes with missing required inputs (e.g., ImageUpscaleWithModel without image input) and shows which generation steps would be affected. You can choose to exclude these nodes or include them in the analysis.
-*   **Full Audit in Notes**: Records detailed metadata for every detected generation step in the Eagle Notes section for precise reproduction.
+### ⚠️ Disclaimer & Bug Reports
+
+*   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on advanced trace logic to identify the most relevant generation parameters.
+*   **Bug Reports**: When reporting issues on GitHub, please always attach:
+    1.  Information about your generation environment (ComfyUI/A1111 version, custom nodes used, etc.).
+    2.  The original image (PNG/WebP) that retains its metadata.
 
 ### 🏗️ Architecture
 
@@ -65,13 +71,6 @@ This plugin features an advanced metadata parser that intelligently extracts gen
 - **Reliable Extraction**: Robust error handling ensures the plugin continues working even with unusual or incomplete metadata
 
 For technical details, see [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md).
-
-### ⚠️ Disclaimer & Bug Reports
-
-*   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on the advanced trace logic to identify the most relevant generation parameters.
-*   **Bug Reports**: When reporting issues on GitHub, please always attach:
-    1.  Information about your generation environment (ComfyUI/A1111 version, custom nodes used, etc.).
-    2.  The original image (PNG/WebP) that retains its metadata.
 
 ### 📄 License
 
@@ -97,8 +96,9 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
     * **メモ（アノテーション）**: プロンプトやパラメータの詳細をメモ欄に保存し、参照・コピーを容易に。
 * **選択的取り込み**: チェックボックスで必要な情報のみ（例: チェックポイントのみ）を選択して取り込み可能。
 * **バッチ処理**: 複数画像をまとめて効率的に処理し、進捗状況を表示。
-* **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
+* **高度なワークフロー解析**: ComfyUIのノードグラフを動的に解析し、実際の実行ルートを特定。複雑なマルチステージワークフロー（HiresFix、FaceDetailer等）からも正確にパラメータを抽出。
 * **疑わしいノード検出**: ComfyUIワークフロー内で必須入力が不足しているノードを自動検出し、影響を受ける生成ステップを表示するダイアログで通知します。各疑わしいノードについて、除外、含める、または確認を選択できます。
+* **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
 * **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
 * **外部依存なし**: PNG/WebPの内部データ（tEXt, comf, Exif）を直接解析するため、重い外部ライブラリに依存せず動作。
 * **ユーティリティ**: このプラグインが生成したタグやメモのみを安全に削除する機能を提供。
@@ -113,12 +113,27 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 | :---: | :---: |
 | <img src="assets/preview-result.png" width="400" alt="結果概要"> | <img src="assets/preview-settings.png" width="400" alt="設定ウィンドウ"> |
 
+### � 使い方
+
+1.  EagleでAI生成画像（ComfyUI/A1111/Civitai）を1つ以上選択
+2.  右クリックして **「プラグイン」** > **「ComfyUI Auto Tagger」** を選択
+3.  ポップアップウィンドウで:
+    * **出力設定**: 「タグ」、「メモ」、または両方への追加を選択
+    * **対象**: 抽出したいメタデータ項目をチェック（チェックポイント、LoRA、プロンプトなど）
+
 ### 📦 インストール
 
 1.  [Releasesページ](https://github.com/NNNebel/comfyui-auto-tagger/releases)から最新の `.eagleplugin` ファイルをダウンロード
 2.  Eagleを起動
 3.  `.eagleplugin` ファイルをEagleウィンドウにドラッグ&ドロップ
 4.  必要に応じてEagleを再起動
+
+### ⚠️ 免責事項・不具合報告
+
+*   **免責事項**: ComfyUIのWorkflowは非常に複雑なため、100%の動作は保証できません。本プラグインは、高度な解析ロジックに基づいて最も関連性の高い生成パラメータを特定します。
+*   **不具合報告**: GitHubのIssueで報告する際は、以下の2点を必ず添付してください。
+    1.  生成環境の情報（ComfyUI/A1111のバージョン、使用しているカスタムノード等）
+    2.  メタデータが保持された画像の実ファイル（PNG/WebP）
 
 ### 🏗️ アーキテクチャ
 
@@ -130,37 +145,6 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 - **詳細なエラーハンドリング**: コンテキストと提案を含む特定のエラータイプで問題を明確化
 
 詳細は [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md) を参照してください。
-
-### 🚀 使い方
-
-1.  EagleでAI生成画像（ComfyUI/A1111/Civitai）を1つ以上選択
-2.  右クリックして **「プラグイン」** > **「ComfyUI Auto Tagger」** を選択
-3.  ポップアップウィンドウで:
-    * **出力設定**: 「タグ」、「メモ」、または両方への追加を選択
-    * **対象**: 抽出したいメタデータ項目をチェック（チェックポイント、LoRA、プロンプトなど）
-### 🧠 高度なワークフロー解析ロジック
-
-単なるメタデータの読み取りではなく、ComfyUIのノードグラフを動的に解析し、最終的な画像出力に至るまでの実際の実行ルートを特定します。これにより、どれほど巨大で複雑な「オールインワン」ワークフローであっても、生成に関与したノードから正確にパラメータを抽出します。
-
-| ワークフロー全体像 | 抽出結果（マルチステージ） |
-| :---: | :---: |
-| <img src="assets/workflow_image.png" width="500" alt="Complex Workflow"> | <img src="assets/workflow_trace_result.png" width="300" alt="Trace Result"> |
-
-| 疑わしいノード検出 |
-| :---: |
-| <img src="assets/suspicious_node detecter.png" width="500" alt="Suspicious Node Detection"> |
-
-*   **実行経路の動的探索**: 出力ノードから潜在空間や画像の連鎖を逆引きし、画像生成に使用されていない不要なブランチの情報は除外します。
-*   **マルチステージ対応**: KSampler、SAM Detailer、HiresFix、FaceDetailerなど、経路上のあらゆる工程からシード値、プロンプト、サンプラー情報を網羅的に取得します。
-*   **疑わしいノード検出**: 必須入力が不足しているノード（例：画像入力がないImageUpscaleWithModel）を自動検出し、どの生成ステップに影響するかを表示します。これらのノードを除外するか、解析に含めるかを選択できます。
-*   **詳細な履歴保存**: Eagleのメモ欄には、検出されたすべての生成ステップごとのメタデータが記録され、後からの正確な振り返りが可能です。
-
-### ⚠️ 免責事項・不具合報告
-
-*   **免責事項**: ComfyUIのWorkflowは非常に複雑なため、100%の動作は保証できません。本プラグインは、高度な解析ロジックに基づいて最も関連性の高い生成パラメータを特定します。
-*   **不具合報告**: GitHubのIssueで報告する際は、以下の2点を必ず添付してください。
-    1.  生成環境の情報（ComfyUI/A1111のバージョン、使用しているカスタムノード等）
-    2.  メタデータが保持された画像の実ファイル（PNG/WebP）
 
 ### 📄 ライセンス
 
