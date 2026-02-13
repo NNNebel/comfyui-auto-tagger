@@ -1,6 +1,15 @@
-const ComfyUIGraph = require('./js/metadata-parser/graph/ComfyUIGraph.js');
+/**
+ * Trace Execution Order Utility
+ * 
+ * This script analyzes ComfyUI workflow execution order and sampler dependencies.
+ * Useful for debugging and understanding complex multi-sampler workflows.
+ * 
+ * Usage: node scripts/trace-execution-order.js
+ */
+
+const ComfyUIGraph = require('../js/metadata-parser/graph/ComfyUIGraph.js');
 const fs = require('fs');
-const BinaryUtils = require('./js/metadata-parser/utils/BinaryUtils.js');
+const BinaryUtils = require('../js/metadata-parser/utils/BinaryUtils.js');
 
 const data = fs.readFileSync('tests/fixtures/comfyui_multi.webp');
 const extracted = BinaryUtils.extractWebPMetadata(new Uint8Array(data));
