@@ -16,30 +16,14 @@ All notable changes to this project will be documented in this file.
 #### 🐛 Bug Fixes
 - Fixed base sampler detection in ComfyUI workflows with DetailerForEach nodes
 - Improved distance calculation for samplers that work on images rather than latents
-- Fixed sampler execution order in generationSteps by restoring DFS (Depth-First Search) algorithm
 
 #### ✨ Improvements
 - Enhanced workflow validation to detect non-executable nodes before processing.
 - Improved user feedback with visual indicators for suspicious nodes.
 - Better handling of complex workflows with multiple refinement stages.
-- Optimized metadata parsing engine for better performance and reliability
-- Improved error handling with more informative error messages
-- Enhanced code maintainability and extensibility
 
 #### 🔧 Internal Refactoring
-- Refactored internal parsing architecture for improved code quality
-- Optimized parsing algorithms for faster metadata extraction
 - Improved code organization and reduced duplication
-- Restored DFS-based sampler discovery to maintain correct execution order
-
-#### 🧪 Testing
-- Added comprehensive unit tests for suspicious node detection logic.
-- Added integration tests for suspicious node workflows.
-- Fixed test assertions to match actual translation key format.
-- Added comprehensive integration tests for all fixture images
-- Enhanced test validation to verify sampler execution order
-- Renamed tests/samples to tests/fixtures for better clarity
-- All tests passing (760/760).
 
 ### 🇯🇵 日本語
 #### 🎉 新機能
@@ -53,30 +37,14 @@ All notable changes to this project will be documented in this file.
 #### 🐛 バグ修正
 - DetailerForEachノードを含むComfyUIワークフローでのbase sampler検出を修正
 - latentではなく画像を処理するサンプラーの距離計算を改善
-- DFS（深さ優先探索）アルゴリズムを復元し、generationStepsのサンプラー実行順序を修正
 
 #### ✨ 改善
 - ワークフロー検証を強化し、処理前に実行不可能なノードを検出します。
 - 疑わしいノードの視覚的インジケータでユーザーフィードバックを改善しました。
 - 複数の改善ステージを持つ複雑なワークフローの処理を改善しました。
-- メタデータパースエンジンを最適化し、パフォーマンスと信頼性を向上
-- エラーハンドリングを改善し、より詳細なエラーメッセージを提供
-- コードの保守性と拡張性を向上
 
 #### 🔧 内部リファクタリング
-- 内部パースアーキテクチャをリファクタリングしてコード品質を向上
-- パースアルゴリズムを最適化してメタデータ抽出を高速化
 - コード構成を改善し、重複を削減
-- 正しい実行順序を維持するため、DFSベースのサンプラー発見を復元
-
-#### 🧪 テスト
-- 疑わしいノード検出ロジックの包括的なユニットテストを追加しました。
-- 疑わしいノードワークフローの統合テストを追加しました。
-- テストアサーションを実際の翻訳キー形式に合わせて修正しました。
-- 全てのフィクスチャ画像に対する包括的な統合テストを追加
-- サンプラー実行順序を検証するテストを強化
-- tests/samplesをtests/fixturesに名称変更し、明確化
-- 全テスト成功（760/760）。
 
 ## [1.3.2] - 2026-01-30
 
