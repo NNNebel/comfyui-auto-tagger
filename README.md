@@ -62,16 +62,6 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
     1.  Information about your generation environment (ComfyUI/A1111 version, custom nodes used, etc.).
     2.  The original image (PNG/WebP) that retains its metadata.
 
-### 🏗️ Architecture
-
-This plugin features an advanced metadata parser that intelligently extracts generation information from AI images.
-
-- **Multi-Format Support**: Automatically detects and extracts metadata from ComfyUI, A1111, and Civitai images
-- **Intelligent Analysis**: Uses advanced algorithms to accurately identify generation parameters even in complex workflows
-- **Reliable Extraction**: Robust error handling ensures the plugin continues working even with unusual or incomplete metadata
-
-For technical details, see [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md).
-
 ### 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
@@ -134,17 +124,6 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 *   **不具合報告**: GitHubのIssueで報告する際は、以下の2点を必ず添付してください。
     1.  生成環境の情報（ComfyUI/A1111のバージョン、使用しているカスタムノード等）
     2.  メタデータが保持された画像の実ファイル（PNG/WebP）
-
-### 🏗️ アーキテクチャ
-
-本プラグインは、グラフベースの解析とハンドラーシステムを採用した高度なメタデータパーサーを搭載しています。
-
-- **グラフベースのComfyUI解析**: ノードグラフを明示的に構築し、トラバーサルアルゴリズムでベースサンプラーを正確に特定
-- **拡張可能なA1111パラメータパース**: ハンドラーシステムにより、新しいパラメータタイプを簡単に追加可能
-- **構造化されたプロンプトトークン化**: 重み付きテキスト、LoRAタグ、ネストされた括弧を正確に解析
-- **詳細なエラーハンドリング**: コンテキストと提案を含む特定のエラータイプで問題を明確化
-
-詳細は [ARCHITECTURE.md](js/metadata-parser/ARCHITECTURE.md) を参照してください。
 
 ### 📄 ライセンス
 
