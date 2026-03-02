@@ -77,9 +77,17 @@ class ComfyUIParser extends MetadataParserBase {
    * @param {Object} [options={}] - Parser options (e.g., suspiciousNodeHandling)
    */
   extractFromPrompt(promptData, metadata, options = {}) {
+    // Initialize dictionary and reporter
+    const dictionary = NodeDefinitionDictionary.getDefault();
+    const reporter = new MetadataExtractionReporter();
+    
     // Create graph and analyzer instances with options
     const graph = new ComfyUIGraph(promptData, options);
     const analyzer = new ComfyUISamplerAnalyzer(graph);
+    
+    // Set dictionary and reporter
+    analyzer.setDictionary(dictionary);
+    analyzer.setReporter(reporter);
     
     // Find base sampler and extract all sampler metadata
     const { baseSampler, allSamplers, isFallback, suspiciousNodes } = analyzer.findBaseSampler();
@@ -239,6 +247,29 @@ class ComfyUIParser extends MetadataParserBase {
     }
     
     if (loras.size > 0) metadata.loras = Array.from(loras);
+    
+    // Check for excluded nodes and log warnings
+    const excludedNodes = reporter.getExcludedNodes();
+    if (excludedNodes.length > 0) {
+      const hasValidSamplers = allSamplersMetadata.length > 0;
+      const hasValidMetadata = metadata.positive || metadata.seed !== null;
+      
+      if (hasValidSamplers && hasValidMetadata) {
+        // Soft Warning: Nodes excluded but extraction succeeded
+        ErrorHandler.logSoftWarning(
+          'ComfyUIParser',
+          reporter.getSoftWarningMessage(),
+          { excludedCount: excludedNodes.length, excludedNodes }
+        );
+      } else {
+        // Hard Warning: Nodes excluded and extraction failed
+        ErrorHandler.logHardWarning(
+          'ComfyUIParser',
+          reporter.getHardWarningMessage(),
+          { excludedCount: excludedNodes.length, excludedNodes }
+        );
+      }
+    }
   }
 
   /**
