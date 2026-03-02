@@ -149,8 +149,49 @@ class ComfyUISamplerAnalyzer {
       reachableSamplers = new Set(samplerIds);
     }
     
-    // Step 4: Calculate distance to latent source for each sampler
-    const scored = Array.from(reachableSamplers).map(id => ({
+    // Filter out samplers with no latent_image connection (Silent_Drop)
+    const validSamplers = [];
+    for (const samplerId of reachableSamplers) {
+      const node = this.graph.getNode(samplerId);
+      if (!node) continue;
+      
+      // Check if node is Muted or Bypassed
+      if (node.mode === 2 || node.mode === 4) {
+        // mode 2 = Muted, mode 4 = Bypassed
+        const reason = node.mode === 2 ? 'muted' : 'bypassed';
+        if (this.reporter) {
+          this.reporter.logNodeExclusion(samplerId, node.class_type, reason);
+        }
+        continue;
+      }
+      
+      // Check if latent_image input is connected
+      const hasLatentInput = this.graph.hasInputPort(samplerId, 'latent_image') || 
+                             this.graph.hasInputPort(samplerId, 'latent');
+      
+      if (hasLatentInput) {
+        const latentConnection = this.graph.getConnectedNodeId(samplerId, 'latent_image') ||
+                                 this.graph.getConnectedNodeId(samplerId, 'latent');
+        
+        if (!latentConnection) {
+          // No connection - exclude this sampler
+          if (this.reporter) {
+            this.reporter.logNodeExclusion(samplerId, node.class_type, 'no_latent_input');
+          }
+          continue;
+        }
+      }
+      
+      validSamplers.push(samplerId);
+    }
+    
+    // If all samplers were excluded, return empty result
+    if (validSamplers.length === 0) {
+      return { baseSampler: null, allSamplers: [], isFallback, suspiciousNodes: uniqueSuspiciousNodes };
+    }
+    
+    // Step 4: Calculate distance to latent source for each valid sampler
+    const scored = validSamplers.map(id => ({
       id,
       distance: this._calculateDistanceToSource(id),
       executionOrder: this.graph.getExecutionOrder(id)

@@ -21,6 +21,8 @@
   class ErrorHandler {
     constructor() {
       this.errors = [];
+      this.softWarnings = [];
+      this.hardWarnings = [];
       this.minLevel = LogLevel.INFO;
     }
 
@@ -270,6 +272,85 @@
           { args: args.length }
         );
       };
+    }
+
+    /**
+     * Log a soft warning (nodes skipped but extraction succeeded)
+     * @param {string} component - Component name
+     * @param {string} message - Warning message
+     * @param {Object} context - Additional context information
+     */
+    static logSoftWarning(component, message, context = {}) {
+      if (!ErrorHandler.instance) {
+        ErrorHandler.instance = new ErrorHandler();
+      }
+      
+      const warning = {
+        type: 'soft',
+        component,
+        message,
+        timestamp: new Date().toISOString(),
+        context
+      };
+      
+      ErrorHandler.instance.softWarnings.push(warning);
+      this._log(LogLevel.WARN, component, `[Soft Warning] ${message}`, context);
+    }
+
+    /**
+     * Log a hard warning (nodes skipped and extraction failed)
+     * @param {string} component - Component name
+     * @param {string} message - Warning message
+     * @param {Object} context - Additional context information
+     */
+    static logHardWarning(component, message, context = {}) {
+      if (!ErrorHandler.instance) {
+        ErrorHandler.instance = new ErrorHandler();
+      }
+      
+      const warning = {
+        type: 'hard',
+        component,
+        message,
+        timestamp: new Date().toISOString(),
+        context
+      };
+      
+      ErrorHandler.instance.hardWarnings.push(warning);
+      this._log(LogLevel.ERROR, component, `[Hard Warning] ${message}`, context);
+    }
+
+    /**
+     * Get all soft warnings
+     * @returns {Array} Array of soft warning objects
+     */
+    static getSoftWarnings() {
+      if (!ErrorHandler.instance) {
+        ErrorHandler.instance = new ErrorHandler();
+      }
+      return ErrorHandler.instance.softWarnings;
+    }
+
+    /**
+     * Get all hard warnings
+     * @returns {Array} Array of hard warning objects
+     */
+    static getHardWarnings() {
+      if (!ErrorHandler.instance) {
+        ErrorHandler.instance = new ErrorHandler();
+      }
+      return ErrorHandler.instance.hardWarnings;
+    }
+
+    /**
+     * Clear all warnings
+     */
+    static clearWarnings() {
+      if (!ErrorHandler.instance) {
+        ErrorHandler.instance = new ErrorHandler();
+      }
+      ErrorHandler.instance.softWarnings = [];
+      ErrorHandler.instance.hardWarnings = [];
     }
   }
 
