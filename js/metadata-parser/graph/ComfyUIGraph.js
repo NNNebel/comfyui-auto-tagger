@@ -760,6 +760,51 @@ class ComfyUIGraph {
     return ancestors;
   }
 
+  /**
+   * Get the value of an input port for a node
+   * @param {string} nodeId - The ID of the node
+   * @param {string} portName - The name of the input port
+   * @returns {*} The value of the input port, or undefined if not found
+   */
+  getInputPort(nodeId, portName) {
+    const node = this.getNode(nodeId);
+    if (!node || !node.inputs) {
+      return undefined;
+    }
+    return node.inputs[portName];
+  }
+
+  /**
+   * Get the ID of the node connected to an input port
+   * @param {string} nodeId - The ID of the node
+   * @param {string} portName - The name of the input port
+   * @returns {string|null} The ID of the connected node, or null if not connected
+   */
+  getConnectedNodeId(nodeId, portName) {
+    const inputValue = this.getInputPort(nodeId, portName);
+    
+    // Input connections are represented as [nodeId, outputIndex]
+    if (Array.isArray(inputValue) && inputValue.length >= 2) {
+      return String(inputValue[0]);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Check if a node has a specific input port
+   * @param {string} nodeId - The ID of the node
+   * @param {string} portName - The name of the input port
+   * @returns {boolean} True if the port exists
+   */
+  hasInputPort(nodeId, portName) {
+    const node = this.getNode(nodeId);
+    if (!node || !node.inputs) {
+      return false;
+    }
+    return portName in node.inputs;
+  }
+
 }
 
   // Export for both browser and Node.js environments

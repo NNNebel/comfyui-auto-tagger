@@ -1,0 +1,32 @@
+{
+  "format": "comfyui",
+  "seed": 55555,
+  "steps": 30,
+  "cfg": 7,
+  "sampler": "euler",
+  "scheduler": "normal",
+  "positive": "two horses playing",
+  "negative": "bad composition",
+  "checkpoint": "real_horse_v1.safetensors",
+  "sampler_fallback": false,
+  "extra_samplers": [
+    {
+      "id": "10",
+      "seed": 55555,
+      "steps": 30,
+      "cfg": 7,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "is_base": true
+    },
+    {
+      "id": "20",
+      "seed": 66666,
+      "steps": 15,
+      "cfg": 7,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "is_base": false
+    }
+  ]
+}

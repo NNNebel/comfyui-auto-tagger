@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "nodes": {
+    "RandomNoise": {
+      "type": "provider",
+      "value_path": ["inputs", "noise_seed"],
+      "metadata_type": "seed"
+    },
+    "BasicScheduler": {
+      "type": "provider",
+      "value_paths": {
+        "steps": ["inputs", "steps"],
+        "scheduler": ["inputs", "scheduler"]
+      }
+    },
+    "KSamplerSelect": {
+      "type": "provider",
+      "value_path": ["inputs", "sampler_name"],
+      "metadata_type": "sampler"
+    },
+    "FluxGuidance": {
+      "type": "provider",
+      "value_path": ["inputs", "guidance"],
+      "metadata_type": "cfg"
+    },
+    "CLIPTextEncode": {
+      "type": "provider",
+      "value_path": ["inputs", "text"],
+      "metadata_type": "positive"
+    },
+    "SamplerCustomAdvanced": {
+      "type": "sampler",
+      "port_mapping": {
+        "seed": ["noise", "noise_seed"],
+        "steps": ["sigmas", "steps"],
+        "cfg": ["guider", "guidance"],
+        "sampler": ["sampler", "sampler_name"],
+        "scheduler": ["sigmas", "scheduler"],
+        "positive": ["guider", "conditioning", "text"],
+        "negative": []
+      }
+    },
+    "AnySwitch": {
+      "type": "router",
+      "passthrough_rules": {
+        "output": ["input1", "input2", "input3", "input4", "input5"]
+      }
+    },
+    "Switch": {
+      "type": "router",
+      "passthrough_rules": {
+        "output": ["input_true", "input_false"]
+      }
+    }
+  }
+}

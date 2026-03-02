@@ -51,6 +51,34 @@ class ComfyUISamplerAnalyzer {
      * @type {ComfyUIGraph}
      */
     this.graph = graph;
+    
+    /**
+     * Node definition dictionary for custom nodes
+     * @type {NodeDefinitionDictionary|null}
+     */
+    this.dictionary = null;
+    
+    /**
+     * Metadata extraction reporter for trace logs
+     * @type {MetadataExtractionReporter|null}
+     */
+    this.reporter = null;
+  }
+  
+  /**
+   * Set the node definition dictionary
+   * @param {NodeDefinitionDictionary} dictionary - The dictionary instance
+   */
+  setDictionary(dictionary) {
+    this.dictionary = dictionary;
+  }
+  
+  /**
+   * Set the metadata extraction reporter
+   * @param {MetadataExtractionReporter} reporter - The reporter instance
+   */
+  setReporter(reporter) {
+    this.reporter = reporter;
   }
   
   /**
@@ -331,113 +359,51 @@ class ComfyUISamplerAnalyzer {
     const node = this.graph.getNode(samplerId);
     if (!node) return null;
     
-    // Trace to connected nodes to extract parameters
-    let seed = null;
-    let steps = null;
-    let cfg = null;
-    let sampler = null;
-    let scheduler = null;
-    let positive = '';
-    let negative = '';
-    
-    // Extract seed from RandomNoise node
-    if (node.inputs?.noise) {
-      const noiseNodeId = Array.isArray(node.inputs.noise) ? String(node.inputs.noise[0]) : null;
-      if (noiseNodeId) {
-        const noiseNode = this.graph.getNode(noiseNodeId);
-        if (noiseNode && noiseNode.class_type === 'RandomNoise') {
-          seed = this.graph.resolveInput(noiseNodeId, 'noise_seed');
-        }
-      }
-    }
-    
-    // Extract steps and scheduler from BasicScheduler or similar nodes
-    if (node.inputs?.sigmas) {
-      const sigmasNodeId = Array.isArray(node.inputs.sigmas) ? String(node.inputs.sigmas[0]) : null;
-      if (sigmasNodeId) {
-        const sigmasNode = this.graph.getNode(sigmasNodeId);
-        if (sigmasNode && (sigmasNode.class_type === 'BasicScheduler' || sigmasNode.class_type.includes('Scheduler'))) {
-          steps = this.graph.resolveInput(sigmasNodeId, 'steps');
-          scheduler = this.graph.resolveInput(sigmasNodeId, 'scheduler');
-        }
-      }
-    }
-    
-    // Extract sampler_name from KSamplerSelect node
-    if (node.inputs?.sampler) {
-      const samplerNodeId = Array.isArray(node.inputs.sampler) ? String(node.inputs.sampler[0]) : null;
-      if (samplerNodeId) {
-        const samplerNode = this.graph.getNode(samplerNodeId);
-        if (samplerNode && samplerNode.class_type === 'KSamplerSelect') {
-          sampler = this.graph.resolveInput(samplerNodeId, 'sampler_name');
-        }
-      }
-    }
-    
-    // Extract cfg from FluxGuidance or BasicGuider
-    if (node.inputs?.guider) {
-      const guiderNodeId = Array.isArray(node.inputs.guider) ? String(node.inputs.guider[0]) : null;
-      if (guiderNodeId) {
-        const guiderNode = this.graph.getNode(guiderNodeId);
-        
-        // Check for FluxGuidance connected to BasicGuider
-        if (guiderNode && guiderNode.class_type === 'BasicGuider' && guiderNode.inputs?.conditioning) {
-          const condNodeId = Array.isArray(guiderNode.inputs.conditioning) ? String(guiderNode.inputs.conditioning[0]) : null;
-          if (condNodeId) {
-            const condNode = this.graph.getNode(condNodeId);
-            if (condNode && condNode.class_type === 'FluxGuidance') {
-              cfg = this.graph.resolveInput(condNodeId, 'guidance');
-              
-              // Extract positive prompt from FluxGuidance's conditioning input
-              if (condNode.inputs?.conditioning) {
-                const textNodeId = Array.isArray(condNode.inputs.conditioning) ? String(condNode.inputs.conditioning[0]) : null;
-                if (textNodeId) {
-                  const textRaw = this.graph.resolveInput(textNodeId, 'text');
-                  if (typeof textRaw === 'string') {
-                    positive = textRaw.trim();
-                  }
-                }
-              }
-            }
-          }
-        }
-        
-        // Also check for direct CFG in guider (some custom nodes)
-        if (!cfg && guiderNode) {
-          cfg = this.graph.resolveInput(guiderNodeId, 'cfg') || this.graph.resolveInput(guiderNodeId, 'guidance');
-        }
-      }
-    }
-    
-    // If no positive prompt found yet, try to find CLIPTextEncode nodes
-    if (!positive) {
-      const textNodes = this.graph.getNodesByType('conditioning');
-      for (const textNodeId of textNodes) {
-        const textNode = this.graph.getNode(textNodeId);
-        if (textNode && textNode.class_type && textNode.class_type.includes('CLIPTextEncode')) {
-          const textRaw = this.graph.resolveInput(textNodeId, 'text');
-          if (typeof textRaw === 'string') {
-            positive = textRaw.trim();
-            break;
-          }
-        }
-      }
-    }
-    
-    return {
+    const metadata = {
       nodeId: samplerId,
       nodeName: node.class_type || 'Unknown',
       nodeType: node.class_type,
-      isBase,
-      seed: seed,
-      steps: steps,
-      cfg: cfg,
-      sampler: sampler !== null ? sampler : undefined,
-      scheduler: scheduler !== null ? scheduler : undefined,
-      positive,
-      negative,
-      checkpoint: this._findCheckpoint(samplerId)
+      isBase
     };
+    
+    // Start trace if reporter is available
+    if (this.reporter) {
+      this.reporter.startTrace(samplerId);
+    }
+    
+    // Extract each metadata type using the new trace-based approach
+    const metadataTypes = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'positive', 'negative'];
+    
+    for (const type of metadataTypes) {
+      const value = this._traceMetadataValue(samplerId, type, this._getPortPatterns(type));
+      if (value !== null && value !== undefined) {
+        // For string values, trim whitespace
+        if (typeof value === 'string') {
+          metadata[type] = value.trim();
+        } else {
+          metadata[type] = value;
+        }
+      } else {
+        // Set appropriate default values
+        if (type === 'positive' || type === 'negative') {
+          metadata[type] = '';
+        } else if (type === 'sampler' || type === 'scheduler') {
+          metadata[type] = undefined;
+        } else {
+          metadata[type] = null;
+        }
+      }
+    }
+    
+    // Find checkpoint
+    metadata.checkpoint = this._findCheckpoint(samplerId);
+    
+    // End trace if reporter is available
+    if (this.reporter) {
+      this.reporter.endTrace(true, metadata);
+    }
+    
+    return metadata;
   }
   
   /**
@@ -535,6 +501,258 @@ class ComfyUISamplerAnalyzer {
         stepIndex: index + 1
       };
     });
+  }
+  
+  /**
+   * Get port name patterns for a metadata type
+   * @param {string} metadataType - The type of metadata (seed, steps, cfg, etc.)
+   * @returns {Array<string>} Array of port name patterns
+   * @private
+   */
+  _getPortPatterns(metadataType) {
+    const patterns = {
+      seed: ['seed', 'noise_seed', 'noise'],
+      steps: ['steps'],
+      cfg: ['cfg', 'guidance'],
+      sampler: ['sampler', 'sampler_name'],
+      scheduler: ['scheduler'],
+      positive: ['positive', 'text', 'prompt', 'cond', 'conditioning', 'text_g', 'text_l'],
+      negative: ['negative', 'text', 'prompt']
+    };
+    return patterns[metadataType] || [];
+  }
+  
+  /**
+   * Trace metadata value by traversing the graph backwards
+   * @param {string} startNodeId - The node to start tracing from
+   * @param {string} metadataType - The type of metadata to trace
+   * @param {Array<string>} portPatterns - Port name patterns to match
+   * @returns {*} The traced metadata value, or null if not found
+   * @private
+   */
+  _traceMetadataValue(startNodeId, metadataType, portPatterns) {
+    const visited = new Set();
+    const queue = [[startNodeId, 0]]; // [nodeId, depth]
+    const maxDepth = 20; // Prevent infinite loops
+    
+    while (queue.length > 0) {
+      const [nodeId, depth] = queue.shift();
+      
+      if (visited.has(nodeId) || depth > maxDepth) {
+        continue;
+      }
+      visited.add(nodeId);
+      
+      const node = this.graph.getNode(nodeId);
+      if (!node) {
+        continue;
+      }
+      
+      // Log node visit
+      if (this.reporter) {
+        this.reporter.logNodeVisit(nodeId, node.class_type, `trace_${metadataType}`);
+      }
+      
+      // Check dictionary definition first (highest priority)
+      if (this.dictionary && this.dictionary.hasDefinition(node.class_type)) {
+        const definition = this.dictionary.getNodeDefinition(node.class_type);
+        
+        if (this.reporter) {
+          this.reporter.logDictionaryUsage(nodeId, definition);
+        }
+        
+        const value = this._applyDictionaryDefinition(nodeId, definition, metadataType);
+        if (value !== null && value !== undefined) {
+          return value;
+        }
+      }
+      
+      // Check if this is a router node - if so, pass through
+      if (this._isRouterNode(nodeId)) {
+        const passthroughPorts = this._passthroughRouter(nodeId, portPatterns);
+        for (const port of passthroughPorts) {
+          const connectedNodeId = this.graph.getConnectedNodeId(nodeId, port);
+          if (connectedNodeId && !visited.has(connectedNodeId)) {
+            queue.push([connectedNodeId, depth + 1]);
+          }
+        }
+        continue;
+      }
+      
+      // Apply heuristic search
+      if (this.reporter) {
+        this.reporter.logHeuristicUsage(nodeId, portPatterns);
+      }
+      
+      const value = this._applyHeuristicSearch(nodeId, metadataType, portPatterns);
+      if (value !== null && value !== undefined) {
+        return value;
+      }
+      
+      // Continue traversing to parent nodes
+      const parents = this.graph.getParents(nodeId);
+      for (const parentId of parents) {
+        if (!visited.has(parentId)) {
+          queue.push([parentId, depth + 1]);
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Apply dictionary definition to extract metadata value
+   * @param {string} nodeId - The node ID
+   * @param {Object} definition - The dictionary definition
+   * @param {string} metadataType - The type of metadata to extract
+   * @returns {*} The extracted value, or null if not found
+   * @private
+   */
+  _applyDictionaryDefinition(nodeId, definition, metadataType) {
+    const node = this.graph.getNode(nodeId);
+    if (!node) {
+      return null;
+    }
+    
+    // Handle provider type nodes
+    if (definition.type === 'provider') {
+      // Single value_path for one metadata type
+      if (definition.value_path && definition.metadata_type === metadataType) {
+        let value = node;
+        for (const key of definition.value_path) {
+          if (value && typeof value === 'object') {
+            value = value[key];
+          } else {
+            return null;
+          }
+        }
+        return value;
+      }
+      
+      // Multiple value_paths for different metadata types
+      if (definition.value_paths && definition.value_paths[metadataType]) {
+        let value = node;
+        for (const key of definition.value_paths[metadataType]) {
+          if (value && typeof value === 'object') {
+            value = value[key];
+          } else {
+            return null;
+          }
+        }
+        return value;
+      }
+    }
+    
+    // Handle sampler type nodes
+    if (definition.type === 'sampler') {
+      const portMapping = definition.port_mapping[metadataType];
+      if (!portMapping || portMapping.length === 0) {
+        return null;
+      }
+      
+      // Follow the port path to find connected nodes
+      for (const portName of portMapping) {
+        const connectedNodeId = this.graph.getConnectedNodeId(nodeId, portName);
+        if (connectedNodeId) {
+          // Recursively trace from the connected node
+          return this._traceMetadataValue(connectedNodeId, metadataType, this._getPortPatterns(metadataType));
+        }
+      }
+    }
+    
+    // Router type nodes are handled separately in _traceMetadataValue
+    
+    return null;
+  }
+  
+  /**
+   * Apply heuristic search to extract metadata value
+   * @param {string} nodeId - The node ID
+   * @param {string} metadataType - The type of metadata to extract
+   * @param {Array<string>} portPatterns - Port name patterns to match
+   * @returns {*} The extracted value, or null if not found
+   * @private
+   */
+  _applyHeuristicSearch(nodeId, metadataType, portPatterns) {
+    const node = this.graph.getNode(nodeId);
+    if (!node || !node.inputs) {
+      return null;
+    }
+    
+    // Check if node has a direct value in inputs matching the patterns
+    for (const pattern of portPatterns) {
+      if (pattern in node.inputs) {
+        const value = node.inputs[pattern];
+        
+        // If it's a connection [nodeId, outputIndex], continue tracing
+        if (Array.isArray(value) && value.length >= 2) {
+          const connectedNodeId = String(value[0]);
+          return this._traceMetadataValue(connectedNodeId, metadataType, portPatterns);
+        }
+        
+        // If it's a direct value, return it
+        if (value !== null && value !== undefined) {
+          return value;
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Check if a node is a router node
+   * @param {string} nodeId - The node ID
+   * @returns {boolean} True if the node is a router
+   * @private
+   */
+  _isRouterNode(nodeId) {
+    const node = this.graph.getNode(nodeId);
+    if (!node) {
+      return false;
+    }
+    
+    // Check dictionary definition
+    if (this.dictionary && this.dictionary.hasDefinition(node.class_type)) {
+      const definition = this.dictionary.getNodeDefinition(node.class_type);
+      return definition.type === 'router';
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Get passthrough ports for a router node
+   * @param {string} nodeId - The router node ID
+   * @param {Array<string>} portPatterns - Port name patterns to match
+   * @returns {Array<string>} Array of input port names to explore
+   * @private
+   */
+  _passthroughRouter(nodeId, portPatterns) {
+    const node = this.graph.getNode(nodeId);
+    if (!node) {
+      return [];
+    }
+    
+    // Get router definition from dictionary
+    if (this.dictionary && this.dictionary.hasDefinition(node.class_type)) {
+      const definition = this.dictionary.getNodeDefinition(node.class_type);
+      
+      if (definition.type === 'router' && definition.passthrough_rules) {
+        // Return all input ports defined in passthrough_rules
+        const allInputPorts = new Set();
+        for (const outputPort in definition.passthrough_rules) {
+          const inputPorts = definition.passthrough_rules[outputPort];
+          if (Array.isArray(inputPorts)) {
+            inputPorts.forEach(port => allInputPorts.add(port));
+          }
+        }
+        return Array.from(allInputPorts);
+      }
+    }
+    
+    return [];
   }
 }
 

@@ -1,0 +1,14 @@
+{
+  "format": "a1111",
+  "positive": "fantasy horse with wings, pegasus, clouds, flying",
+  "negative": "worst quality, ugly",
+  "steps": 40,
+  "sampler": "DPM++ 2M Karras",
+  "cfg": 7,
+  "seed": 11223344,
+  "checkpoint": "fantasy_creatures_v3.safetensors",
+  "loras": ["PegasusWings"],
+  "lora_hashes": {
+    "PegasusWings": "abcdef123456"
+  }
+}
