@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4] - 2026-03-04
+
+### 🇬🇧 English
+#### 🔧 Internal Refactoring
+- **Dictionary-Based Metadata Extraction System**:
+  - Implemented `NodeDefinitionDictionary` for extensible node type definitions
+  - Added `MetadataExtractionReporter` for detailed trace logging and error reporting
+  - Extended `ComfyUIGraph` with new methods: `getInputPort()`, `getConnectedNodeId()`, `hasInputPort()`
+  - Refactored `ComfyUISamplerAnalyzer` to use dictionary-based extraction with heuristic fallback
+  - Removed hardcoded node class names (RandomNoise, BasicScheduler, etc.)
+  - Implemented Silent_Drop logic to exclude invalid samplers (no latent_image, muted, bypassed)
+  - Added soft/hard warning methods to `ErrorHandler`
+
+#### 🧪 Testing
+- Added unit tests for `NodeDefinitionDictionary` (17 tests)
+- Added unit tests for `MetadataExtractionReporter` (15 tests)
+- Added integration tests for dictionary-based extraction (7 tests)
+- Fixed sample file paths in integration tests (tests/samples/ → tests/fixtures/)
+- Achieved 100% test pass rate: 815 passed, 1 skipped (intentional)
+
+### 🇯🇵 日本語
+#### 🔧 内部リファクタリング
+- **辞書ベースのメタデータ抽出システム**:
+  - 拡張可能なノードタイプ定義のための`NodeDefinitionDictionary`を実装
+  - 詳細なトレースログとエラー報告のための`MetadataExtractionReporter`を追加
+  - `ComfyUIGraph`に新しいメソッドを追加: `getInputPort()`, `getConnectedNodeId()`, `hasInputPort()`
+  - `ComfyUISamplerAnalyzer`を辞書ベースの抽出とヒューリスティックフォールバックを使用するようにリファクタリング
+  - ハードコードされたノードクラス名（RandomNoise、BasicSchedulerなど）を削除
+  - 無効なサンプラー（latent_image未接続、ミュート、バイパス）を除外するSilent_Dropロジックを実装
+  - `ErrorHandler`にソフト/ハード警告メソッドを追加
+
+#### 🧪 テスト
+- `NodeDefinitionDictionary`のユニットテストを追加（17テスト）
+- `MetadataExtractionReporter`のユニットテストを追加（15テスト）
+- 辞書ベース抽出の統合テストを追加（7テスト）
+- 統合テストのサンプルファイルパスを修正（tests/samples/ → tests/fixtures/）
+- 100%のテスト成功率を達成: 815成功、1スキップ（意図的）
+
 ## [1.3.3] - 2026-02-13
 
 ### 🇬🇧 English
