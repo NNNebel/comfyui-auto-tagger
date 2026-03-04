@@ -899,10 +899,10 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                // Verify Content-Type
+                // Verify Content-Type (allow both application/json and text/plain for GitHub raw content)
                 const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Response is not JSON');
+                if (!contentType || !(contentType.includes('application/json') || contentType.includes('text/plain'))) {
+                    console.warn('[Dictionary] Unexpected Content-Type:', contentType);
                 }
                 
                 // Security: Get response as text first to validate before parsing
