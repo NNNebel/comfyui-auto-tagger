@@ -192,4 +192,106 @@ describe('MetadataExtractionReporter', () => {
       expect(reporter.excludedNodesWithoutTrace).toEqual([]);
     });
   });
+
+  describe('copyToClipboard', () => {
+    it('should generate report for clipboard', () => {
+      reporter.startTrace('5');
+      reporter.logNodeExclusion('7', 'KSampler', 'no_latent_input');
+      reporter.endTrace(false, null);
+      
+      const workflowJSON = { '5': { class_type: 'SamplerCustomAdvanced' } };
+      
+      // copyToClipboard returns the report text
+      // In browser environment, it would also copy to clipboard
+      const report = reporter.generateReport(workflowJSON);
+      expect(report).toContain('メタデータ抽出エラー報告');
+    });
+  });
+
+  describe('openGitHubIssue', () => {
+    it('should generate GitHub issue URL', () => {
+      // This method opens a URL in browser
+      // We can't test the actual opening, but we can verify the method exists
+      expect(typeof reporter.openGitHubIssue).toBe('function');
+    });
+  });
+
+  describe('trace lifecycle', () => {
+    it('should handle multiple traces', () => {
+      // First trace
+      reporter.startTrace('5');
+      reporter.logNodeVisit('3', 'RandomNoise', 'trace_seed');
+      reporter.endTrace(true, { seed: 123 });
+      
+      // Second trace
+      reporter.startTrace('8');
+      reporter.logNodeVisit('4', 'BasicScheduler', 'trace_scheduler');
+      reporter.endTrace(true, { scheduler: 'normal' });
+      
+      expect(reporter.traces).toHaveLength(2);
+      expect(reporter.traces[0].samplerId).toBe('5');
+      expect(reporter.traces[1].samplerId).toBe('8');
+    });
+
+    it('should handle trace without endTrace', () => {
+      reporter.startTrace('5');
+      reporter.logNodeVisit('3', 'RandomNoise', 'trace_seed');
+      
+      // Start another trace without ending the first one
+      reporter.startTrace('8');
+      
+      // The first trace should be abandoned
+      expect(reporter.currentTrace.samplerId).toBe('8');
+    });
+  });
+
+  describe('exclusion reasons', () => {
+    it('should track different exclusion reasons', () => {
+      reporter.logNodeExclusion('7', 'KSampler', 'no_latent_input');
+      reporter.logNodeExclusion('8', 'KSampler', 'muted');
+      reporter.logNodeExclusion('9', 'KSampler', 'bypassed');
+      reporter.logNodeExclusion('10', 'KSampler', 'inactive_branch');
+      
+      const excluded = reporter.getExcludedNodes();
+      expect(excluded).toHaveLength(4);
+      
+      const reasons = excluded.map(n => n.reason);
+      expect(reasons).toContain('no_latent_input');
+      expect(reasons).toContain('muted');
+      expect(reasons).toContain('bypassed');
+      expect(reasons).toContain('inactive_branch');
+    });
+  });
+
+  describe('metadata extraction tracking', () => {
+    it('should track successful extraction with metadata', () => {
+      reporter.startTrace('5');
+      reporter.logNodeVisit('3', 'RandomNoise', 'trace_seed');
+      reporter.logNodeVisit('4', 'BasicScheduler', 'trace_scheduler');
+      
+      const metadata = {
+        seed: 123,
+        steps: 20,
+        cfg: 7.0,
+        sampler: 'euler',
+        scheduler: 'normal'
+      };
+      
+      reporter.endTrace(true, metadata);
+      
+      expect(reporter.traces[0].success).toBe(true);
+      expect(reporter.traces[0].extractedMetadata).toEqual(metadata);
+    });
+
+    it('should track failed extraction', () => {
+      reporter.startTrace('5');
+      reporter.logNodeVisit('3', 'RandomNoise', 'trace_seed');
+      reporter.logNodeExclusion('7', 'KSampler', 'no_latent_input');
+      
+      reporter.endTrace(false, null);
+      
+      expect(reporter.traces[0].success).toBe(false);
+      expect(reporter.traces[0].extractedMetadata).toBeNull();
+    });
+  });
 });

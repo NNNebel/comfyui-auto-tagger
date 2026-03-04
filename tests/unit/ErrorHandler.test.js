@@ -357,3 +357,164 @@ describe('ErrorHandler', () => {
       consoleInfoSpy.mockRestore();
     });
   });
+
+  describe('Soft Warning', () => {
+    let localConsoleWarnSpy;
+    
+    beforeEach(() => {
+      ErrorHandler.clearWarnings();
+      localConsoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    
+    afterEach(() => {
+      localConsoleWarnSpy.mockRestore();
+    });
+
+    it('should log soft warning', () => {
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Nodes skipped but extraction succeeded', {
+        excludedCount: 2
+      });
+
+      // Soft warning uses console.warn
+      expect(localConsoleWarnSpy).toHaveBeenCalled();
+      const loggedData = JSON.parse(localConsoleWarnSpy.mock.calls[localConsoleWarnSpy.mock.calls.length - 1][0]);
+      expect(loggedData.message).toContain('[Soft Warning]');
+    });
+
+    it('should collect soft warnings', () => {
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Warning 1', { count: 1 });
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Warning 2', { count: 2 });
+
+      const warnings = ErrorHandler.getSoftWarnings();
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0].message).toBe('Warning 1');
+      expect(warnings[1].message).toBe('Warning 2');
+    });
+
+    it('should include timestamp in soft warning', () => {
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Test warning', {});
+
+      const warnings = ErrorHandler.getSoftWarnings();
+      expect(warnings[0].timestamp).toBeDefined();
+      expect(warnings[0].timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    });
+
+    it('should clear soft warnings', () => {
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Test warning', {});
+      expect(ErrorHandler.getSoftWarnings()).toHaveLength(1);
+
+      ErrorHandler.clearWarnings();
+      expect(ErrorHandler.getSoftWarnings()).toHaveLength(0);
+    });
+  });
+
+  describe('Hard Warning', () => {
+    let localConsoleErrorSpy;
+    
+    beforeEach(() => {
+      ErrorHandler.clearWarnings();
+      localConsoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+    
+    afterEach(() => {
+      localConsoleErrorSpy.mockRestore();
+    });
+
+    it('should log hard warning', () => {
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Nodes skipped and extraction failed', {
+        excludedCount: 2
+      });
+
+      // Hard warning uses console.error
+      expect(localConsoleErrorSpy).toHaveBeenCalled();
+      const loggedData = JSON.parse(localConsoleErrorSpy.mock.calls[localConsoleErrorSpy.mock.calls.length - 1][0]);
+      expect(loggedData.message).toContain('[Hard Warning]');
+    });
+
+    it('should collect hard warnings', () => {
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Warning 1', { count: 1 });
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Warning 2', { count: 2 });
+
+      const warnings = ErrorHandler.getHardWarnings();
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0].message).toBe('Warning 1');
+      expect(warnings[1].message).toBe('Warning 2');
+    });
+
+    it('should include timestamp in hard warning', () => {
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Test warning', {});
+
+      const warnings = ErrorHandler.getHardWarnings();
+      expect(warnings[0].timestamp).toBeDefined();
+      expect(warnings[0].timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    });
+
+    it('should clear hard warnings', () => {
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Test warning', {});
+      expect(ErrorHandler.getHardWarnings()).toHaveLength(1);
+
+      ErrorHandler.clearWarnings();
+      expect(ErrorHandler.getHardWarnings()).toHaveLength(0);
+    });
+  });
+
+  describe('Warning separation', () => {
+    beforeEach(() => {
+      ErrorHandler.clearWarnings();
+    });
+
+    it('should keep soft and hard warnings separate', () => {
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Soft warning', {});
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Hard warning', {});
+
+      const softWarnings = ErrorHandler.getSoftWarnings();
+      const hardWarnings = ErrorHandler.getHardWarnings();
+
+      expect(softWarnings).toHaveLength(1);
+      expect(hardWarnings).toHaveLength(1);
+      expect(softWarnings[0].message).toBe('Soft warning');
+      expect(hardWarnings[0].message).toBe('Hard warning');
+    });
+
+    it('should clear both warning types', () => {
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Soft warning', {});
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Hard warning', {});
+
+      ErrorHandler.clearWarnings();
+
+      expect(ErrorHandler.getSoftWarnings()).toHaveLength(0);
+      expect(ErrorHandler.getHardWarnings()).toHaveLength(0);
+    });
+  });
+
+  describe('Warning context', () => {
+    beforeEach(() => {
+      ErrorHandler.clearWarnings();
+    });
+
+    it('should include context in soft warning', () => {
+      const context = {
+        excludedCount: 2,
+        excludedNodes: ['7', '8'],
+        reason: 'no_latent_input'
+      };
+
+      ErrorHandler.logSoftWarning('ComfyUIParser', 'Test warning', context);
+
+      const warnings = ErrorHandler.getSoftWarnings();
+      expect(warnings[0].context).toEqual(context);
+    });
+
+    it('should include context in hard warning', () => {
+      const context = {
+        excludedCount: 3,
+        extractionFailed: true,
+        samplerCount: 0
+      };
+
+      ErrorHandler.logHardWarning('ComfyUIParser', 'Test warning', context);
+
+      const warnings = ErrorHandler.getHardWarnings();
+      expect(warnings[0].context).toEqual(context);
+    });
+  });

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 ## [1.3.4] - 2026-03-04
 
 ### 🇬🇧 English
+#### 🎉 New Features
+- **Settings Dialog**: Added a dedicated settings dialog to organize configuration options
+  - Moved processing settings (chunk size, suspicious node handling) to settings dialog
+  - Moved dictionary settings (online fetch toggle) to settings dialog
+  - Moved debug mode toggle to settings dialog
+  - Added GitHub Issue reporting button in settings dialog
+- **GitHub Issue Reporting**: Users can now report issues directly from the plugin
+  - One-click button to open GitHub issue creation page
+  - Automatic error report generation with trace logs
+  - Clipboard copy functionality for error details
+
 #### 🔧 Internal Refactoring
 - **Dictionary-Based Metadata Extraction System**:
   - Implemented `NodeDefinitionDictionary` for extensible node type definitions
@@ -23,12 +34,24 @@ All notable changes to this project will be documented in this file.
 #### 🧪 Testing
 - Added unit tests for `NodeDefinitionDictionary` (17 tests)
 - Added unit tests for `MetadataExtractionReporter` (15 tests)
+- Added unit tests for `ErrorHandler` soft/hard warnings (10 tests)
 - Added integration tests for dictionary-based extraction (7 tests)
 - Added 32 property-based tests for validation and correctness
 - Fixed sample file paths in integration tests (tests/samples/ → tests/fixtures/)
-- Achieved 100% test pass rate: 847 passed, 1 skipped (intentional)
+- Achieved 100% test pass rate: 876 passed, 1 skipped (intentional)
 
 ### 🇯🇵 日本語
+#### 🎉 新機能
+- **設定ダイアログ**: 設定オプションを整理するための専用設定ダイアログを追加
+  - 処理設定（チャンクサイズ、疑わしいノードの処理）を設定ダイアログに移動
+  - 辞書設定（オンライン取得の切り替え）を設定ダイアログに移動
+  - デバッグモードの切り替えを設定ダイアログに移動
+  - 設定ダイアログにGitHub Issue報告ボタンを追加
+- **GitHub Issue報告**: プラグインから直接Issueを報告できるようになりました
+  - ワンクリックでGitHubのIssue作成ページを開くボタン
+  - トレースログを含む自動エラーレポート生成
+  - エラー詳細のクリップボードコピー機能
+
 #### 🔧 内部リファクタリング
 - **辞書ベースのメタデータ抽出システム**:
   - 拡張可能なノードタイプ定義のための`NodeDefinitionDictionary`を実装
@@ -47,10 +70,11 @@ All notable changes to this project will be documented in this file.
 #### 🧪 テスト
 - `NodeDefinitionDictionary`のユニットテストを追加（17テスト）
 - `MetadataExtractionReporter`のユニットテストを追加（15テスト）
+- `ErrorHandler`のソフト/ハード警告のユニットテストを追加（10テスト）
 - 辞書ベース抽出の統合テストを追加（7テスト）
 - 検証と正確性のための32のプロパティベーステストを追加
 - 統合テストのサンプルファイルパスを修正（tests/samples/ → tests/fixtures/）
-- 100%のテスト成功率を達成: 847成功、1スキップ（意図的）
+- 100%のテスト成功率を達成: 876成功、1スキップ（意図的）
 
 ## [1.3.3] - 2026-02-13
 

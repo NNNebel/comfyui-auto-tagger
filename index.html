@@ -32,21 +32,6 @@
             margin-top: 0;
         }
 
-        .debug-option {
-            position: absolute;
-            top: 15px; /* 上の位置を調整 */
-            right: 20px;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            opacity: 0.8;
-            color: var(--secondary-text);
-        }
-        .debug-option label {
-            cursor: pointer;
-            margin-left: 4px;
-        }
-
         .section-title {
             font-weight: bold;
             margin-bottom: 6px; /* マージンを調整 */
@@ -371,13 +356,198 @@
             font-size: 12px;
             margin-bottom: 12px;
         }
+
+        /* Settings button */
+        .settings-button {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background-color 0.2s;
+        }
+
+        .settings-button:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Settings dialog */
+        #settings-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #settings-dialog.visible {
+            display: flex;
+        }
+
+        .settings-content {
+            background-color: var(--bg-color);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .settings-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-close {
+            background-color: transparent;
+            border: none;
+            color: var(--secondary-text);
+            cursor: pointer;
+            font-size: 24px;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .settings-close:hover {
+            color: var(--text-color);
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: var(--text-color);
+        }
+
+        .settings-description {
+            font-size: 11px;
+            color: var(--secondary-text);
+            margin-left: 20px;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        
+        .settings-button-action {
+            transition: opacity 0.2s, background-color 0.2s;
+        }
+        
+        .settings-button-action:hover {
+            opacity: 0.9;
+            background-color: #0b5ed7;
+        }
+        
+        /* Hard Warning Modal */
+        #hard-warning-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #hard-warning-modal.visible {
+            display: flex;
+        }
+        
+        .hard-warning-content {
+            background-color: var(--bg-color);
+            border: 2px solid #dc3545;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .hard-warning-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+            color: #dc3545;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .hard-warning-body {
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+        
+        .hard-warning-details {
+            background-color: var(--log-bg);
+            padding: 12px;
+            border-radius: 4px;
+            margin: 12px 0;
+            border-left: 3px solid #dc3545;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .hard-warning-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .hard-warning-button {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            transition: opacity 0.2s;
+        }
+        
+        .hard-warning-button:hover {
+            opacity: 0.9;
+        }
+        
+        .hard-warning-button.report {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .hard-warning-button.close {
+            background-color: #6c757d;
+            color: white;
+        }
     </style>
 </head>
 <body>
-    <div class="debug-option">
-        <input type="checkbox" id="chk-debug-log">
-        <label for="chk-debug-log">Debug Mode</label>
-    </div>
+    <button class="settings-button" id="settings-button">⚙️ 設定</button>
 
     <h1>ComfyUI Auto Tagger</h1>
 
@@ -390,25 +560,6 @@
         <div class="option-group">
             <input type="checkbox" id="chk-write-notes" checked>
             <label for="chk-write-notes">メモに追加</label>
-        </div>
-        <div class="option-group">
-            <label for="chunk-size">一度に処理する数:</label>
-            <input type="number" id="chunk-size" value="5" min="1" max="50">
-        </div>
-    </div>
-
-    <div class="section-title" data-i18n="ui.suspiciousNodeHandling">疑わしいノードの処理</div>
-    <div style="display: flex; gap: 20px; margin-bottom: 10px; align-items: center;">
-        <div class="option-group">
-            <label for="suspicious-node-handling" data-i18n="ui.processingMethod">処理方法:</label>
-            <select id="suspicious-node-handling" style="margin-left: 8px; padding: 4px 8px; background-color: var(--log-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 3px;">
-                <option value="exclude" data-i18n="ui.option.exclude">除外する</option>
-                <option value="ask" data-i18n="ui.option.ask">確認する</option>
-                <option value="include" data-i18n="ui.option.include">含める</option>
-            </select>
-        </div>
-        <div style="font-size: 11px; color: var(--secondary-text);" data-i18n="ui.suspiciousNodeDescription">
-            必須入力が欠けているノードの扱いを選択
         </div>
     </div>
 
@@ -458,6 +609,16 @@
         <button id="cancelButton" style="display:none;">キャンセル</button>
     </div>
     
+    <!-- Hidden settings (synced with settings dialog) -->
+    <input type="hidden" id="chunk-size" value="5">
+    <select id="suspicious-node-handling" style="display:none;">
+        <option value="exclude">除外する</option>
+        <option value="ask">確認する</option>
+        <option value="include">含める</option>
+    </select>
+    <input type="hidden" id="chk-fetch-dictionary">
+    <input type="hidden" id="chk-debug-log">
+    
     <div id="progress-container">
         <div id="progress-bar"></div>
         <div id="progress-text">0 / 0</div>
@@ -482,6 +643,80 @@
 
     <div id="log"></div>
 
+    <!-- Dictionary status bar -->
+    <div id="dictionary-status" style="margin-top: 10px; padding: 6px 10px; background-color: var(--log-bg); border-radius: 3px; font-size: 11px; color: var(--secondary-text); display: none;">
+        <span id="dictionary-status-icon">ℹ️</span>
+        <span id="dictionary-status-text"></span>
+    </div>
+
+    <!-- Settings dialog -->
+    <div id="settings-dialog">
+        <div class="settings-content">
+            <div class="settings-header">
+                <span>⚙️ 設定</span>
+                <button class="settings-close" id="settings-close">×</button>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">処理設定</div>
+                <div class="option-group">
+                    <label for="chunk-size-settings">一度に処理する数:</label>
+                    <input type="number" id="chunk-size-settings" value="5" min="1" max="50" style="margin-left: 8px;">
+                </div>
+                <div class="settings-description">
+                    一度に処理する画像の数を設定します。多すぎるとメモリを消費します。
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title" data-i18n="ui.suspiciousNodeHandling">疑わしいノードの処理</div>
+                <div class="option-group">
+                    <label for="suspicious-node-handling-settings" data-i18n="ui.processingMethod">処理方法:</label>
+                    <select id="suspicious-node-handling-settings" style="margin-left: 8px; padding: 4px 8px; background-color: var(--log-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 3px;">
+                        <option value="exclude" data-i18n="ui.option.exclude">除外する</option>
+                        <option value="ask" data-i18n="ui.option.ask">確認する</option>
+                        <option value="include" data-i18n="ui.option.include">含める</option>
+                    </select>
+                </div>
+                <div class="settings-description" data-i18n="ui.suspiciousNodeDescription">
+                    必須入力が欠けているノードの扱いを選択します。「確認する」を選択すると、処理中にダイアログが表示されます。
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">辞書設定</div>
+                <div class="option-group">
+                    <input type="checkbox" id="chk-fetch-dictionary-settings">
+                    <label for="chk-fetch-dictionary-settings">オンラインから辞書を取得する（推奨）</label>
+                </div>
+                <div class="settings-description">
+                    最新のカスタムノード定義をオンラインから取得します。無効にするとバンドルされた辞書を使用します。変更は次回起動時に反映されます。
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">デバッグ設定</div>
+                <div class="option-group">
+                    <input type="checkbox" id="chk-debug-log-settings">
+                    <label for="chk-debug-log-settings">デバッグモードを有効にする</label>
+                </div>
+                <div class="settings-description">
+                    詳細なデバッグログをコンソールに出力します。問題の診断に役立ちます。
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title">サポート</div>
+                <button class="settings-button-action" id="btn-report-issue" style="width: 100%; padding: 10px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 8px;">
+                    🐛 GitHubでIssueを報告
+                </button>
+                <div class="settings-description">
+                    問題や改善提案をGitHubで報告できます。クリックするとGitHubのIssue作成ページが開きます。
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Suspicious node confirmation dialog -->
     <div id="suspicious-node-dialog">
         <div class="dialog-content">
@@ -505,6 +740,24 @@
             </div>
             <div style="text-align: center; margin-top: 8px; font-size: 11px; color: var(--secondary-text);" data-i18n="ui.dialog.shiftHint">
                 💡 Shiftキーを押しながらクリックすると、残りの全画像に適用されます
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hard Warning Modal -->
+    <div id="hard-warning-modal">
+        <div class="hard-warning-content">
+            <div class="hard-warning-header">
+                <span>❌</span>
+                <span>メタデータ抽出エラー</span>
+            </div>
+            <div class="hard-warning-body">
+                <p id="hard-warning-message"></p>
+                <div class="hard-warning-details" id="hard-warning-details"></div>
+            </div>
+            <div class="hard-warning-actions">
+                <button class="hard-warning-button report" id="btn-report-error">エラーを報告</button>
+                <button class="hard-warning-button close" id="btn-close-hard-warning">閉じる</button>
             </div>
         </div>
     </div>
@@ -558,6 +811,657 @@
     <!-- Legacy core.js for processMetadata -->
     <script src="js/core.js"></script>
     <script src="js/plugin.js"></script>
+    
+    <!-- Dictionary Initialization -->
+    <script>
+        // Global dictionary instance
+        window.globalDictionary = null;
+        
+        // Dictionary URL (GitHub raw content URL)
+        const DICTIONARY_URL = 'https://raw.githubusercontent.com/NNNebel/comfyui-auto-tagger/main/js/metadata-parser/dictionary/default-dictionary.json';
+        
+        // Security: Validate URL is HTTPS and from trusted domain
+        function isValidDictionaryURL(url) {
+            try {
+                const parsedURL = new URL(url);
+                // Only allow HTTPS
+                if (parsedURL.protocol !== 'https:') {
+                    console.error('[Dictionary] Security: Only HTTPS URLs are allowed');
+                    return false;
+                }
+                // Only allow GitHub raw content (you can add more trusted domains)
+                const trustedDomains = ['raw.githubusercontent.com', 'gist.githubusercontent.com'];
+                if (!trustedDomains.includes(parsedURL.hostname)) {
+                    console.error('[Dictionary] Security: URL must be from trusted domain:', trustedDomains);
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('[Dictionary] Security: Invalid URL format');
+                return false;
+            }
+        }
+        
+        // Show dictionary status message
+        function showDictionaryStatus(icon, message, type = 'info') {
+            const statusBar = document.getElementById('dictionary-status');
+            const statusIcon = document.getElementById('dictionary-status-icon');
+            const statusText = document.getElementById('dictionary-status-text');
+            
+            if (statusBar && statusIcon && statusText) {
+                statusIcon.textContent = icon;
+                statusText.textContent = message;
+                statusBar.style.display = 'block';
+                
+                // Color based on type
+                if (type === 'success') {
+                    statusBar.style.borderLeft = '3px solid #28a745';
+                } else if (type === 'error') {
+                    statusBar.style.borderLeft = '3px solid #dc3545';
+                } else if (type === 'warning') {
+                    statusBar.style.borderLeft = '3px solid #ffc107';
+                } else {
+                    statusBar.style.borderLeft = '3px solid var(--border-color)';
+                }
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    statusBar.style.display = 'none';
+                }, 10000);
+            }
+        }
+        
+        // Fetch dictionary with security checks and timeout
+        async function secureFetchDictionary(url) {
+            // Security check
+            if (!isValidDictionaryURL(url)) {
+                throw new Error('Invalid or untrusted dictionary URL');
+            }
+            
+            // Fetch with timeout (10 seconds)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            try {
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    // Security: Prevent credentials from being sent
+                    credentials: 'omit',
+                    // Security: Prevent redirects to malicious sites
+                    redirect: 'error'
+                });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Verify Content-Type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON');
+                }
+                
+                // Security: Get response as text first to validate before parsing
+                const responseText = await response.text();
+                
+                // Security: Check response size (max 1MB for dictionary)
+                if (responseText.length > 1024 * 1024) {
+                    throw new Error('Dictionary file too large (max 1MB)');
+                }
+                
+                // Security: Parse JSON safely
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    throw new Error('Invalid JSON format');
+                }
+                
+                // Security: Validate data is a plain object (not a function, array, etc.)
+                if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+                    throw new Error('Dictionary must be a JSON object');
+                }
+                
+                // Security: Sanitize the data - remove any functions or dangerous properties
+                const sanitizedData = sanitizeDictionaryData(data);
+                
+                return sanitizedData;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    throw new Error('Dictionary fetch timeout (10s)');
+                }
+                throw error;
+            }
+        }
+        
+        // Security: Sanitize dictionary data to prevent code injection
+        function sanitizeDictionaryData(data) {
+            // Deep clone to avoid modifying original
+            const sanitized = {};
+            
+            // Only allow specific top-level keys
+            const allowedKeys = ['version', 'nodes'];
+            for (const key of allowedKeys) {
+                if (key in data) {
+                    if (key === 'version') {
+                        // Version must be a string
+                        if (typeof data.version === 'string') {
+                            sanitized.version = data.version;
+                        }
+                    } else if (key === 'nodes') {
+                        // Nodes must be an object
+                        if (typeof data.nodes === 'object' && data.nodes !== null && !Array.isArray(data.nodes)) {
+                            sanitized.nodes = sanitizeNodes(data.nodes);
+                        }
+                    }
+                }
+            }
+            
+            return sanitized;
+        }
+        
+        // Security: Sanitize nodes object
+        function sanitizeNodes(nodes) {
+            const sanitized = {};
+            
+            for (const [nodeName, nodeData] of Object.entries(nodes)) {
+                // Node name must be a string
+                if (typeof nodeName !== 'string') continue;
+                
+                // Node data must be an object
+                if (typeof nodeData !== 'object' || nodeData === null || Array.isArray(nodeData)) continue;
+                
+                // Sanitize node definition
+                sanitized[nodeName] = sanitizeNodeDefinition(nodeData);
+            }
+            
+            return sanitized;
+        }
+        
+        // Security: Sanitize individual node definition
+        function sanitizeNodeDefinition(nodeData) {
+            const sanitized = {};
+            
+            // Only allow specific keys with specific types
+            const allowedFields = {
+                'type': 'string',
+                'class_type': 'string',
+                'port_mapping': 'object',
+                'passthrough_rules': 'array',
+                'value_path': ['string', 'array'],
+                'value_paths': ['object', 'array'],
+                'metadata_type': 'string'
+            };
+            
+            for (const [key, allowedType] of Object.entries(allowedFields)) {
+                if (key in nodeData) {
+                    const value = nodeData[key];
+                    const valueType = Array.isArray(value) ? 'array' : typeof value;
+                    
+                    // Check if type matches
+                    const allowedTypes = Array.isArray(allowedType) ? allowedType : [allowedType];
+                    if (allowedTypes.includes(valueType)) {
+                        // Recursively sanitize objects and arrays
+                        if (valueType === 'object') {
+                            sanitized[key] = sanitizePlainObject(value);
+                        } else if (valueType === 'array') {
+                            sanitized[key] = sanitizeArray(value);
+                        } else {
+                            sanitized[key] = value;
+                        }
+                    }
+                }
+            }
+            
+            return sanitized;
+        }
+        
+        // Security: Sanitize plain object (only primitives allowed)
+        function sanitizePlainObject(obj) {
+            if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+                return {};
+            }
+            
+            const sanitized = {};
+            for (const [key, value] of Object.entries(obj)) {
+                const valueType = Array.isArray(value) ? 'array' : typeof value;
+                
+                if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+                    sanitized[key] = value;
+                } else if (valueType === 'array') {
+                    sanitized[key] = sanitizeArray(value);
+                } else if (valueType === 'object') {
+                    sanitized[key] = sanitizePlainObject(value);
+                }
+                // Ignore functions, symbols, undefined, etc.
+            }
+            
+            return sanitized;
+        }
+        
+        // Security: Sanitize array (only primitives and plain objects allowed)
+        function sanitizeArray(arr) {
+            if (!Array.isArray(arr)) {
+                return [];
+            }
+            
+            return arr.map(item => {
+                const itemType = Array.isArray(item) ? 'array' : typeof item;
+                
+                if (itemType === 'string' || itemType === 'number' || itemType === 'boolean') {
+                    return item;
+                } else if (itemType === 'object') {
+                    return sanitizePlainObject(item);
+                } else if (itemType === 'array') {
+                    return sanitizeArray(item);
+                }
+                // Ignore functions, symbols, undefined, etc.
+                return null;
+            }).filter(item => item !== null);
+        }
+        
+        // Load dictionary fetch preference from localStorage
+        function getDictionaryFetchPreference() {
+            const saved = localStorage.getItem('dictionary_fetch_enabled');
+            return saved === null ? true : saved === 'true'; // Default: enabled
+        }
+        
+        // Save dictionary fetch preference to localStorage
+        function saveDictionaryFetchPreference(enabled) {
+            localStorage.setItem('dictionary_fetch_enabled', enabled.toString());
+        }
+        
+        // Initialize dictionary on plugin load
+        async function initializeDictionary() {
+            const fetchEnabled = getDictionaryFetchPreference();
+            
+            // Set checkbox state
+            const checkbox = document.getElementById('chk-fetch-dictionary');
+            if (checkbox) {
+                checkbox.checked = fetchEnabled;
+            }
+            
+            if (!fetchEnabled) {
+                console.log('[Dictionary] Online fetch disabled by user preference');
+                window.globalDictionary = window.NodeDefinitionDictionary.getDefault();
+                showDictionaryStatus('📦', 'バンドルされた辞書を使用しています', 'info');
+                return;
+            }
+            
+            try {
+                console.log('[Dictionary] Fetching from URL:', DICTIONARY_URL);
+                showDictionaryStatus('⏳', 'オンラインから辞書を取得中...', 'info');
+                
+                const data = await secureFetchDictionary(DICTIONARY_URL);
+                window.globalDictionary = new window.NodeDefinitionDictionary(data);
+                
+                // Validate the fetched dictionary
+                const validation = window.globalDictionary.validate();
+                if (!validation.valid) {
+                    console.error('[Dictionary] Invalid dictionary from URL:', validation.errors);
+                    throw new Error('Invalid dictionary structure');
+                }
+                
+                // Save to cache on successful fetch
+                window.globalDictionary.saveToCache();
+                console.log('[Dictionary] Successfully loaded from URL');
+                showDictionaryStatus('✅', 'オンライン辞書の取得に成功しました', 'success');
+            } catch (error) {
+                console.error('[Dictionary] Failed to fetch from URL:', error);
+                
+                // Try to load from cache
+                const cached = window.NodeDefinitionDictionary.loadFromCache();
+                if (cached) {
+                    window.globalDictionary = cached;
+                    console.log('[Dictionary] Using cached dictionary');
+                    showDictionaryStatus('💾', 'キャッシュされた辞書を使用しています', 'warning');
+                    return;
+                }
+                
+                // Fall back to default dictionary
+                window.globalDictionary = window.NodeDefinitionDictionary.getDefault();
+                console.log('[Dictionary] Using default dictionary');
+                showDictionaryStatus('⚠️', 'オンライン取得に失敗しました。バンドルされた辞書を使用しています', 'error');
+            }
+        }
+        
+        // Handle checkbox change
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkbox = document.getElementById('chk-fetch-dictionary-settings');
+            if (checkbox) {
+                // Initialize checkbox state
+                checkbox.checked = getDictionaryFetchPreference();
+                
+                checkbox.addEventListener('change', (e) => {
+                    const enabled = e.target.checked;
+                    saveDictionaryFetchPreference(enabled);
+                    
+                    if (enabled) {
+                        showDictionaryStatus('🔄', '次回起動時にオンラインから辞書を取得します', 'info');
+                    } else {
+                        showDictionaryStatus('📦', '次回起動時はバンドルされた辞書を使用します', 'info');
+                    }
+                });
+            }
+        });
+        
+        // Start dictionary initialization immediately
+        initializeDictionary();
+    </script>
+    
+    <script>
+        // Settings dialog management
+        document.addEventListener('DOMContentLoaded', () => {
+            const settingsButton = document.getElementById('settings-button');
+            const settingsDialog = document.getElementById('settings-dialog');
+            const settingsClose = document.getElementById('settings-close');
+            const btnReportIssue = document.getElementById('btn-report-issue');
+            
+            // Open settings dialog
+            if (settingsButton) {
+                settingsButton.addEventListener('click', () => {
+                    // Sync settings from main UI to dialog
+                    syncSettingsToDialog();
+                    settingsDialog.classList.add('visible');
+                });
+            }
+            
+            // Close settings dialog
+            if (settingsClose) {
+                settingsClose.addEventListener('click', () => {
+                    // Sync settings from dialog to main UI
+                    syncSettingsFromDialog();
+                    settingsDialog.classList.remove('visible');
+                });
+            }
+            
+            // Close on background click
+            settingsDialog.addEventListener('click', (e) => {
+                if (e.target === settingsDialog) {
+                    syncSettingsFromDialog();
+                    settingsDialog.classList.remove('visible');
+                }
+            });
+            
+            // Report issue button
+            if (btnReportIssue) {
+                btnReportIssue.addEventListener('click', () => {
+                    openGitHubIssue();
+                });
+            }
+        });
+        
+        // Open GitHub issue page
+        function openGitHubIssue() {
+            // GitHub repository URL
+            const repoUrl = 'https://github.com/NNNebel/comfyui-auto-tagger';
+            const issueUrl = `${repoUrl}/issues/new`;
+            
+            // Open in browser
+            if (typeof eagle !== 'undefined' && eagle.app && eagle.app.openURL) {
+                eagle.app.openURL(issueUrl);
+            } else if (typeof window !== 'undefined') {
+                window.open(issueUrl, '_blank');
+            }
+        }
+        
+        // Sync settings from main UI to dialog
+        function syncSettingsToDialog() {
+            // Chunk size
+            const chunkSize = document.getElementById('chunk-size');
+            const chunkSizeSettings = document.getElementById('chunk-size-settings');
+            if (chunkSize && chunkSizeSettings) {
+                chunkSizeSettings.value = chunkSize.value;
+            }
+            
+            // Suspicious node handling
+            const suspiciousHandling = document.getElementById('suspicious-node-handling');
+            const suspiciousHandlingSettings = document.getElementById('suspicious-node-handling-settings');
+            if (suspiciousHandling && suspiciousHandlingSettings) {
+                suspiciousHandlingSettings.value = suspiciousHandling.value;
+            }
+            
+            // Dictionary fetch
+            const fetchDict = document.getElementById('chk-fetch-dictionary');
+            const fetchDictSettings = document.getElementById('chk-fetch-dictionary-settings');
+            if (fetchDict && fetchDictSettings) {
+                fetchDictSettings.checked = fetchDict.checked;
+            }
+            
+            // Debug mode
+            const debugLog = document.getElementById('chk-debug-log');
+            const debugLogSettings = document.getElementById('chk-debug-log-settings');
+            if (debugLog && debugLogSettings) {
+                debugLogSettings.checked = debugLog.checked;
+            }
+        }
+        
+        // Sync settings from dialog to main UI
+        function syncSettingsFromDialog() {
+            // Chunk size
+            const chunkSize = document.getElementById('chunk-size');
+            const chunkSizeSettings = document.getElementById('chunk-size-settings');
+            if (chunkSize && chunkSizeSettings) {
+                chunkSize.value = chunkSizeSettings.value;
+            }
+            
+            // Suspicious node handling
+            const suspiciousHandling = document.getElementById('suspicious-node-handling');
+            const suspiciousHandlingSettings = document.getElementById('suspicious-node-handling-settings');
+            if (suspiciousHandling && suspiciousHandlingSettings) {
+                suspiciousHandling.value = suspiciousHandlingSettings.value;
+                // Trigger change event to update chunk size state
+                suspiciousHandling.dispatchEvent(new Event('change'));
+            }
+            
+            // Dictionary fetch
+            const fetchDict = document.getElementById('chk-fetch-dictionary');
+            const fetchDictSettings = document.getElementById('chk-fetch-dictionary-settings');
+            if (fetchDict && fetchDictSettings) {
+                fetchDict.checked = fetchDictSettings.checked;
+                // Trigger change event to save preference
+                fetchDict.dispatchEvent(new Event('change'));
+            }
+            
+            // Debug mode
+            const debugLog = document.getElementById('chk-debug-log');
+            const debugLogSettings = document.getElementById('chk-debug-log-settings');
+            if (debugLog && debugLogSettings) {
+                debugLog.checked = debugLogSettings.checked;
+                // Trigger change event if needed
+                debugLog.dispatchEvent(new Event('change'));
+            }
+        }
+    </script>
+    
+    <script>
+        // Warning display functions
+        function showSoftWarning(message, excludedCount) {
+            const warningSection = document.getElementById('warning-section');
+            const warningMessage = document.getElementById('warning-message');
+            
+            if (warningSection && warningMessage) {
+                warningMessage.innerHTML = `
+                    <div style="margin-bottom: 8px;">
+                        ${message}
+                    </div>
+                    <div style="font-size: 11px; color: var(--secondary-text);">
+                        除外されたノード数: ${excludedCount}
+                    </div>
+                `;
+                warningSection.classList.add('visible');
+            }
+        }
+        
+        function dismissWarning() {
+            const warningSection = document.getElementById('warning-section');
+            if (warningSection) {
+                warningSection.classList.remove('visible');
+            }
+        }
+        
+        function showWarningDetails() {
+            // Get soft warnings from ErrorHandler
+            if (window.ErrorHandler) {
+                const softWarnings = window.ErrorHandler.getSoftWarnings();
+                if (softWarnings && softWarnings.length > 0) {
+                    const details = softWarnings.map(w => 
+                        `[${w.component}] ${w.message}\n${JSON.stringify(w.context, null, 2)}`
+                    ).join('\n\n');
+                    
+                    alert('警告の詳細:\n\n' + details);
+                }
+            }
+        }
+        
+        function copyWarningInfo() {
+            // Get soft warnings from ErrorHandler
+            if (window.ErrorHandler) {
+                const softWarnings = window.ErrorHandler.getSoftWarnings();
+                if (softWarnings && softWarnings.length > 0) {
+                    const info = JSON.stringify(softWarnings, null, 2);
+                    
+                    // Copy to clipboard
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(info).then(() => {
+                            alert('警告情報をクリップボードにコピーしました');
+                        }).catch(err => {
+                            console.error('Failed to copy:', err);
+                            alert('コピーに失敗しました');
+                        });
+                    } else {
+                        // Fallback for older browsers
+                        const textarea = document.createElement('textarea');
+                        textarea.value = info;
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand('copy');
+                            alert('警告情報をクリップボードにコピーしました');
+                        } catch (err) {
+                            console.error('Failed to copy:', err);
+                            alert('コピーに失敗しました');
+                        }
+                        document.body.removeChild(textarea);
+                    }
+                }
+            }
+        }
+        
+        function includeAllNodes() {
+            // This function is called when user wants to include all excluded nodes
+            // In the current implementation, this would require re-processing
+            alert('この機能は現在実装中です。画像を再処理してください。');
+            dismissWarning();
+        }
+        
+        // Export functions for global use
+        window.showSoftWarning = showSoftWarning;
+        window.dismissWarning = dismissWarning;
+        window.showWarningDetails = showWarningDetails;
+        window.copyWarningInfo = copyWarningInfo;
+        window.includeAllNodes = includeAllNodes;
+    </script>
+    
+    <script>
+        // Hard Warning display and error reporting
+        let currentReporter = null; // Store current MetadataExtractionReporter instance
+        
+        function showHardWarning(message, reporter) {
+            currentReporter = reporter;
+            
+            const modal = document.getElementById('hard-warning-modal');
+            const messageEl = document.getElementById('hard-warning-message');
+            const detailsEl = document.getElementById('hard-warning-details');
+            
+            if (modal && messageEl && detailsEl) {
+                messageEl.textContent = message;
+                
+                // Show hard warnings from ErrorHandler
+                if (window.ErrorHandler) {
+                    const hardWarnings = window.ErrorHandler.getHardWarnings();
+                    if (hardWarnings && hardWarnings.length > 0) {
+                        const details = hardWarnings.map(w => 
+                            `[${w.component}] ${w.message}\n${JSON.stringify(w.context, null, 2)}`
+                        ).join('\n\n');
+                        detailsEl.textContent = details;
+                    } else {
+                        detailsEl.textContent = 'エラーの詳細情報がありません';
+                    }
+                }
+                
+                modal.classList.add('visible');
+            }
+        }
+        
+        function closeHardWarning() {
+            const modal = document.getElementById('hard-warning-modal');
+            if (modal) {
+                modal.classList.remove('visible');
+            }
+            currentReporter = null;
+        }
+        
+        function reportError() {
+            if (!currentReporter) {
+                alert('エラー報告情報が利用できません');
+                return;
+            }
+            
+            try {
+                // Generate error report
+                const report = currentReporter.generateReport();
+                
+                // Copy to clipboard
+                currentReporter.copyToClipboard();
+                
+                // Open GitHub issue page
+                currentReporter.openGitHubIssue();
+                
+                // Show instruction message
+                alert('エラー報告をクリップボードにコピーしました。\n\n開いたGitHubページに貼り付けて、画像を添付してください。');
+                
+                closeHardWarning();
+            } catch (error) {
+                console.error('Failed to generate error report:', error);
+                alert('エラー報告の生成に失敗しました: ' + error.message);
+            }
+        }
+        
+        // Export functions for global use
+        window.showHardWarning = showHardWarning;
+        window.closeHardWarning = closeHardWarning;
+        window.reportError = reportError;
+        
+        // Add event listeners for Hard Warning modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnReport = document.getElementById('btn-report-error');
+            const btnClose = document.getElementById('btn-close-hard-warning');
+            
+            if (btnReport) {
+                btnReport.addEventListener('click', reportError);
+            }
+            
+            if (btnClose) {
+                btnClose.addEventListener('click', closeHardWarning);
+            }
+            
+            // Close on background click
+            const modal = document.getElementById('hard-warning-modal');
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeHardWarning();
+                    }
+                });
+            }
+        });
+    </script>
     
     <script>
         // Suspicious node handling

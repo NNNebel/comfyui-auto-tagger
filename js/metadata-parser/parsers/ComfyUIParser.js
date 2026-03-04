@@ -81,8 +81,10 @@ class ComfyUIParser extends MetadataParserBase {
    * @param {Object} [options={}] - Parser options (e.g., suspiciousNodeHandling)
    */
   extractFromPrompt(promptData, metadata, options = {}) {
-    // Initialize dictionary and reporter
-    const dictionary = NodeDefinitionDictionary.getDefault();
+    // Use global dictionary if available, otherwise use default
+    const dictionary = (typeof window !== 'undefined' && window.globalDictionary) 
+      ? window.globalDictionary 
+      : NodeDefinitionDictionary.getDefault();
     const reporter = new MetadataExtractionReporter();
     
     // Create graph and analyzer instances with options

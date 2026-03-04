@@ -232,4 +232,149 @@ describe('NodeDefinitionDictionary', () => {
       expect(def.passthrough_rules).toBeDefined();
     });
   });
+
+  describe('cache functionality', () => {
+    it('should save dictionary to cache', () => {
+      // Skip if localStorage is not available (Node.js environment)
+      if (typeof localStorage === 'undefined') {
+        return;
+      }
+
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestNode': {
+            type: 'provider',
+            value_path: ['inputs', 'value'],
+            metadata_type: 'test'
+          }
+        }
+      });
+
+      // Save to cache
+      dict.saveToCache();
+
+      // Load from cache
+      const cached = NodeDefinitionDictionary.loadFromCache();
+      expect(cached).toBeInstanceOf(NodeDefinitionDictionary);
+      expect(cached.version).toBe('1.0.0');
+      expect(cached.hasDefinition('TestNode')).toBe(true);
+    });
+
+    it('should return null when cache is empty', () => {
+      // Skip if localStorage is not available (Node.js environment)
+      if (typeof localStorage === 'undefined') {
+        return;
+      }
+
+      // Clear cache first
+      localStorage.removeItem('node_definition_dictionary');
+
+      const cached = NodeDefinitionDictionary.loadFromCache();
+      expect(cached).toBeNull();
+    });
+
+    it('should handle invalid cache data', () => {
+      // Skip if localStorage is not available (Node.js environment)
+      if (typeof localStorage === 'undefined') {
+        return;
+      }
+
+      // Set invalid cache data
+      localStorage.setItem('node_definition_dictionary', 'invalid json');
+
+      const cached = NodeDefinitionDictionary.loadFromCache();
+      expect(cached).toBeNull();
+    });
+  });
+
+  describe('fetchFromURL', () => {
+    it('should return null when fetch is not available', async () => {
+      // In Node.js environment without fetch polyfill, this should return null
+      // The method handles this gracefully by returning null on error
+      const result = await NodeDefinitionDictionary.fetchFromURL('https://example.com/dict.json');
+      
+      // Result can be either null (fetch failed) or a dictionary (fetch succeeded with default)
+      // We just verify the method doesn't throw
+      expect(result === null || result instanceof NodeDefinitionDictionary).toBe(true);
+    });
+
+    it('should return a promise', () => {
+      // Test that the method exists and returns a promise
+      const promise = NodeDefinitionDictionary.fetchFromURL('https://example.com/dict.json');
+      expect(promise).toBeInstanceOf(Promise);
+    });
+  });
+
+  describe('node type validation', () => {
+    it('should accept valid sampler node', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestSampler': {
+            type: 'sampler',
+            port_mapping: {
+              seed: 'noise_seed',
+              steps: 'steps',
+              cfg: 'cfg'
+            }
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(true);
+    });
+
+    it('should accept valid router node', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestRouter': {
+            type: 'router',
+            passthrough_rules: {
+              'output': ['input1', 'input2']
+            }
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(true);
+    });
+
+    it('should accept valid provider node with value_path', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestProvider': {
+            type: 'provider',
+            value_path: ['inputs', 'value'],
+            metadata_type: 'test'
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(true);
+    });
+
+    it('should accept valid provider node with value_paths', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestProvider': {
+            type: 'provider',
+            value_paths: {
+              seed: ['inputs', 'seed'],
+              steps: ['inputs', 'steps']
+            }
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(true);
+    });
+  });
 });

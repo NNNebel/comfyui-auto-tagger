@@ -456,7 +456,7 @@ describe('Metadata Extraction - Property Tests', () => {
         fc.property(
           fc.integer({ min: 0, max: 999999999 }), // seed
           fc.integer({ min: 1, max: 100 }), // steps
-          fc.float({ min: 1.0, max: 20.0 }), // cfg
+          fc.float({ min: 1.0, max: 20.0, noNaN: true }), // cfg (no NaN)
           (seed, steps, cfg) => {
             const promptData = {
               "3": {
