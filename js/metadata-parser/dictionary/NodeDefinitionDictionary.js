@@ -17,6 +17,7 @@
      * @param {Object} dictionaryData - The dictionary data object
      */
     constructor(dictionaryData) {
+      this._originalData = dictionaryData || {};
       this.version = dictionaryData.version || '1.0.0';
       this.nodes = dictionaryData.nodes || {};
     }
@@ -46,8 +47,8 @@
     validate() {
       const errors = [];
 
-      // Check required fields
-      if (!this.version) {
+      // Check required fields in original data
+      if (!this._originalData.version) {
         errors.push('Missing required field: version');
       }
 

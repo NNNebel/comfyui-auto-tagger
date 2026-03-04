@@ -3,7 +3,7 @@
   'use strict';
 
   // Get dependencies for both environments
-  var MetadataParserBase, ParsingUtils, ErrorHandler, ComfyUIGraph, ComfyUISamplerAnalyzer;
+  var MetadataParserBase, ParsingUtils, ErrorHandler, ComfyUIGraph, ComfyUISamplerAnalyzer, NodeDefinitionDictionary, MetadataExtractionReporter;
   
   if (typeof window !== 'undefined') {
     // Browser environment
@@ -12,6 +12,8 @@
     ErrorHandler = window.ErrorHandler;
     ComfyUIGraph = window.ComfyUIGraph;
     ComfyUISamplerAnalyzer = window.ComfyUISamplerAnalyzer;
+    NodeDefinitionDictionary = window.NodeDefinitionDictionary;
+    MetadataExtractionReporter = window.MetadataExtractionReporter;
   } else if (typeof require !== 'undefined') {
     // Node.js environment (testing)
     MetadataParserBase = require('./MetadataParser');
@@ -19,6 +21,8 @@
     ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
     ComfyUIGraph = require('../graph/ComfyUIGraph');
     ComfyUISamplerAnalyzer = require('../graph/ComfyUISamplerAnalyzer');
+    NodeDefinitionDictionary = require('../dictionary/NodeDefinitionDictionary');
+    MetadataExtractionReporter = require('../reporter/MetadataExtractionReporter');
   } else {
     throw new Error('Required dependencies not found');
   }

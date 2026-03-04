@@ -15,12 +15,18 @@ All notable changes to this project will be documented in this file.
   - Implemented Silent_Drop logic to exclude invalid samplers (no latent_image, muted, bypassed)
   - Added soft/hard warning methods to `ErrorHandler`
 
+#### 📚 Documentation
+- Added comprehensive dictionary format documentation (`DICTIONARY_FORMAT.md`)
+- Added custom node addition guide (`ADDING_CUSTOM_NODES.md`)
+- Added error reporting guide (`ERROR_REPORTING.md`)
+
 #### 🧪 Testing
 - Added unit tests for `NodeDefinitionDictionary` (17 tests)
 - Added unit tests for `MetadataExtractionReporter` (15 tests)
 - Added integration tests for dictionary-based extraction (7 tests)
+- Added 32 property-based tests for validation and correctness
 - Fixed sample file paths in integration tests (tests/samples/ → tests/fixtures/)
-- Achieved 100% test pass rate: 815 passed, 1 skipped (intentional)
+- Achieved 100% test pass rate: 847 passed, 1 skipped (intentional)
 
 ### 🇯🇵 日本語
 #### 🔧 内部リファクタリング
@@ -33,12 +39,18 @@ All notable changes to this project will be documented in this file.
   - 無効なサンプラー（latent_image未接続、ミュート、バイパス）を除外するSilent_Dropロジックを実装
   - `ErrorHandler`にソフト/ハード警告メソッドを追加
 
+#### 📚 ドキュメント
+- 包括的な辞書フォーマットドキュメントを追加（`DICTIONARY_FORMAT.md`）
+- カスタムノード追加ガイドを追加（`ADDING_CUSTOM_NODES.md`）
+- エラー報告ガイドを追加（`ERROR_REPORTING.md`）
+
 #### 🧪 テスト
 - `NodeDefinitionDictionary`のユニットテストを追加（17テスト）
 - `MetadataExtractionReporter`のユニットテストを追加（15テスト）
 - 辞書ベース抽出の統合テストを追加（7テスト）
+- 検証と正確性のための32のプロパティベーステストを追加
 - 統合テストのサンプルファイルパスを修正（tests/samples/ → tests/fixtures/）
-- 100%のテスト成功率を達成: 815成功、1スキップ（意図的）
+- 100%のテスト成功率を達成: 847成功、1スキップ（意図的）
 
 ## [1.3.3] - 2026-02-13
 
