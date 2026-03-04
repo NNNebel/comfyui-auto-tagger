@@ -469,7 +469,7 @@ describe('ImageMetadataReader', () => {
 
   describe('Real sample file tests', () => {
     it('should extract metadata from real PNG sample if available', () => {
-      const samplePath = join(process.cwd(), 'tests', 'samples', '00151-76682904.png');
+      const samplePath = join(process.cwd(), 'tests', 'fixtures', 'comfyui_simple.png');
       
       if (existsSync(samplePath)) {
         const buffer = new Uint8Array(readFileSync(samplePath));

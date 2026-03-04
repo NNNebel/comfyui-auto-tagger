@@ -62,7 +62,7 @@ describe('core.js + MetadataService Integration', () => {
 
   describe('processMetadata with buffer and mimeType (mode 2)', () => {
     it('should parse ComfyUI PNG using MetadataService internally', () => {
-      const samplePath = join(__dirname, '../samples/comfyui_simple.png');
+      const samplePath = join(__dirname, '../fixtures/comfyui_simple.png');
       let buffer;
       try {
         buffer = readFileSync(samplePath);
@@ -81,7 +81,7 @@ describe('core.js + MetadataService Integration', () => {
     });
 
     it('should not cause double parsing when buffer is provided', () => {
-      const samplePath = join(__dirname, '../samples/comfyui_simple.png');
+      const samplePath = join(__dirname, '../fixtures/comfyui_simple.png');
       let buffer;
       try {
         buffer = readFileSync(samplePath);
@@ -102,7 +102,7 @@ describe('core.js + MetadataService Integration', () => {
 
   describe('Correct usage pattern (as in plugin.js)', () => {
     it('should work with MetadataService -> processMetadata flow', () => {
-      const samplePath = join(__dirname, '../samples/comfyui_simple.png');
+      const samplePath = join(__dirname, '../fixtures/comfyui_simple.png');
       let buffer;
       try {
         buffer = readFileSync(samplePath);
@@ -127,7 +127,7 @@ describe('core.js + MetadataService Integration', () => {
     });
 
     it('should NOT pass null + buffer to processMetadata (INCORRECT way)', () => {
-      const samplePath = join(__dirname, '../samples/comfyui_simple.png');
+      const samplePath = join(__dirname, '../fixtures/comfyui_simple.png');
       let buffer;
       try {
         buffer = readFileSync(samplePath);
@@ -156,7 +156,7 @@ describe('core.js + MetadataService Integration', () => {
 
   describe('Performance regression test', () => {
     it('should process metadata in reasonable time', () => {
-      const samplePath = join(__dirname, '../samples/comfyui_simple.png');
+      const samplePath = join(__dirname, '../fixtures/comfyui_simple.png');
       let buffer;
       try {
         buffer = readFileSync(samplePath);
