@@ -123,7 +123,8 @@ Promise.all([
         cfg: document.getElementById('chk-cfg'),
         addTags: document.getElementById('chk-add-tags'),
         writeNotes: document.getElementById('chk-write-notes'),
-        debug: document.getElementById('chk-debug-log')
+        debug: document.getElementById('chk-debug-log'),
+        includeAllSamplers: document.getElementById('chk-include-all-samplers')
     };
     
     const suspiciousNodeHandlingSelect = document.getElementById('suspicious-node-handling');
@@ -421,7 +422,8 @@ Promise.all([
         const allSettingsOn = {
             checkpoint: true, lora: true, positive: true, negative: true,
             seed: true, sampler: true, steps: true, cfg: true,
-            addTags: true, writeNotes: true
+            addTags: true, writeNotes: true,
+            includeAllSamplers: true  // Include all samplers to ensure all tags are removed
         };
         
         await debugLog(`REMOVE (Force: ${isForceMode}): ${items.length} items`);
@@ -554,6 +556,9 @@ Promise.all([
     if (suspiciousNodeHandlingSelect) {
         suspiciousNodeHandlingSelect.onchange = saveSettings;
     }
+    
+    // Listen for settings changed event from settings dialog
+    document.addEventListener('settingsChanged', saveSettings);
     
     console.log("Initialized.");
 });

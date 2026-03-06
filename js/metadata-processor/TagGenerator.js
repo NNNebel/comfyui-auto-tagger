@@ -81,11 +81,18 @@ class TagGenerator {
    *   seed: true,
    *   steps: true,
    *   cfg: true,
-   *   sampler: true
+   *   sampler: true,
+   *   includeAllSamplers: false  // Optional: include all samplers or first only
    * });
    * // Returns: { tags: Set, cats: { cp: Set, lora: Set, pos: Set, neg: Set, param: Set } }
    */
   static generate(metadata, settings) {
+    // Debug log to check settings
+    if (typeof console !== 'undefined' && settings.debug) {
+      console.log('[TagGenerator] Settings:', settings);
+      console.log('[TagGenerator] includeAllSamplers:', settings.includeAllSamplers);
+    }
+    
     const cats = {
       cp: new Set(),
       lora: new Set(),
@@ -122,18 +129,44 @@ class TagGenerator {
       }
     }
 
-    // Extract parameter tags (from base sampler only)
-    if (metadata.seed !== undefined) {
-      cats.param.add(`seed:${metadata.seed}`);
-    }
-    if (metadata.steps !== undefined) {
-      cats.param.add(`steps:${metadata.steps}`);
-    }
-    if (metadata.cfg !== undefined) {
-      cats.param.add(`cfg:${Number(metadata.cfg).toFixed(2)}`);
-    }
-    if (metadata.sampler) {
-      cats.param.add(`sampler:${String(metadata.sampler).toLowerCase()}`);
+    // Extract parameter tags
+    // Check if user wants all samplers or first only (default: first only)
+    const includeAllSamplers = settings.includeAllSamplers === true;
+    
+    if (metadata.generationSteps && metadata.generationSteps.length > 0) {
+      // Use generationSteps for multi-sampler workflows
+      const stepsToProcess = includeAllSamplers 
+        ? metadata.generationSteps 
+        : [metadata.generationSteps[0]]; // First sampler only
+      
+      stepsToProcess.forEach(step => {
+        if (step.seed !== undefined) {
+          cats.param.add(`seed:${step.seed}`);
+        }
+        if (step.steps !== undefined) {
+          cats.param.add(`steps:${step.steps}`);
+        }
+        if (step.cfg !== undefined) {
+          cats.param.add(`cfg:${Number(step.cfg).toFixed(2)}`);
+        }
+        if (step.sampler) {
+          cats.param.add(`sampler:${String(step.sampler).toLowerCase()}`);
+        }
+      });
+    } else {
+      // Fallback to base sampler for simple workflows
+      if (metadata.seed !== undefined) {
+        cats.param.add(`seed:${metadata.seed}`);
+      }
+      if (metadata.steps !== undefined) {
+        cats.param.add(`steps:${metadata.steps}`);
+      }
+      if (metadata.cfg !== undefined) {
+        cats.param.add(`cfg:${Number(metadata.cfg).toFixed(2)}`);
+      }
+      if (metadata.sampler) {
+        cats.param.add(`sampler:${String(metadata.sampler).toLowerCase()}`);
+      }
     }
 
     // Filter tags based on settings

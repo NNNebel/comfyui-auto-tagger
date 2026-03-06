@@ -618,6 +618,7 @@
     </select>
     <input type="hidden" id="chk-fetch-dictionary">
     <input type="hidden" id="chk-debug-log">
+    <input type="hidden" id="chk-include-all-samplers">
     
     <div id="progress-container">
         <div id="progress-bar"></div>
@@ -695,6 +696,17 @@
             </div>
 
             <div class="settings-section">
+                <div class="settings-section-title">タグ生成設定</div>
+                <div class="option-group">
+                    <input type="checkbox" id="chk-include-all-samplers-settings">
+                    <label for="chk-include-all-samplers-settings">全てのサンプラーのパラメータをタグに含める</label>
+                </div>
+                <div class="settings-description">
+                    オフの場合、最初に実行されたサンプラーのパラメータのみをタグに追加します。複雑なワークフロー（リファイン、アップスケールなど）の全てのパラメータを記録したい場合はオンにしてください。
+                </div>
+            </div>
+
+            <div class="settings-section">
                 <div class="settings-section-title">デバッグ設定</div>
                 <div class="option-group">
                     <input type="checkbox" id="chk-debug-log-settings">
@@ -720,16 +732,26 @@
     <!-- Suspicious node confirmation dialog -->
     <div id="suspicious-node-dialog">
         <div class="dialog-content">
-            <div class="dialog-header" data-i18n="ui.dialog.title">⚠️ 疑わしいノードが検出されました</div>
+            <div class="dialog-header" data-i18n="suspiciousNode.title">⚠️ 未使用の可能性があるノード</div>
             <div class="dialog-progress" id="dialog-progress"></div>
             <img id="dialog-image" class="dialog-image" data-i18n="[alt]ui.dialog.imagePreview" alt="画像プレビュー">
             <div class="dialog-info">
                 <div><strong data-i18n="ui.dialog.filename">ファイル名:</strong> <span id="dialog-filename"></span></div>
                 <div class="dialog-node-info">
                     <div class="dialog-node-id" id="dialog-node-id"></div>
-                    <div style="margin-top: 8px;" id="dialog-node-reason"></div>
-                    <div style="margin-top: 8px; font-size: 11px; color: var(--secondary-text);" id="dialog-node-suggestion"></div>
-                    <div style="margin-top: 12px; padding: 8px; background-color: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 3px;" id="dialog-affected-steps"></div>
+                    <div style="margin-top: 12px; white-space: pre-line;" id="dialog-node-description" data-i18n="suspiciousNode.description"></div>
+                    <div style="margin-top: 12px;">
+                        <div style="font-weight: 500; margin-bottom: 4px;" data-i18n="suspiciousNode.commonCases">よくあるケース：</div>
+                        <div style="margin-left: 16px;">
+                            <div>✓ <span data-i18n="suspiciousNode.case1">条件分岐（スイッチノード）で選ばれなかったルート</span></div>
+                            <div>✓ <span data-i18n="suspiciousNode.case2">試行錯誤中に一時的に無効化したノード</span></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px; font-weight: 500;" id="dialog-node-question" data-i18n="suspiciousNode.question"></div>
+                    <div style="margin-top: 12px; padding: 8px; background-color: rgba(33, 150, 243, 0.1); border-left: 3px solid #2196f3; border-radius: 3px;">
+                        <div data-i18n="suspiciousNode.hint">💡 ヒント: 通常は「除外」を選択してください。</div>
+                        <div style="margin-top: 4px; font-size: 11px; color: var(--secondary-text);" data-i18n="suspiciousNode.hintDetail">実際に使用されたノードの情報のみが記録されます。</div>
+                    </div>
                 </div>
             </div>
             <div class="dialog-actions">
@@ -818,7 +840,7 @@
         window.globalDictionary = null;
         
         // Dictionary URL (GitHub raw content URL)
-        const DICTIONARY_URL = 'https://raw.githubusercontent.com/NNNebel/comfyui-auto-tagger/feature/metadata-extraction-logic-overhaul/js/metadata-parser/dictionary/default-dictionary.json';
+        const DICTIONARY_URL = 'https://raw.githubusercontent.com/NNNebel/comfyui-auto-tagger/main/js/metadata-parser/dictionary/default-dictionary.json';
         
         // Security: Validate URL is HTTPS and from trusted domain
         function isValidDictionaryURL(url) {
@@ -992,7 +1014,7 @@
                 'type': 'string',
                 'class_type': 'string',
                 'port_mapping': 'object',
-                'passthrough_rules': 'array',
+                'passthrough_rules': 'object',
                 'value_path': ['string', 'array'],
                 'value_paths': ['object', 'array'],
                 'metadata_type': 'string'
@@ -1006,8 +1028,12 @@
                     // Check if type matches
                     const allowedTypes = Array.isArray(allowedType) ? allowedType : [allowedType];
                     if (allowedTypes.includes(valueType)) {
-                        // Recursively sanitize objects and arrays
-                        if (valueType === 'object') {
+                        // Special handling for specific fields
+                        if (key === 'passthrough_rules') {
+                            sanitized[key] = sanitizePassthroughRules(value);
+                        } else if (key === 'port_mapping') {
+                            sanitized[key] = sanitizePortMapping(value);
+                        } else if (valueType === 'object') {
                             sanitized[key] = sanitizePlainObject(value);
                         } else if (valueType === 'array') {
                             sanitized[key] = sanitizeArray(value);
@@ -1016,6 +1042,51 @@
                         }
                     }
                 }
+            }
+            
+            return sanitized;
+        }
+        
+        // Security: Sanitize passthrough_rules (must be object with string keys and string array values)
+        function sanitizePassthroughRules(rules) {
+            if (typeof rules !== 'object' || rules === null || Array.isArray(rules)) {
+                return {};
+            }
+            
+            const sanitized = {};
+            for (const [outputPort, inputPorts] of Object.entries(rules)) {
+                // Output port must be a string
+                if (typeof outputPort !== 'string') continue;
+                
+                // Input ports must be an array of strings
+                if (!Array.isArray(inputPorts)) continue;
+                
+                const sanitizedPorts = inputPorts.filter(port => typeof port === 'string');
+                if (sanitizedPorts.length > 0) {
+                    sanitized[outputPort] = sanitizedPorts;
+                }
+            }
+            
+            return sanitized;
+        }
+        
+        // Security: Sanitize port_mapping (must be object with string keys and array values)
+        function sanitizePortMapping(mapping) {
+            if (typeof mapping !== 'object' || mapping === null || Array.isArray(mapping)) {
+                return {};
+            }
+            
+            const sanitized = {};
+            for (const [metadataType, portPath] of Object.entries(mapping)) {
+                // Metadata type must be a string
+                if (typeof metadataType !== 'string') continue;
+                
+                // Port path must be an array
+                if (!Array.isArray(portPath)) continue;
+                
+                // Sanitize the array (only strings allowed)
+                const sanitizedPath = sanitizeArray(portPath);
+                sanitized[metadataType] = sanitizedPath;
             }
             
             return sanitized;
@@ -1104,7 +1175,8 @@
                 const validation = window.globalDictionary.validate();
                 if (!validation.valid) {
                     console.error('[Dictionary] Invalid dictionary from URL:', validation.errors);
-                    throw new Error('Invalid dictionary structure');
+                    console.error('[Dictionary] Validation errors detail:', JSON.stringify(validation.errors, null, 2));
+                    throw new Error('Invalid dictionary structure: ' + validation.errors.join(', '));
                 }
                 
                 // Save to cache on successful fetch
@@ -1130,8 +1202,37 @@
             }
         }
         
-        // Handle checkbox change
+        // Handle checkbox change and initialize all settings from localStorage
         document.addEventListener('DOMContentLoaded', () => {
+            // Define default values
+            const defaults = {
+                chunk_size: '5',
+                suspicious_node_handling: 'exclude',
+                debug_log_enabled: 'false',
+                include_all_samplers: 'false'
+            };
+            
+            // Initialize chunk size
+            const chunkSize = document.getElementById('chunk-size');
+            const chunkSizeSettings = document.getElementById('chunk-size-settings');
+            if (chunkSize && chunkSizeSettings) {
+                const saved = localStorage.getItem('chunk_size') || defaults.chunk_size;
+                chunkSize.value = saved;
+                chunkSizeSettings.value = saved;
+            }
+            
+            // Initialize suspicious node handling
+            const suspiciousHandling = document.getElementById('suspicious-node-handling');
+            const suspiciousHandlingSettings = document.getElementById('suspicious-node-handling-settings');
+            if (suspiciousHandling && suspiciousHandlingSettings) {
+                const saved = localStorage.getItem('suspicious_node_handling') || defaults.suspicious_node_handling;
+                suspiciousHandling.value = saved;
+                suspiciousHandlingSettings.value = saved;
+                // Trigger change event to update chunk size state
+                suspiciousHandling.dispatchEvent(new Event('change'));
+            }
+            
+            // Initialize dictionary fetch preference
             const checkbox = document.getElementById('chk-fetch-dictionary-settings');
             if (checkbox) {
                 // Initialize checkbox state
@@ -1147,6 +1248,29 @@
                         showDictionaryStatus('📦', '次回起動時はバンドルされた辞書を使用します', 'info');
                     }
                 });
+            }
+            
+            // Initialize debug log setting
+            const debugLog = document.getElementById('chk-debug-log');
+            const debugLogSettings = document.getElementById('chk-debug-log-settings');
+            if (debugLog && debugLogSettings) {
+                const saved = localStorage.getItem('debug_log_enabled') || defaults.debug_log_enabled;
+                const isEnabled = saved === 'true';
+                debugLog.checked = isEnabled;
+                debugLogSettings.checked = isEnabled;
+            }
+            
+            // Initialize include all samplers setting
+            const includeAllSamplersCheckbox = document.getElementById('chk-include-all-samplers-settings');
+            const includeAllSamplersHidden = document.getElementById('chk-include-all-samplers');
+            
+            if (includeAllSamplersCheckbox && includeAllSamplersHidden) {
+                // Load saved preference (default: false)
+                const saved = localStorage.getItem('include_all_samplers') || defaults.include_all_samplers;
+                const isEnabled = saved === 'true';
+                
+                includeAllSamplersCheckbox.checked = isEnabled;
+                includeAllSamplersHidden.checked = isEnabled;
             }
         });
         
@@ -1177,6 +1301,8 @@
                     // Sync settings from dialog to main UI
                     syncSettingsFromDialog();
                     settingsDialog.classList.remove('visible');
+                    // Trigger change event to save settings in plugin.js
+                    document.dispatchEvent(new CustomEvent('settingsChanged'));
                 });
             }
             
@@ -1185,6 +1311,8 @@
                 if (e.target === settingsDialog) {
                     syncSettingsFromDialog();
                     settingsDialog.classList.remove('visible');
+                    // Trigger change event to save settings in plugin.js
+                    document.dispatchEvent(new CustomEvent('settingsChanged'));
                 }
             });
             
@@ -1239,6 +1367,13 @@
             if (debugLog && debugLogSettings) {
                 debugLogSettings.checked = debugLog.checked;
             }
+            
+            // Include all samplers
+            const includeAllSamplers = document.getElementById('chk-include-all-samplers');
+            const includeAllSamplersSettings = document.getElementById('chk-include-all-samplers-settings');
+            if (includeAllSamplers && includeAllSamplersSettings) {
+                includeAllSamplersSettings.checked = includeAllSamplers.checked;
+            }
         }
         
         // Sync settings from dialog to main UI
@@ -1248,6 +1383,7 @@
             const chunkSizeSettings = document.getElementById('chunk-size-settings');
             if (chunkSize && chunkSizeSettings) {
                 chunkSize.value = chunkSizeSettings.value;
+                localStorage.setItem('chunk_size', chunkSizeSettings.value);
             }
             
             // Suspicious node handling
@@ -1255,6 +1391,7 @@
             const suspiciousHandlingSettings = document.getElementById('suspicious-node-handling-settings');
             if (suspiciousHandling && suspiciousHandlingSettings) {
                 suspiciousHandling.value = suspiciousHandlingSettings.value;
+                localStorage.setItem('suspicious_node_handling', suspiciousHandlingSettings.value);
                 // Trigger change event to update chunk size state
                 suspiciousHandling.dispatchEvent(new Event('change'));
             }
@@ -1264,6 +1401,7 @@
             const fetchDictSettings = document.getElementById('chk-fetch-dictionary-settings');
             if (fetchDict && fetchDictSettings) {
                 fetchDict.checked = fetchDictSettings.checked;
+                localStorage.setItem('dictionary_fetch_enabled', fetchDictSettings.checked);
                 // Trigger change event to save preference
                 fetchDict.dispatchEvent(new Event('change'));
             }
@@ -1273,8 +1411,17 @@
             const debugLogSettings = document.getElementById('chk-debug-log-settings');
             if (debugLog && debugLogSettings) {
                 debugLog.checked = debugLogSettings.checked;
+                localStorage.setItem('debug_log_enabled', debugLogSettings.checked);
                 // Trigger change event if needed
                 debugLog.dispatchEvent(new Event('change'));
+            }
+            
+            // Include all samplers
+            const includeAllSamplers = document.getElementById('chk-include-all-samplers');
+            const includeAllSamplersSettings = document.getElementById('chk-include-all-samplers-settings');
+            if (includeAllSamplers && includeAllSamplersSettings) {
+                includeAllSamplers.checked = includeAllSamplersSettings.checked;
+                localStorage.setItem('include_all_samplers', includeAllSamplersSettings.checked);
             }
         }
     </script>
@@ -1585,32 +1732,6 @@
                 ? window.i18next.t('ui.dialog.nodeInfo', { nodeId: node.nodeId, nodeType: node.nodeType || 'Unknown' })
                 : `ノード #${node.nodeId} (${node.nodeType || 'Unknown'})`;
             document.getElementById('dialog-node-id').textContent = nodeInfoText;
-            
-            // Translate reason and suggestion using i18next
-            const reason = node.reasonKey 
-                ? (window.i18next ? window.i18next.t(node.reasonKey, node.reasonParams || {}) : node.reasonKey)
-                : (node.reason || '');
-            const suggestion = node.suggestionKey 
-                ? (window.i18next ? window.i18next.t(node.suggestionKey) : node.suggestionKey)
-                : (node.suggestion || '');
-            
-            document.getElementById('dialog-node-reason').textContent = reason;
-            document.getElementById('dialog-node-suggestion').textContent = suggestion;
-            
-            // Display affected steps if available
-            const affectedStepsDiv = document.getElementById('dialog-affected-steps');
-            if (node.affectedSteps && node.affectedSteps.length > 0) {
-                const stepsText = node.affectedSteps.map(step => 
-                    `Step ${step.stepIndex} - ${step.stepNodeType} (ID: ${step.stepNodeId})`
-                ).join(', ');
-                const affectedText = window.i18next 
-                    ? window.i18next.t('ui.dialog.affectedSteps', { steps: stepsText })
-                    : `影響を受けるステップ: ${stepsText}`;
-                affectedStepsDiv.textContent = affectedText;
-                affectedStepsDiv.style.display = 'block';
-            } else {
-                affectedStepsDiv.style.display = 'none';
-            }
             
             dialog.classList.add('visible');
             

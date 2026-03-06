@@ -176,6 +176,80 @@ describe('TagGenerator', () => {
       expect(result.tags.size).toBe(3);
     });
 
+    it('should generate parameter tags from all generation steps', () => {
+      const metadata = {
+        generationSteps: [
+          { seed: 111111, steps: 30, cfg: 6.0, sampler: 'dpmpp_2m' },
+          { seed: 222222, steps: 20, cfg: 6.0, sampler: 'dpmpp_2m' },
+          { seed: 333333, steps: 30, cfg: 7.0, sampler: 'dpmpp_2m' },
+          { seed: 444444, steps: 2, cfg: 2.0, sampler: 'dpmpp_2m' }
+        ]
+      };
+      const settings = { seed: true, steps: true, cfg: true, sampler: true, includeAllSamplers: true };
+      const result = TagGenerator.generate(metadata, settings);
+      
+      // All seeds should be present
+      expect(result.tags.has('seed:111111')).toBe(true);
+      expect(result.tags.has('seed:222222')).toBe(true);
+      expect(result.tags.has('seed:333333')).toBe(true);
+      expect(result.tags.has('seed:444444')).toBe(true);
+      
+      // All unique steps values should be present
+      expect(result.tags.has('steps:30')).toBe(true);
+      expect(result.tags.has('steps:20')).toBe(true);
+      expect(result.tags.has('steps:2')).toBe(true);
+      
+      // All unique cfg values should be present
+      expect(result.tags.has('cfg:6.00')).toBe(true);
+      expect(result.tags.has('cfg:7.00')).toBe(true);
+      expect(result.tags.has('cfg:2.00')).toBe(true);
+      
+      // Sampler should be present (deduplicated)
+      expect(result.tags.has('sampler:dpmpp_2m')).toBe(true);
+    });
+
+    it('should generate parameter tags from first sampler only when includeAllSamplers is false', () => {
+      const metadata = {
+        generationSteps: [
+          { seed: 111111, steps: 30, cfg: 6.0, sampler: 'dpmpp_2m' },
+          { seed: 222222, steps: 20, cfg: 6.0, sampler: 'euler' },
+          { seed: 333333, steps: 30, cfg: 7.0, sampler: 'dpmpp_2m' }
+        ]
+      };
+      const settings = { seed: true, steps: true, cfg: true, sampler: true, includeAllSamplers: false };
+      const result = TagGenerator.generate(metadata, settings);
+      
+      // Only first sampler's parameters should be present
+      expect(result.tags.has('seed:111111')).toBe(true);
+      expect(result.tags.has('seed:222222')).toBe(false);
+      expect(result.tags.has('seed:333333')).toBe(false);
+      
+      expect(result.tags.has('steps:30')).toBe(true);
+      expect(result.tags.has('steps:20')).toBe(false);
+      
+      expect(result.tags.has('cfg:6.00')).toBe(true);
+      expect(result.tags.has('cfg:7.00')).toBe(false);
+      
+      expect(result.tags.has('sampler:dpmpp_2m')).toBe(true);
+      expect(result.tags.has('sampler:euler')).toBe(false);
+    });
+
+    it('should use base sampler parameters when generationSteps is not present', () => {
+      const metadata = {
+        seed: 12345,
+        steps: 20,
+        cfg: 7.5,
+        sampler: 'euler'
+      };
+      const settings = { seed: true, steps: true, cfg: true, sampler: true };
+      const result = TagGenerator.generate(metadata, settings);
+      
+      expect(result.tags.has('seed:12345')).toBe(true);
+      expect(result.tags.has('steps:20')).toBe(true);
+      expect(result.tags.has('cfg:7.50')).toBe(true);
+      expect(result.tags.has('sampler:euler')).toBe(true);
+    });
+
     it('should return empty tags when settings are all false', () => {
       const metadata = {
         checkpoint: 'models/checkpoint.safetensors',

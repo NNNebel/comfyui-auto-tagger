@@ -86,6 +86,17 @@
         "forceDeleteAll": "[FORCE DELETE MODE]\nThis will delete ALL tags and remove note information from {{count}} items.\nThis is fast but may also remove user-added tags.\n\nAre you sure?"
     },
     "suspiciousNode": {
+        "title": "⚠️ Potentially Unused Node",
+        "description": "This node may not have been executed because its inputs are not connected.\nThis node is on an alternate route (branch) in the workflow and was not used in this image generation.",
+        "commonCases": "Common cases:",
+        "case1": "Alternate route not selected by a switch node",
+        "case2": "Temporarily disabled node during experimentation",
+        "question": "Include this node's settings (prompts, parameters, etc.) in tags and notes?",
+        "hint": "💡 Hint: Usually select \"Exclude\".",
+        "hintDetail": "Only information from actually used nodes will be recorded.",
+        "graphTitle": "Workflow Structure:",
+        "mainRoute": "Main Route",
+        "unusedRoute": "Unused Route",
         "reason": {
             "imageProcessingNoInput": "Image processing node '{{nodeType}}' has no image/pixels input",
             "vaeEncodeNoInput": "VAEEncode node has no pixels/image input",
