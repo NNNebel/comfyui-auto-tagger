@@ -2,203 +2,133 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.4] - 2026-03-04
+## [1.3.4] - 2026-03-07
 
 ### 🇬🇧 English
 #### 🎉 New Features
 - **Settings Dialog**: Added a dedicated settings dialog to organize configuration options
-  - Moved processing settings (chunk size, suspicious node handling) to settings dialog
-  - Moved dictionary settings (online fetch toggle) to settings dialog
-  - Moved debug mode toggle to settings dialog
-  - Added GitHub Issue reporting button in settings dialog
-- **GitHub Issue Reporting**: Users can now report issues directly from the plugin
+  - Processing settings (chunk size, suspicious node handling)
+  - Dictionary settings (online fetch toggle)
+  - Debug mode toggle
+  - GitHub Issue reporting button
+- **GitHub Issue Reporting**: Report issues directly from the plugin
   - One-click button to open GitHub issue creation page
   - Automatic error report generation with trace logs
   - Clipboard copy functionality for error details
 
-#### 🔧 Internal Refactoring
-- **Dictionary-Based Metadata Extraction System**:
-  - Implemented `NodeDefinitionDictionary` for extensible node type definitions
-  - Added `MetadataExtractionReporter` for detailed trace logging and error reporting
-  - Extended `ComfyUIGraph` with new methods: `getInputPort()`, `getConnectedNodeId()`, `hasInputPort()`
-  - Refactored `ComfyUISamplerAnalyzer` to use dictionary-based extraction with heuristic fallback
-  - Removed hardcoded node class names (RandomNoise, BasicScheduler, etc.)
-  - Implemented Silent_Drop logic to exclude invalid samplers (no latent_image, muted, bypassed)
-  - Added soft/hard warning methods to `ErrorHandler`
-
-#### 📚 Documentation
-- Added comprehensive dictionary format documentation (`DICTIONARY_FORMAT.md`)
-- Added custom node addition guide (`ADDING_CUSTOM_NODES.md`)
-- Added error reporting guide (`ERROR_REPORTING.md`)
-
-#### 🧪 Testing
-- Added unit tests for `NodeDefinitionDictionary` (17 tests)
-- Added unit tests for `MetadataExtractionReporter` (15 tests)
-- Added unit tests for `ErrorHandler` soft/hard warnings (10 tests)
-- Added integration tests for dictionary-based extraction (7 tests)
-- Added 32 property-based tests for validation and correctness
-- Fixed sample file paths in integration tests (tests/samples/ → tests/fixtures/)
-- Achieved 100% test pass rate: 876 passed, 1 skipped (intentional)
+#### ✨ Improvements
+- Improved metadata extraction accuracy with dictionary-based system
+- Better support for custom ComfyUI nodes
+- Enhanced error reporting with detailed trace logs
 
 ### 🇯🇵 日本語
 #### 🎉 新機能
 - **設定ダイアログ**: 設定オプションを整理するための専用設定ダイアログを追加
-  - 処理設定（チャンクサイズ、疑わしいノードの処理）を設定ダイアログに移動
-  - 辞書設定（オンライン取得の切り替え）を設定ダイアログに移動
-  - デバッグモードの切り替えを設定ダイアログに移動
-  - 設定ダイアログにGitHub Issue報告ボタンを追加
+  - 処理設定（チャンクサイズ、疑わしいノードの処理）
+  - 辞書設定（オンライン取得の切り替え）
+  - デバッグモードの切り替え
+  - GitHub Issue報告ボタン
 - **GitHub Issue報告**: プラグインから直接Issueを報告できるようになりました
   - ワンクリックでGitHubのIssue作成ページを開くボタン
   - トレースログを含む自動エラーレポート生成
   - エラー詳細のクリップボードコピー機能
 
-#### 🔧 内部リファクタリング
-- **辞書ベースのメタデータ抽出システム**:
-  - 拡張可能なノードタイプ定義のための`NodeDefinitionDictionary`を実装
-  - 詳細なトレースログとエラー報告のための`MetadataExtractionReporter`を追加
-  - `ComfyUIGraph`に新しいメソッドを追加: `getInputPort()`, `getConnectedNodeId()`, `hasInputPort()`
-  - `ComfyUISamplerAnalyzer`を辞書ベースの抽出とヒューリスティックフォールバックを使用するようにリファクタリング
-  - ハードコードされたノードクラス名（RandomNoise、BasicSchedulerなど）を削除
-  - 無効なサンプラー（latent_image未接続、ミュート、バイパス）を除外するSilent_Dropロジックを実装
-  - `ErrorHandler`にソフト/ハード警告メソッドを追加
-
-#### 📚 ドキュメント
-- 包括的な辞書フォーマットドキュメントを追加（`DICTIONARY_FORMAT.md`）
-- カスタムノード追加ガイドを追加（`ADDING_CUSTOM_NODES.md`）
-- エラー報告ガイドを追加（`ERROR_REPORTING.md`）
-
-#### 🧪 テスト
-- `NodeDefinitionDictionary`のユニットテストを追加（17テスト）
-- `MetadataExtractionReporter`のユニットテストを追加（15テスト）
-- `ErrorHandler`のソフト/ハード警告のユニットテストを追加（10テスト）
-- 辞書ベース抽出の統合テストを追加（7テスト）
-- 検証と正確性のための32のプロパティベーステストを追加
-- 統合テストのサンプルファイルパスを修正（tests/samples/ → tests/fixtures/）
-- 100%のテスト成功率を達成: 876成功、1スキップ（意図的）
+#### ✨ 改善
+- 辞書ベースシステムによるメタデータ抽出精度の向上
+- カスタムComfyUIノードのサポート強化
+- 詳細なトレースログによるエラー報告の改善
 
 ## [1.3.3] - 2026-02-13
 
 ### 🇬🇧 English
 #### 🎉 New Features
 - **Suspicious Node Detection with UI Integration**:
-  - Implemented heuristic detection to identify nodes with missing required inputs in ComfyUI workflows.
-  - Added user-configurable handling modes: exclude (default), include, or ask via dialog.
-  - Dialog displays affected generation steps for each suspicious node.
-  - Shift+Click functionality to apply decisions to all remaining images.
-  - Settings persistence via localStorage.
+  - Detects nodes with missing required inputs in ComfyUI workflows
+  - User-configurable handling modes: exclude (default), include, or ask via dialog
+  - Dialog displays affected generation steps for each suspicious node
+  - Shift+Click functionality to apply decisions to all remaining images
+  - Settings persistence via localStorage
 
 #### 🐛 Bug Fixes
 - Fixed base sampler detection in ComfyUI workflows with DetailerForEach nodes
 - Improved distance calculation for samplers that work on images rather than latents
 
 #### ✨ Improvements
-- Enhanced workflow validation to detect non-executable nodes before processing.
-- Improved user feedback with visual indicators for suspicious nodes.
-- Better handling of complex workflows with multiple refinement stages.
-
-#### 🔧 Internal Refactoring
-- Improved code organization and reduced duplication
+- Enhanced workflow validation to detect non-executable nodes before processing
+- Improved user feedback with visual indicators for suspicious nodes
+- Better handling of complex workflows with multiple refinement stages
 
 ### 🇯🇵 日本語
 #### 🎉 新機能
 - **疑わしいノード検出とUI統合**:
-  - ComfyUIワークフロー内で必須入力が不足しているノードを検出するヒューリスティック検出を実装しました。
-  - ユーザー設定可能な処理モード: 除外（デフォルト）、含める、またはダイアログで確認。
-  - 各疑わしいノードに影響を受ける生成ステップをダイアログに表示します。
-  - Shift+クリック機能で、残りの全ての画像に決定を適用できます。
-  - localStorageを使用した設定の永続化。
+  - ComfyUIワークフロー内で必須入力が不足しているノードを検出
+  - ユーザー設定可能な処理モード: 除外（デフォルト）、含める、またはダイアログで確認
+  - 各疑わしいノードに影響を受ける生成ステップをダイアログに表示
+  - Shift+クリック機能で、残りの全ての画像に決定を適用
+  - localStorageを使用した設定の永続化
 
 #### 🐛 バグ修正
 - DetailerForEachノードを含むComfyUIワークフローでのbase sampler検出を修正
 - latentではなく画像を処理するサンプラーの距離計算を改善
 
 #### ✨ 改善
-- ワークフロー検証を強化し、処理前に実行不可能なノードを検出します。
-- 疑わしいノードの視覚的インジケータでユーザーフィードバックを改善しました。
-- 複数の改善ステージを持つ複雑なワークフローの処理を改善しました。
-
-#### 🔧 内部リファクタリング
-- コード構成を改善し、重複を削減
+- ワークフロー検証を強化し、処理前に実行不可能なノードを検出
+- 疑わしいノードの視覚的インジケータでユーザーフィードバックを改善
+- 複数の改善ステージを持つ複雑なワークフローの処理を改善
 
 ## [1.3.2] - 2026-01-30
 
 ### 🇬🇧 English
 #### 🎉 New Features
 - **Stable Diffusion WebUI (A1111) Support**:
-  - Added official support for Automatic1111, Forge, and other A1111-based WebUI generated images.
-  - Extracts prompts, negative prompts, seed, steps, CFG scale, sampler, model, and other parameters.
-  - Works with both PNG and WebP formats.
+  - Added official support for Automatic1111, Forge, and other A1111-based WebUI generated images
+  - Extracts prompts, negative prompts, seed, steps, CFG scale, sampler, model, and other parameters
+  - Works with both PNG and WebP formats
 - **Civitai Generated Images Support**:
-  - Full support for images generated on Civitai platform.
-  - Automatically detects and extracts generation parameters.
+  - Full support for images generated on Civitai platform
+  - Automatically detects and extracts generation parameters
 - **Force Delete Mode**:
-  - Added "Force Delete Mode" (Shift + Click on "Delete Info") to remove all tags from selected images without metadata analysis.
-  - Useful for cleaning up malformed tags.
+  - Added "Force Delete Mode" (Shift + Click on "Delete Info") to remove all tags from selected images without metadata analysis
+  - Useful for cleaning up malformed tags
 
 #### ✨ Improvements
 - **Enhanced Multi-Sampler Workflow Support (ComfyUI)**:
-  - Implemented VAEEncode image chain tracing for accurate base sampler detection in img2img workflows.
-  - Improved distance calculation for samplers in complex workflows (HiresFix, FaceDetailer, etc.).
-  - Special handling for DetailerForEach and other nodes without `latent_image` input.
-  - More accurate base sampler selection in workflows with multiple refinement stages.
+  - Improved base sampler detection in img2img workflows
+  - Better distance calculation for samplers in complex workflows (HiresFix, FaceDetailer, etc.)
+  - More accurate base sampler selection in workflows with multiple refinement stages
 - **Enhanced LoRA Extraction**:
-  - Improved detection to handle both standard LoraLoader nodes and custom extensions (e.g., "Lora Loader Stack (rgthree)").
-  - Detects LoRA files from any node with "lora" in input keys.
-  - Added support for extracting LoRA information from A1111 images (both from "Lora hashes" parameter and prompt tags).
+  - Improved detection to handle both standard LoraLoader nodes and custom extensions (e.g., "Lora Loader Stack (rgthree)")
+  - Added support for extracting LoRA information from A1111 images (both from "Lora hashes" parameter and prompt tags)
 
 #### 🐛 Bug Fixes
-- Fixed ComfyUI annotation generation to skip "[Generation Info]" label when no samplers are found.
-- Fixed ComfyUI annotation to skip step labels when no content is available for that step (e.g., when only LoRA is enabled).
-
-#### 🔧 Internal Refactoring
-- **Metadata Parser Architecture Refactoring**:
-  - Migrated to a three-layer architecture (Binary Extraction → Format Detection → Parsing) for better maintainability and extensibility.
-  - Introduced `MetadataService` as the main entry point for metadata extraction.
-  - Separated format-specific logic into dedicated parser classes (`ComfyUIParser`, `A1111Parser`).
-  - Removed duplicate code from `core.js` and delegated parsing to the new architecture.
-
-#### 🧪 Testing
-- Added comprehensive test suite with 200+ tests covering unit tests, integration tests, and property-based tests.
-- Improved test suite to separate sample data (fictional) from actual test expectations (real data), ensuring safer and more robust testing.
+- Fixed ComfyUI annotation generation to skip "[Generation Info]" label when no samplers are found
+- Fixed ComfyUI annotation to skip step labels when no content is available for that step
 
 ### 🇯🇵 日本語
 #### 🎉 新機能
 - **Stable Diffusion WebUI (A1111) 対応**:
-  - Automatic1111、Forge、その他A1111ベースのWebUIで生成された画像に正式対応しました。
-  - プロンプト、ネガティブプロンプト、Seed値、Steps、CFG scale、サンプラー、モデルなどのパラメータを抽出します。
-  - PNGとWebPの両フォーマットに対応しています。
+  - Automatic1111、Forge、その他A1111ベースのWebUIで生成された画像に正式対応
+  - プロンプト、ネガティブプロンプト、Seed値、Steps、CFG scale、サンプラー、モデルなどのパラメータを抽出
+  - PNGとWebPの両フォーマットに対応
 - **Civitai生成画像対応**:
-  - Civitaiプラットフォームで生成された画像に完全対応しました。
-  - 生成パラメータを自動検出・抽出します。
+  - Civitaiプラットフォームで生成された画像に完全対応
+  - 生成パラメータを自動検出・抽出
 - **強制削除モード**:
-  - 「情報を削除」ボタンをShiftキーを押しながらクリックすると、メタデータ解析を行わずに選択画像の全てのタグを削除する「強制削除モード」を追加しました。
-  - 不正なタグを一括削除する際に便利です。
+  - 「情報を削除」ボタンをShiftキーを押しながらクリックすると、メタデータ解析を行わずに選択画像の全てのタグを削除する「強制削除モード」を追加
+  - 不正なタグを一括削除する際に便利
 
 #### ✨ 改善
 - **マルチサンプラーワークフローのサポート強化（ComfyUI）**:
-  - img2imgワークフローでの正確なベースサンプラー検出のため、VAEEncodeの画像チェーン追跡を実装しました。
-  - 複雑なワークフロー（HiresFix、FaceDetailerなど）でのサンプラー距離計算を改善しました。
-  - DetailerForEachなど`latent_image`入力を持たないノードの特別処理を追加しました。
-  - 複数のリファインメント段階を持つワークフローでのベースサンプラー選択がより正確になりました。
+  - img2imgワークフローでの正確なベースサンプラー検出を改善
+  - 複雑なワークフロー（HiresFix、FaceDetailerなど）でのサンプラー距離計算を改善
+  - 複数のリファインメント段階を持つワークフローでのベースサンプラー選択がより正確に
 - **LoRA抽出の強化**:
-  - 標準的な LoraLoader ノードとカスタム拡張（例："Lora Loader Stack (rgthree)"）の両方に対応し、検出精度を改善しました。
-  - "lora" を含む任意のノードの入力キーから LoRA ファイルを検出できるようになりました。
-  - A1111 画像からの LoRA 情報抽出に対応しました（"Lora hashes" パラメータとプロンプトタグの両方から抽出）。
+  - 標準的な LoraLoader ノードとカスタム拡張（例："Lora Loader Stack (rgthree)"）の両方に対応
+  - A1111 画像からの LoRA 情報抽出に対応（"Lora hashes" パラメータとプロンプトタグの両方から抽出）
 
 #### 🐛 バグ修正
-- ComfyUI のアノテーション生成で、サンプラーが見つからない場合に "[Generation Info]" ラベルだけが表示される問題を修正しました。
-- ComfyUI のアノテーション生成で、ステップにコンテンツがない場合（例：LoRA のみ有効な場合）にステップラベルを表示しないように修正しました。
-
-#### 🔧 内部リファクタリング
-- **メタデータパーサーのアーキテクチャ刷新**:
-  - 保守性と拡張性を向上させるため、3層アーキテクチャ（バイナリ抽出 → フォーマット検出 → パース）に移行しました。
-  - メタデータ抽出のメインエントリーポイントとして`MetadataService`を導入しました。
-  - フォーマット固有のロジックを専用のパーサークラス（`ComfyUIParser`、`A1111Parser`）に分離しました。
-  - `core.js`から重複コードを削除し、新しいアーキテクチャにパース処理を委譲しました。
-
-#### 🧪 テスト
-- 200以上のテストを含む包括的なテストスイート（ユニットテスト、統合テスト、プロパティテスト）を追加しました。
-- テスト環境を整備し、公開用サンプルデータ（架空）とテスト実行用データ（実データ）を分離することで、安全性と信頼性を向上させました。
+- ComfyUI のアノテーション生成で、サンプラーが見つからない場合に "[Generation Info]" ラベルだけが表示される問題を修正
+- ComfyUI のアノテーション生成で、ステップにコンテンツがない場合にステップラベルを表示しないように修正
 
 ## [1.3.1] - 2026-01-10
 

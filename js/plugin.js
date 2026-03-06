@@ -31,6 +31,11 @@ Promise.all([
                 interpolation: { escapeValue: false }
             });
             updateUILabels();
+            
+            // Initialize dictionary after i18n is ready
+            if (window.initializeDictionary) {
+                await window.initializeDictionary();
+            }
         } catch (e) { console.error("[i18n] Init failed", e); }
     }
 
@@ -74,10 +79,10 @@ Promise.all([
         }
         
         // Dialog translations
-        const dialogHeader = document.querySelector('.dialog-header');
-        if (dialogHeader) dialogHeader.textContent = t('ui.dialog.title');
+        const dialogHeader = document.querySelector('#suspicious-node-dialog .dialog-header');
+        if (dialogHeader) dialogHeader.textContent = t('suspiciousNode.title');
         
-        const dialogFilenameLabel = document.querySelector('.dialog-info strong');
+        const dialogFilenameLabel = document.querySelector('#suspicious-node-dialog .dialog-info > div:first-child strong');
         if (dialogFilenameLabel) dialogFilenameLabel.textContent = t('ui.dialog.filename');
         
         const dialogImage = document.getElementById('dialog-image');
@@ -95,8 +100,78 @@ Promise.all([
         const btnIncludeImage = document.getElementById('btn-include-image');
         if (btnIncludeImage) btnIncludeImage.textContent = t('ui.dialog.includeImage');
         
-        const shiftHint = document.querySelector('.dialog-actions + div');
+        const shiftHint = document.querySelector('#suspicious-node-dialog .dialog-actions + div');
         if (shiftHint) shiftHint.textContent = t('ui.dialog.shiftHint');
+
+        // Settings dialog translations
+        const settingsTitle = document.querySelector('.settings-header span');
+        if (settingsTitle) settingsTitle.textContent = t('ui.settings.title');
+        
+        const settingsSectionTitles = document.querySelectorAll('.settings-section-title');
+        if (settingsSectionTitles[0]) settingsSectionTitles[0].textContent = t('ui.settings.processingSettings');
+        if (settingsSectionTitles[1]) settingsSectionTitles[1].textContent = t('ui.suspiciousNodeHandling');
+        if (settingsSectionTitles[2]) settingsSectionTitles[2].textContent = t('ui.settings.dictionarySettings');
+        if (settingsSectionTitles[3]) settingsSectionTitles[3].textContent = t('ui.settings.tagGenerationSettings');
+        if (settingsSectionTitles[4]) settingsSectionTitles[4].textContent = t('ui.settings.debugSettings');
+        if (settingsSectionTitles[5]) settingsSectionTitles[5].textContent = t('ui.settings.support');
+        
+        const chunkSizeSettingsLabel = document.querySelector('label[for="chunk-size-settings"]');
+        if (chunkSizeSettingsLabel) chunkSizeSettingsLabel.textContent = t('ui.settings.chunkSize');
+        
+        const suspiciousNodeHandlingSettingsLabel = document.querySelector('label[for="suspicious-node-handling-settings"]');
+        if (suspiciousNodeHandlingSettingsLabel) suspiciousNodeHandlingSettingsLabel.textContent = t('ui.processingMethod');
+        
+        const suspiciousNodeHandlingSettingsSelect = document.getElementById('suspicious-node-handling-settings');
+        if (suspiciousNodeHandlingSettingsSelect) {
+            const options = suspiciousNodeHandlingSettingsSelect.querySelectorAll('option');
+            if (options[0]) options[0].textContent = t('ui.option.exclude');
+            if (options[1]) options[1].textContent = t('ui.option.ask');
+            if (options[2]) options[2].textContent = t('ui.option.include');
+        }
+        
+        const fetchDictionaryLabel = document.querySelector('label[for="chk-fetch-dictionary-settings"]');
+        if (fetchDictionaryLabel) fetchDictionaryLabel.textContent = t('ui.settings.fetchDictionary');
+        
+        const includeAllSamplersLabel = document.querySelector('label[for="chk-include-all-samplers-settings"]');
+        if (includeAllSamplersLabel) includeAllSamplersLabel.textContent = t('ui.settings.includeAllSamplers');
+        
+        const debugModeSettingsLabel = document.querySelector('label[for="chk-debug-log-settings"]');
+        if (debugModeSettingsLabel) debugModeSettingsLabel.textContent = t('ui.settings.debugMode');
+        
+        const btnReportIssue = document.getElementById('btn-report-issue');
+        if (btnReportIssue) btnReportIssue.textContent = t('ui.settings.reportIssue');
+        
+        const settingsDescriptions = document.querySelectorAll('.settings-description');
+        if (settingsDescriptions[0]) settingsDescriptions[0].textContent = t('ui.settings.chunkSizeDescription');
+        if (settingsDescriptions[1]) settingsDescriptions[1].textContent = t('ui.suspiciousNodeDescription');
+        if (settingsDescriptions[2]) settingsDescriptions[2].textContent = t('ui.settings.fetchDictionaryDescription');
+        if (settingsDescriptions[3]) settingsDescriptions[3].textContent = t('ui.settings.includeAllSamplersDescription');
+        if (settingsDescriptions[4]) settingsDescriptions[4].textContent = t('ui.settings.debugModeDescription');
+        if (settingsDescriptions[5]) settingsDescriptions[5].textContent = t('ui.settings.reportIssueDescription');
+        
+        // Suspicious node dialog content
+        const dialogNodeDescription = document.getElementById('dialog-node-description');
+        if (dialogNodeDescription) dialogNodeDescription.textContent = t('suspiciousNode.description');
+        
+        const dialogNodeQuestion = document.getElementById('dialog-node-question');
+        if (dialogNodeQuestion) dialogNodeQuestion.textContent = t('suspiciousNode.question');
+        
+        const dialogNodeInfo = document.querySelector('#suspicious-node-dialog .dialog-node-info');
+        if (dialogNodeInfo) {
+            const graphTitleDiv = dialogNodeInfo.querySelector('div:nth-child(4) > div:first-child');
+            if (graphTitleDiv) graphTitleDiv.textContent = t('suspiciousNode.graphTitle');
+            
+            const commonCasesDiv = dialogNodeInfo.querySelector('div:nth-child(5) > div:first-child');
+            if (commonCasesDiv) commonCasesDiv.textContent = t('suspiciousNode.commonCases');
+            
+            const caseSpans = dialogNodeInfo.querySelectorAll('div:nth-child(5) > div:nth-child(2) > div > span');
+            if (caseSpans[0]) caseSpans[0].textContent = t('suspiciousNode.case1');
+            if (caseSpans[1]) caseSpans[1].textContent = t('suspiciousNode.case2');
+            
+            const hintDivs = dialogNodeInfo.querySelectorAll('div:nth-child(6) > div');
+            if (hintDivs[0]) hintDivs[0].textContent = t('suspiciousNode.hint');
+            if (hintDivs[1]) hintDivs[1].textContent = t('suspiciousNode.hintDetail');
+        }
 
         document.getElementById('startButton').textContent = t('ui.button.start');
         document.getElementById('deleteInfoButton').textContent = t('ui.button.deleteInfo');

@@ -654,77 +654,63 @@
     <div id="settings-dialog">
         <div class="settings-content">
             <div class="settings-header">
-                <span>⚙️ 設定</span>
+                <span></span>
                 <button class="settings-close" id="settings-close">×</button>
             </div>
 
             <div class="settings-section">
-                <div class="settings-section-title">処理設定</div>
+                <div class="settings-section-title"></div>
                 <div class="option-group">
-                    <label for="chunk-size-settings">一度に処理する数:</label>
+                    <label for="chunk-size-settings"></label>
                     <input type="number" id="chunk-size-settings" value="5" min="1" max="50" style="margin-left: 8px;">
                 </div>
-                <div class="settings-description">
-                    一度に処理する画像の数を設定します。多すぎるとメモリを消費します。
-                </div>
+                <div class="settings-description"></div>
             </div>
 
             <div class="settings-section">
-                <div class="settings-section-title" data-i18n="ui.suspiciousNodeHandling">疑わしいノードの処理</div>
+                <div class="settings-section-title"></div>
                 <div class="option-group">
-                    <label for="suspicious-node-handling-settings" data-i18n="ui.processingMethod">処理方法:</label>
+                    <label for="suspicious-node-handling-settings"></label>
                     <select id="suspicious-node-handling-settings" style="margin-left: 8px; padding: 4px 8px; background-color: var(--log-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 3px;">
-                        <option value="exclude" data-i18n="ui.option.exclude">除外する</option>
-                        <option value="ask" data-i18n="ui.option.ask">確認する</option>
-                        <option value="include" data-i18n="ui.option.include">含める</option>
+                        <option value="exclude"></option>
+                        <option value="ask"></option>
+                        <option value="include"></option>
                     </select>
                 </div>
-                <div class="settings-description" data-i18n="ui.suspiciousNodeDescription">
-                    必須入力が欠けているノードの扱いを選択します。「確認する」を選択すると、処理中にダイアログが表示されます。
-                </div>
+                <div class="settings-description"></div>
             </div>
 
             <div class="settings-section">
-                <div class="settings-section-title">辞書設定</div>
+                <div class="settings-section-title"></div>
                 <div class="option-group">
                     <input type="checkbox" id="chk-fetch-dictionary-settings">
-                    <label for="chk-fetch-dictionary-settings">オンラインから辞書を取得する（推奨）</label>
+                    <label for="chk-fetch-dictionary-settings"></label>
                 </div>
-                <div class="settings-description">
-                    最新のカスタムノード定義をオンラインから取得します。無効にするとバンドルされた辞書を使用します。変更は次回起動時に反映されます。
-                </div>
+                <div class="settings-description"></div>
             </div>
 
             <div class="settings-section">
-                <div class="settings-section-title">タグ生成設定</div>
+                <div class="settings-section-title"></div>
                 <div class="option-group">
                     <input type="checkbox" id="chk-include-all-samplers-settings">
-                    <label for="chk-include-all-samplers-settings">全てのサンプラーのパラメータをタグに含める</label>
+                    <label for="chk-include-all-samplers-settings"></label>
                 </div>
-                <div class="settings-description">
-                    オフの場合、最初に実行されたサンプラーのパラメータのみをタグに追加します。複雑なワークフロー（リファイン、アップスケールなど）の全てのパラメータを記録したい場合はオンにしてください。
-                </div>
+                <div class="settings-description"></div>
             </div>
 
             <div class="settings-section">
-                <div class="settings-section-title">デバッグ設定</div>
+                <div class="settings-section-title"></div>
                 <div class="option-group">
                     <input type="checkbox" id="chk-debug-log-settings">
-                    <label for="chk-debug-log-settings">デバッグモードを有効にする</label>
+                    <label for="chk-debug-log-settings"></label>
                 </div>
-                <div class="settings-description">
-                    詳細なデバッグログをコンソールに出力します。問題の診断に役立ちます。
-                </div>
+                <div class="settings-description"></div>
             </div>
 
             <div class="settings-section">
-                <div class="settings-section-title">サポート</div>
-                <button class="settings-button-action" id="btn-report-issue" style="width: 100%; padding: 10px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 8px;">
-                    🐛 GitHubでIssueを報告
-                </button>
-                <div class="settings-description">
-                    問題や改善提案をGitHubで報告できます。クリックするとGitHubのIssue作成ページが開きます。
-                </div>
+                <div class="settings-section-title"></div>
+                <button class="settings-button-action" id="btn-report-issue" style="width: 100%; padding: 10px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 8px;"></button>
+                <div class="settings-description"></div>
             </div>
         </div>
     </div>
@@ -732,36 +718,50 @@
     <!-- Suspicious node confirmation dialog -->
     <div id="suspicious-node-dialog">
         <div class="dialog-content">
-            <div class="dialog-header" data-i18n="suspiciousNode.title">⚠️ 未使用の可能性があるノード</div>
+            <div class="dialog-header"></div>
             <div class="dialog-progress" id="dialog-progress"></div>
-            <img id="dialog-image" class="dialog-image" data-i18n="[alt]ui.dialog.imagePreview" alt="画像プレビュー">
+            <img id="dialog-image" class="dialog-image" alt="">
             <div class="dialog-info">
-                <div><strong data-i18n="ui.dialog.filename">ファイル名:</strong> <span id="dialog-filename"></span></div>
+                <div><strong></strong> <span id="dialog-filename"></span></div>
                 <div class="dialog-node-info">
+                    <!-- 1. Node ID -->
                     <div class="dialog-node-id" id="dialog-node-id"></div>
-                    <div style="margin-top: 12px; white-space: pre-line;" id="dialog-node-description" data-i18n="suspiciousNode.description"></div>
+                    
+                    <!-- 2. Description (possibility) -->
+                    <div style="margin-top: 12px; white-space: pre-line;" id="dialog-node-description"></div>
+                    
+                    <!-- 3. Question -->
+                    <div style="margin-top: 12px; font-weight: 500;" id="dialog-node-question"></div>
+                    
+                    <!-- 4. Workflow graph visualization -->
                     <div style="margin-top: 12px;">
-                        <div style="font-weight: 500; margin-bottom: 4px;" data-i18n="suspiciousNode.commonCases">よくあるケース：</div>
+                        <div style="font-weight: 500; margin-bottom: 8px;"></div>
+                        <div id="workflow-graph" style="padding: 12px; background-color: var(--log-bg); border-radius: 4px; overflow-x: auto;"></div>
+                    </div>
+                    
+                    <!-- 5. Common cases -->
+                    <div style="margin-top: 12px;">
+                        <div style="font-weight: 500; margin-bottom: 4px;"></div>
                         <div style="margin-left: 16px;">
-                            <div>✓ <span data-i18n="suspiciousNode.case1">条件分岐（スイッチノード）で選ばれなかったルート</span></div>
-                            <div>✓ <span data-i18n="suspiciousNode.case2">試行錯誤中に一時的に無効化したノード</span></div>
+                            <div>✓ <span></span></div>
+                            <div>✓ <span></span></div>
                         </div>
                     </div>
-                    <div style="margin-top: 12px; font-weight: 500;" id="dialog-node-question" data-i18n="suspiciousNode.question"></div>
+                    
+                    <!-- 6. Hint -->
                     <div style="margin-top: 12px; padding: 8px; background-color: rgba(33, 150, 243, 0.1); border-left: 3px solid #2196f3; border-radius: 3px;">
-                        <div data-i18n="suspiciousNode.hint">💡 ヒント: 通常は「除外」を選択してください。</div>
-                        <div style="margin-top: 4px; font-size: 11px; color: var(--secondary-text);" data-i18n="suspiciousNode.hintDetail">実際に使用されたノードの情報のみが記録されます。</div>
+                        <div></div>
+                        <div style="margin-top: 4px; font-size: 11px; color: var(--secondary-text);"></div>
                     </div>
                 </div>
             </div>
             <div class="dialog-actions">
-                <button class="dialog-button exclude" id="btn-exclude-node" data-i18n="ui.dialog.excludeNode">このノードを除外</button>
-                <button class="dialog-button include" id="btn-include-node" data-i18n="ui.dialog.includeNode">このノードを含める</button>
-                <button class="dialog-button exclude-all" id="btn-exclude-image" data-i18n="ui.dialog.excludeImage">この画像は全て除外</button>
-                <button class="dialog-button include-all" id="btn-include-image" data-i18n="ui.dialog.includeImage">この画像は全て含める</button>
+                <button class="dialog-button exclude" id="btn-exclude-node"></button>
+                <button class="dialog-button include" id="btn-include-node"></button>
+                <button class="dialog-button exclude-all" id="btn-exclude-image"></button>
+                <button class="dialog-button include-all" id="btn-include-image"></button>
             </div>
-            <div style="text-align: center; margin-top: 8px; font-size: 11px; color: var(--secondary-text);" data-i18n="ui.dialog.shiftHint">
-                💡 Shiftキーを押しながらクリックすると、残りの全画像に適用されます
+            <div style="text-align: center; margin-top: 8px; font-size: 11px; color: var(--secondary-text);">
             </div>
         </div>
     </div>
@@ -1157,16 +1157,19 @@
                 checkbox.checked = fetchEnabled;
             }
             
+            // Helper function to get translated text
+            const t = (key) => window.i18next ? window.i18next.t(key) : key;
+            
             if (!fetchEnabled) {
                 console.log('[Dictionary] Online fetch disabled by user preference');
                 window.globalDictionary = window.NodeDefinitionDictionary.getDefault();
-                showDictionaryStatus('📦', 'バンドルされた辞書を使用しています', 'info');
+                showDictionaryStatus('📦', t('dictionary.bundled'), 'info');
                 return;
             }
             
             try {
                 console.log('[Dictionary] Fetching from URL:', DICTIONARY_URL);
-                showDictionaryStatus('⏳', 'オンラインから辞書を取得中...', 'info');
+                showDictionaryStatus('⏳', t('dictionary.fetching'), 'info');
                 
                 const data = await secureFetchDictionary(DICTIONARY_URL);
                 window.globalDictionary = new window.NodeDefinitionDictionary(data);
@@ -1182,7 +1185,7 @@
                 // Save to cache on successful fetch
                 window.globalDictionary.saveToCache();
                 console.log('[Dictionary] Successfully loaded from URL');
-                showDictionaryStatus('✅', 'オンライン辞書の取得に成功しました', 'success');
+                showDictionaryStatus('✅', t('dictionary.fetchSuccess'), 'success');
             } catch (error) {
                 console.error('[Dictionary] Failed to fetch from URL:', error);
                 
@@ -1191,14 +1194,14 @@
                 if (cached) {
                     window.globalDictionary = cached;
                     console.log('[Dictionary] Using cached dictionary');
-                    showDictionaryStatus('💾', 'キャッシュされた辞書を使用しています', 'warning');
+                    showDictionaryStatus('💾', t('dictionary.cached'), 'warning');
                     return;
                 }
                 
                 // Fall back to default dictionary
                 window.globalDictionary = window.NodeDefinitionDictionary.getDefault();
                 console.log('[Dictionary] Using default dictionary');
-                showDictionaryStatus('⚠️', 'オンライン取得に失敗しました。バンドルされた辞書を使用しています', 'error');
+                showDictionaryStatus('⚠️', t('dictionary.fetchFailed'), 'error');
             }
         }
         
@@ -1274,8 +1277,8 @@
             }
         });
         
-        // Start dictionary initialization immediately
-        initializeDictionary();
+        // Export initializeDictionary to window for plugin.js to call after i18n is ready
+        window.initializeDictionary = initializeDictionary;
     </script>
     
     <script>
@@ -1292,6 +1295,15 @@
                     // Sync settings from main UI to dialog
                     syncSettingsToDialog();
                     settingsDialog.classList.add('visible');
+                    
+                    // Resize window for settings dialog
+                    if (typeof eagle !== 'undefined' && eagle.window) {
+                        try {
+                            eagle.window.setSize(640, 900);
+                        } catch (e) {
+                            console.log('Window resize not supported:', e);
+                        }
+                    }
                 });
             }
             
@@ -1303,6 +1315,15 @@
                     settingsDialog.classList.remove('visible');
                     // Trigger change event to save settings in plugin.js
                     document.dispatchEvent(new CustomEvent('settingsChanged'));
+                    
+                    // Resize window back to normal
+                    if (typeof eagle !== 'undefined' && eagle.window) {
+                        try {
+                            eagle.window.setSize(640, 520);
+                        } catch (e) {
+                            console.log('Window resize not supported:', e);
+                        }
+                    }
                 });
             }
             
@@ -1313,6 +1334,15 @@
                     settingsDialog.classList.remove('visible');
                     // Trigger change event to save settings in plugin.js
                     document.dispatchEvent(new CustomEvent('settingsChanged'));
+                    
+                    // Resize window back to normal
+                    if (typeof eagle !== 'undefined' && eagle.window) {
+                        try {
+                            eagle.window.setSize(640, 520);
+                        } catch (e) {
+                            console.log('Window resize not supported:', e);
+                        }
+                    }
                 }
             });
             
@@ -1673,8 +1703,7 @@
                 console.log('[DEBUG] Resizing window back to 610px');
                 if (typeof eagle !== 'undefined' && eagle.window) {
                     try {
-                        eagle.window.setSize(640, 610);
-                        console.log('[DEBUG] Window resized to 640x610');
+                        eagle.window.setSize(640, 550);
                     } catch (e) {
                         console.log('Window resize not supported:', e);
                     }
@@ -1733,18 +1762,106 @@
                 : `ノード #${node.nodeId} (${node.nodeType || 'Unknown'})`;
             document.getElementById('dialog-node-id').textContent = nodeInfoText;
             
+            // Draw workflow graph
+            drawWorkflowGraph(node);
+            
             dialog.classList.add('visible');
             
             // Resize window when dialog is shown
             console.log('[DEBUG] Resizing window to 900px for dialog');
             if (typeof eagle !== 'undefined' && eagle.window) {
                 try {
-                    eagle.window.setSize(640, 900);
-                    console.log('[DEBUG] Window resized to 640x900');
+                    eagle.window.setSize(640, 1250);
                 } catch (e) {
                     console.log('Window resize not supported:', e);
                 }
             }
+        }
+
+        /**
+         * Draw a simple workflow graph showing the branch structure
+         * @param {Object} node - Suspicious node information
+         */
+        function drawWorkflowGraph(node) {
+            const graphContainer = document.getElementById('workflow-graph');
+            if (!graphContainer) return;
+            
+            // Clear previous graph
+            graphContainer.innerHTML = '';
+            
+            // Get affected steps info
+            const affectedSteps = node.affectedSteps || [];
+            if (affectedSteps.length === 0) {
+                const noGraphText = window.i18next ? window.i18next.t('suspiciousNode.noGraphInfo') : 'グラフ情報が利用できません';
+                graphContainer.innerHTML = `<div style="color: var(--secondary-text); font-size: 11px;">${noGraphText}</div>`;
+                return;
+            }
+            
+            // Build graph structure
+            const mainRouteLabel = window.i18next ? window.i18next.t('suspiciousNode.mainRoute') : 'メインルート';
+            const unusedRouteLabel = window.i18next ? window.i18next.t('suspiciousNode.unusedRoute') : '未使用ルート';
+            
+            // Create graph HTML
+            let graphHTML = '<div style="display: flex; align-items: center; gap: 8px; font-size: 11px; flex-wrap: wrap;">';
+            
+            // Start node
+            graphHTML += `<div style="padding: 6px 10px; background-color: rgba(76, 175, 80, 0.2); border: 1px solid #4caf50; border-radius: 3px; font-weight: 500;">Start</div>`;
+            graphHTML += `<div style="color: var(--secondary-text);">→</div>`;
+            
+            // Branch point (first affected step)
+            const firstStep = affectedSteps[0];
+            const branchNodeId = firstStep.stepNodeId;
+            const branchNodeType = firstStep.stepNodeType;
+            
+            graphHTML += `<div style="padding: 6px 10px; background-color: rgba(33, 150, 243, 0.2); border: 1px solid #2196f3; border-radius: 3px; font-weight: 500;">`;
+            graphHTML += `#${branchNodeId}<br><span style="font-size: 9px; font-weight: normal;">${branchNodeType}</span>`;
+            graphHTML += `</div>`;
+            
+            // Branch structure
+            graphHTML += `<div style="display: flex; flex-direction: column; gap: 8px; margin-left: 8px;">`;
+            
+            // Main route (used) - with label and actual nodes
+            graphHTML += `<div style="display: flex; align-items: center; gap: 8px;">`;
+            graphHTML += `<div style="color: #4caf50; font-weight: bold;">┬→</div>`;
+            
+            // Main route label (different style from nodes)
+            graphHTML += `<div style="padding: 2px 6px; background-color: transparent; border: 1px dashed #4caf50; border-radius: 3px; font-size: 9px; color: #4caf50; font-weight: 500;">`;
+            graphHTML += `${mainRouteLabel}`;
+            graphHTML += `</div>`;
+            
+            // Show next step in main route if available
+            if (affectedSteps.length > 1) {
+                const nextStep = affectedSteps[1];
+                graphHTML += `<div style="color: var(--secondary-text);">→</div>`;
+                graphHTML += `<div style="padding: 6px 10px; background-color: rgba(76, 175, 80, 0.2); border: 1px solid #4caf50; border-radius: 3px;">`;
+                graphHTML += `#${nextStep.stepNodeId}<br><span style="font-size: 9px;">${nextStep.stepNodeType}</span>`;
+                graphHTML += `</div>`;
+                graphHTML += `<div style="color: var(--secondary-text);">→ ...</div>`;
+            } else {
+                graphHTML += `<div style="color: var(--secondary-text);">→ ...</div>`;
+            }
+            graphHTML += `</div>`;
+            
+            // Unused route (suspicious node) - with label and actual node
+            graphHTML += `<div style="display: flex; align-items: center; gap: 8px;">`;
+            graphHTML += `<div style="color: #f44336; font-weight: bold;">└→</div>`;
+            
+            // Unused route label (different style from nodes)
+            graphHTML += `<div style="padding: 2px 6px; background-color: transparent; border: 1px dashed #f44336; border-radius: 3px; font-size: 9px; color: #f44336; font-weight: 500;">`;
+            graphHTML += `${unusedRouteLabel}`;
+            graphHTML += `</div>`;
+            
+            graphHTML += `<div style="color: var(--secondary-text);">→</div>`;
+            graphHTML += `<div style="padding: 6px 10px; background-color: rgba(244, 67, 54, 0.2); border: 1px solid #f44336; border-radius: 3px;">`;
+            graphHTML += `#${node.nodeId}<br><span style="font-size: 9px;">${node.nodeType}</span>`;
+            graphHTML += `</div>`;
+            graphHTML += `<div style="color: var(--secondary-text);">→ ❌</div>`;
+            graphHTML += `</div>`;
+            
+            graphHTML += `</div>`; // Close branch structure
+            graphHTML += '</div>'; // Close main container
+            
+            graphContainer.innerHTML = graphHTML;
         }
 
         function handleNodeDecision(event, decision, scope) {

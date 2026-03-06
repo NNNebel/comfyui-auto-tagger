@@ -27,7 +27,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
     * Traces through complex node connections to identify the actual generation pipeline
     * Handles multi-stage workflows with multiple samplers and refinement stages
     * See workflow analysis examples below
-* **Suspicious Node Detection**: Automatically detects nodes with missing required inputs in ComfyUI workflows and alerts you with a dialog showing affected generation steps. Choose to exclude, include, or ask for each suspicious node.
+* **Suspicious Node Detection**: Detects nodes with missing required inputs in ComfyUI workflows. Since ComfyUI metadata doesn't record the actual execution path, the plugin infers "unused nodes (noise)" from missing inputs. However, to avoid incorrectly excluding unknown custom nodes, a dialog is displayed when suspicious nodes are detected, allowing users to decide whether to include or exclude them from metadata extraction.
 * **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
 * **No External Dependencies**: Parses PNG/WebP chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
@@ -39,9 +39,9 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
   <img src="assets/processing_movie_full.gif" alt="Processing Demo" width="100%">
 </p>
 
-| Output Result | Settings UI |
+| Output Result | Main UI |
 | :---: | :---: |
-| <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Settings Window"> |
+| <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Main Window"> |
 
 #### Advanced Workflow Analysis
 
@@ -57,11 +57,44 @@ The plugin traces complex ComfyUI workflows to identify the actual generation pi
 
 #### Suspicious Node Detection
 
-Automatically detects nodes with missing required inputs and alerts you with a dialog:
+ComfyUI metadata doesn't record the actual execution path. The plugin traces back from the final image save node to extract prompts and parameters. When workflows contain both txt2img and img2img paths, some nodes may not have been executed. To eliminate this noise, the plugin detects nodes with missing required inputs (e.g., latent) as "suspicious nodes (likely not executed)".
+
+However, ComfyUI has many custom nodes, and some may work correctly even with seemingly missing inputs. To prevent automatic exclusion from causing information loss, the plugin displays a dialog when suspicious nodes are detected, allowing users to decide whether to include or exclude them from metadata extraction.
 
 <p align="center">
   <img src="assets/suspicious_node detecter.png" alt="Suspicious Node Detection" width="100%">
 </p>
+
+**Processing Method**: You can configure how to handle suspicious nodes in the settings:
+* **Exclude**: Automatically exclude suspicious nodes from metadata extraction
+* **Ask**: Show a dialog for each suspicious node (recommended)
+* **Include**: Include all nodes regardless of missing inputs
+
+### ⚙️ Configuration
+
+<p align="center">
+  <img src="assets/settings.png" alt="Settings Dialog" width="100%">
+</p>
+
+The plugin provides several configuration options accessible via the settings dialog (gear icon):
+
+#### Processing Settings
+
+* **Process Items per Batch**: Set the number of images to process at once (default: 5). Processing too many images simultaneously may consume excessive memory.
+
+#### Dictionary Settings
+
+* **Fetch dictionary from online (Recommended)**: Fetches the latest custom node definitions from GitHub. If disabled, the bundled dictionary will be used. Changes take effect on next startup.
+
+The plugin uses a node definition dictionary to understand custom nodes' input/output requirements. The online dictionary is regularly updated with new custom nodes, ensuring better compatibility.
+
+#### Tag Generation Settings
+
+* **Include parameters from all samplers in tags**: When enabled, parameters from all samplers in the workflow are added to tags. When disabled (default), only parameters from the first executed sampler are added. Enable this if you want to record all parameters from complex workflows with multiple refinement stages (HiresFix, upscale, etc.).
+
+#### Debug Settings
+
+* **Enable debug mode**: Outputs detailed debug logs to console. Useful for diagnosing issues or reporting bugs.
 
 ### 🚀 Usage
 
@@ -113,7 +146,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
     * 複雑なノード接続を追跡して実際の生成パイプラインを特定
     * 複数のサンプラーと改善ステージを持つマルチステージワークフローに対応
     * 下記のワークフロー解析例を参照
-* **疑わしいノード検出**: ComfyUIワークフロー内で必須入力が不足しているノードを自動検出し、影響を受ける生成ステップを表示するダイアログで通知します。各疑わしいノードについて、除外、含める、または確認を選択できます。
+* **疑わしいノード検出**: ComfyUIのメタデータには実際の実行経路が記録されないため、プラグインは入力の欠落などから「実行されなかった未使用ノード（ノイズ）」を推測します。しかし、未知のカスタムノードを誤って除外しないよう、検知時はダイアログを表示し、抽出情報に含めるか除外するかの判断をユーザーに委ねます。
 * **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
 * **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
 * **外部依存なし**: PNG/WebPの内部データ（tEXt, comf, Exif）を直接解析するため、重い外部ライブラリに依存せず動作。
@@ -125,9 +158,9 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
   <img src="assets/processing_movie_full.gif" alt="処理デモ" width="100%">
 </p>
 
-| 出力結果 | 設定画面 |
+| 出力結果 | メイン画面 |
 | :---: | :---: |
-| <img src="assets/preview-result.png" width="400" alt="結果概要"> | <img src="assets/preview-settings.png" width="400" alt="設定ウィンドウ"> |
+| <img src="assets/preview-result.png" width="400" alt="結果概要"> | <img src="assets/preview-settings.png" width="400" alt="メインウィンドウ"> |
 
 #### 高度なワークフロー解析
 
@@ -143,11 +176,46 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 #### 疑わしいノード検出
 
-必須入力が不足しているノードを自動検出し、ダイアログで通知します：
+ComfyUIの画像に埋め込まれるメタデータには、「実際にどのノードを通って生成されたか」という実行経路の記録が存在しません。そのため、本プラグインは最終的な画像保存ノードから呼び出し元を逆算してプロンプトやパラメータを抽出します。
+
+1つのワークフロー内にt2iとi2iが混在している場合など、実際には実行されていないノードが存在することがあります。これらの不要なノイズを排除するため、プラグインは必須入力（Latentなど）が欠落しているノードを「疑わしいノード（実行されていない可能性が高いノード）」として推測し、検出します。
+
+ただし、ComfyUIには独自のカスタムノードが多数存在し、一見入力が不足していても正常に動作する場合があります。プラグインによる機械的な自動除外による情報の欠落を防ぐため、疑わしいノードを検出した際はダイアログを表示し、メタデータ抽出の対象に「含める」か「除外する」かの選択をユーザーに委ねる設計となっています。
 
 <p align="center">
   <img src="assets/suspicious_node detecter.png" alt="疑わしいノード検出" width="100%">
 </p>
+
+**処理方法**: 設定で疑わしいノードの扱いを選択できます：
+* **除外する**: 疑わしいノードを自動的にメタデータ抽出から除外
+* **確認する**: 各疑わしいノードについてダイアログを表示（推奨）
+* **含める**: 入力の欠落に関わらず全てのノードを含める
+
+### ⚙️ 設定
+
+<p align="center">
+  <img src="assets/settings.png" alt="設定ダイアログ" width="100%">
+</p>
+
+プラグインは設定ダイアログ（歯車アイコン）からアクセスできる複数の設定オプションを提供します：
+
+#### 処理設定
+
+* **一度に処理する数**: 一度に処理する画像の数を設定します（デフォルト: 5）。多すぎるとメモリを消費します。
+
+#### 辞書設定
+
+* **オンラインから辞書を取得する（推奨）**: GitHubから最新のカスタムノード定義を取得します。無効にするとバンドルされた辞書を使用します。変更は次回起動時に反映されます。
+
+プラグインはノード定義辞書を使用して、カスタムノードの入出力要件を理解します。オンライン辞書は新しいカスタムノードで定期的に更新されており、より良い互換性を保証します。
+
+#### タグ生成設定
+
+* **全てのサンプラーのパラメータをタグに含める**: 有効にすると、ワークフロー内の全てのサンプラーのパラメータがタグに追加されます。無効（デフォルト）の場合、最初に実行されたサンプラーのパラメータのみが追加されます。複数の改善ステージ（HiresFix、アップスケールなど）を持つ複雑なワークフローの全てのパラメータを記録したい場合は有効にしてください。
+
+#### デバッグ設定
+
+* **デバッグモードを有効にする**: 詳細なデバッグログをコンソールに出力します。問題の診断やバグ報告に役立ちます。
 
 ### � 使い方
 
