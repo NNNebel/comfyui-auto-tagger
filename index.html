@@ -1299,6 +1299,7 @@
                     // Resize window for settings dialog
                     if (typeof eagle !== 'undefined' && eagle.window) {
                         try {
+                            console.log('[Settings] Resizing window to 640x900');
                             eagle.window.setSize(640, 900);
                         } catch (e) {
                             console.log('Window resize not supported:', e);
@@ -1319,6 +1320,7 @@
                     // Resize window back to normal
                     if (typeof eagle !== 'undefined' && eagle.window) {
                         try {
+                            console.log('[Settings] Resizing window back to 640x520');
                             eagle.window.setSize(640, 520);
                         } catch (e) {
                             console.log('Window resize not supported:', e);
@@ -1338,6 +1340,7 @@
                     // Resize window back to normal
                     if (typeof eagle !== 'undefined' && eagle.window) {
                         try {
+                            console.log('[Settings] Resizing window back to 640x520 (background click)');
                             eagle.window.setSize(640, 520);
                         } catch (e) {
                             console.log('Window resize not supported:', e);

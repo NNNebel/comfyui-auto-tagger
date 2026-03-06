@@ -52,33 +52,66 @@ class MetadataProcessor {
   static process(parsedMeta, settings, t, buffer = null, mimeType = null) {
     let meta = {};
     
+    // Debug logging helper
+    const debugLog = (msg, level = 'info') => {
+      if (typeof window !== 'undefined' && window.isDebugMode && window.isDebugMode()) {
+        const levelPrefix = `[${level.toUpperCase()}]`;
+        const fullMsg = `[MetadataProcessor] ${msg}`;
+        switch(level) {
+          case 'error':
+            console.error(`${levelPrefix} ${fullMsg}`);
+            break;
+          case 'warn':
+            console.warn(`${levelPrefix} ${fullMsg}`);
+            break;
+          default:
+            console.log(`${levelPrefix} ${fullMsg}`);
+        }
+      }
+    };
+    
+    debugLog('Starting metadata processing');
+    debugLog(`Input: parsedMeta=${!!parsedMeta}, buffer=${!!buffer}, mimeType=${mimeType}`);
+    
     // If parsedMeta is provided, use it directly (for testing/backward compatibility)
     if (parsedMeta && typeof parsedMeta === 'object') {
       meta = parsedMeta;
+      debugLog(`Using pre-parsed metadata: format=${meta.format}`);
     }
     // Otherwise, use MetadataService if buffer and mimeType are provided
     else if (buffer && mimeType && MetadataService) {
       try {
+        debugLog('Extracting metadata using MetadataService');
         const service = new MetadataService();
         const parsed = service.extractPreferredMetadata(buffer, mimeType, 'comfyui');
         if (parsed) {
           meta = parsed;
+          debugLog(`Metadata extracted: format=${meta.format}, checkpoint=${meta.checkpoint}`);
+        } else {
+          debugLog('No metadata found', 'warn');
         }
       } catch (e) {
+        debugLog(`MetadataService parsing failed: ${e.message}`, 'error');
         console.error('[MetadataProcessor] MetadataService parsing failed:', e);
       }
     }
     
     // Generate tags
+    debugLog('Generating tags');
     const tagResult = TagGenerator.generate(meta, settings);
+    debugLog(`Generated ${tagResult.tags.size} tags`);
     
     // Build annotation
+    debugLog('Building annotation');
     const annotation = AnnotationBuilder.build(meta, settings, t);
+    debugLog(`Annotation length: ${annotation.length} characters`);
     
     // Calculate step count
     const stepCount = meta.generationSteps && meta.generationSteps.length > 0 
       ? meta.generationSteps.length 
       : (meta.extra_samplers && meta.extra_samplers.length > 0 ? meta.extra_samplers.length : 1);
+    
+    debugLog(`Processing complete: stepCount=${stepCount}, sampler_fallback=${meta.sampler_fallback}`);
     
     return {
       tags: tagResult.tags,

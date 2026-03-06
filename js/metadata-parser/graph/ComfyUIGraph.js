@@ -39,6 +39,7 @@ class ComfyUIGraph {
    * @param {Object} options - Configuration options
    * @param {string} options.suspiciousNodeHandling - How to handle suspicious nodes: 'exclude' (default), 'include', 'warn'
    * @param {Object} options.overrides - Node-specific overrides { nodeId: { forceInclude: boolean } }
+   * @param {NodeDefinitionDictionary} options.dictionary - Node definition dictionary for custom nodes
    */
   constructor(promptData, options = {}) {
     /**
@@ -49,6 +50,12 @@ class ComfyUIGraph {
       suspiciousNodeHandling: options.suspiciousNodeHandling || 'exclude',
       overrides: options.overrides || {}
     };
+    
+    /**
+     * Node definition dictionary
+     * @type {NodeDefinitionDictionary|null}
+     */
+    this.dictionary = options.dictionary || null;
     
     /**
      * Map of node IDs to node data
@@ -510,8 +517,18 @@ class ComfyUIGraph {
     }
     
     // Check for sampler nodes without latent input
+    // Use dictionary to distinguish between sampler nodes and provider nodes
     const samplerNodes = ['KSampler', 'SamplerCustom', 'SamplerCustomAdvanced'];
     if (samplerNodes.some(type => nodeType.includes(type))) {
+      // Check if this is actually a provider node (defined in dictionary)
+      if (this.dictionary && this.dictionary.hasDefinition(nodeType)) {
+        const definition = this.dictionary.getNodeDefinition(nodeType);
+        if (definition && definition.type === 'provider') {
+          // This is a provider node (e.g., KSamplerSelect), not a sampler node
+          return null;
+        }
+      }
+      
       const hasLatentInput = inputKeys.some(key => key.toLowerCase().includes('latent'));
       if (!hasLatentInput) {
         return {

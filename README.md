@@ -24,10 +24,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 * **Selective Import**: Allows toggling specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
 * **Batch Processing**: Efficiently processes multiple images with a progress bar.
 * **Advanced Workflow Analysis**: Dynamically analyzes ComfyUI node graphs to trace the actual execution path, accurately extracting parameters even from complex multi-stage workflows (HiresFix, FaceDetailer, etc.).
-    * Traces through complex node connections to identify the actual generation pipeline
-    * Handles multi-stage workflows with multiple samplers and refinement stages
-    * See workflow analysis examples below
-* **Suspicious Node Detection**: Detects nodes with missing required inputs in ComfyUI workflows. Since ComfyUI metadata doesn't record the actual execution path, the plugin infers "unused nodes (noise)" from missing inputs. However, to avoid incorrectly excluding unknown custom nodes, a dialog is displayed when suspicious nodes are detected, allowing users to decide whether to include or exclude them from metadata extraction.
+* **Suspicious Node Detection**: Detects nodes with missing required inputs in ComfyUI workflows and allows users to decide whether to include or exclude them from metadata extraction.
 * **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
 * **No External Dependencies**: Parses PNG/WebP chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
@@ -47,6 +44,10 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 
 The plugin traces complex ComfyUI workflows to identify the actual generation pipeline:
 
+* Traces through complex node connections to identify the actual generation pipeline
+* Handles multi-stage workflows with multiple samplers and refinement stages
+* Dynamically analyzes node graphs to extract parameters even from complex workflows (HiresFix, FaceDetailer, etc.)
+
 <p align="center">
   <img src="assets/workflow_image.png" alt="Workflow Example" width="100%">
 </p>
@@ -65,10 +66,7 @@ However, ComfyUI has many custom nodes, and some may work correctly even with se
   <img src="assets/suspicious_node detecter.png" alt="Suspicious Node Detection" width="100%">
 </p>
 
-**Processing Method**: You can configure how to handle suspicious nodes in the settings:
-* **Exclude**: Automatically exclude suspicious nodes from metadata extraction
-* **Ask**: Show a dialog for each suspicious node (recommended)
-* **Include**: Include all nodes regardless of missing inputs
+You can configure how to handle suspicious nodes in the settings (see Configuration section below).
 
 ### ⚙️ Configuration
 
@@ -82,11 +80,16 @@ The plugin provides several configuration options accessible via the settings di
 
 * **Process Items per Batch**: Set the number of images to process at once (default: 5). Processing too many images simultaneously may consume excessive memory.
 
+#### Suspicious Node Handling
+
+* **Suspicious Node Handling**: Configure how to handle suspicious nodes (nodes with missing required inputs):
+  * **Exclude**: Automatically exclude suspicious nodes from metadata extraction
+  * **Ask**: Show a dialog for each suspicious node (recommended)
+  * **Include**: Include all nodes regardless of missing inputs
+
 #### Dictionary Settings
 
-* **Fetch dictionary from online (Recommended)**: Fetches the latest custom node definitions from GitHub. If disabled, the bundled dictionary will be used. Changes take effect on next startup.
-
-The plugin uses a node definition dictionary to understand custom nodes' input/output requirements. The online dictionary is regularly updated with new custom nodes, ensuring better compatibility.
+* **Fetch dictionary from online (Recommended)**: Fetches the latest custom node definitions from GitHub. If disabled, the bundled dictionary will be used. Changes take effect on next startup. The plugin uses a node definition dictionary to understand custom nodes' input/output requirements. The online dictionary is regularly updated with new custom nodes, ensuring better compatibility.
 
 #### Tag Generation Settings
 
@@ -165,6 +168,10 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 複雑なComfyUIワークフローを追跡して、実際の生成パイプラインを特定します：
 
+* 複雑なノード接続を追跡して実際の生成パイプラインを特定
+* 複数のサンプラーと改善ステージを持つマルチステージワークフローに対応
+* ノードグラフを動的に解析し、複雑なワークフロー（HiresFix、FaceDetailer等）からもパラメータを正確に抽出
+
 <p align="center">
   <img src="assets/workflow_image.png" alt="ワークフロー例" width="100%">
 </p>
@@ -185,6 +192,7 @@ ComfyUIの画像に埋め込まれるメタデータには、「実際にどの�
   <img src="assets/suspicious_node detecter.png" alt="疑わしいノード検出" width="100%">
 </p>
 
+
 ### ⚙️ 設定
 
 <p align="center">
@@ -197,15 +205,15 @@ ComfyUIの画像に埋め込まれるメタデータには、「実際にどの�
 
 * **一度に処理する数**: 一度に処理する画像の数を設定します（デフォルト: 5）。多すぎるとメモリを消費します。
 
-* **処理方法**: 設定で疑わしいノードの扱いを選択できます：
-* **除外する**: 疑わしいノードを自動的にメタデータ抽出から除外
-* **確認する**: 各疑わしいノードについてダイアログを表示（推奨）
-* **含める**: 入力の欠落に関わらず全てのノードを含める
+#### 疑わしいノードの扱い
+
+* **疑わしいノードの扱い**: 疑わしいノード（必須入力が欠落しているノード）の扱いを設定します：
+  * **除外する**: 疑わしいノードを自動的にメタデータ抽出から除外
+  * **確認する**: 各疑わしいノードについてダイアログを表示（推奨）
+  * **含める**: 入力の欠落に関わらず全てのノードを含める
 #### 辞書設定
 
-* **オンラインから辞書を取得する（推奨）**: GitHubから最新のカスタムノード定義を取得します。無効にするとバンドルされた辞書を使用します。変更は次回起動時に反映されます。
-
-プラグインはノード定義辞書を使用して、カスタムノードの入出力要件を理解します。オンライン辞書は新しいカスタムノードで定期的に更新されており、より良い互換性を保証します。
+* **オンラインから辞書を取得する（推奨）**: GitHubから最新のカスタムノード定義を取得します。無効にするとバンドルされた辞書を使用します。変更は次回起動時に反映されます。プラグインはノード定義辞書を使用して、カスタムノードの入出力要件を理解します。オンライン辞書は新しいカスタムノードで定期的に更新されており、より良い互換性を保証します。
 
 #### タグ生成設定
 

@@ -88,7 +88,12 @@ class ComfyUIParser extends MetadataParserBase {
     const reporter = new MetadataExtractionReporter();
     
     // Create graph and analyzer instances with options
-    const graph = new ComfyUIGraph(promptData, options);
+    // Pass dictionary to graph for suspicious node detection
+    const graphOptions = {
+      ...options,
+      dictionary: dictionary
+    };
+    const graph = new ComfyUIGraph(promptData, graphOptions);
     const analyzer = new ComfyUISamplerAnalyzer(graph);
     
     // Set dictionary and reporter

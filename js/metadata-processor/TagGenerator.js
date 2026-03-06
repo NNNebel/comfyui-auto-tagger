@@ -87,11 +87,33 @@ class TagGenerator {
    * // Returns: { tags: Set, cats: { cp: Set, lora: Set, pos: Set, neg: Set, param: Set } }
    */
   static generate(metadata, settings) {
+    // Debug logging helper
+    const debugLog = (msg, level = 'info') => {
+      if (typeof window !== 'undefined' && window.isDebugMode && window.isDebugMode()) {
+        const levelPrefix = `[${level.toUpperCase()}]`;
+        const fullMsg = `[TagGenerator] ${msg}`;
+        switch(level) {
+          case 'error':
+            console.error(`${levelPrefix} ${fullMsg}`);
+            break;
+          case 'warn':
+            console.warn(`${levelPrefix} ${fullMsg}`);
+            break;
+          default:
+            console.log(`${levelPrefix} ${fullMsg}`);
+        }
+      }
+    };
+
     // Debug log to check settings
     if (typeof console !== 'undefined' && settings.debug) {
       console.log('[TagGenerator] Settings:', settings);
       console.log('[TagGenerator] includeAllSamplers:', settings.includeAllSamplers);
     }
+    
+    debugLog('Starting tag generation');
+    debugLog(`Settings: ${JSON.stringify(settings)}`);
+    debugLog(`Metadata format: ${metadata.format || 'unknown'}, checkpoint: ${metadata.checkpoint || 'none'}`);
     
     const cats = {
       cp: new Set(),
@@ -104,13 +126,16 @@ class TagGenerator {
     // Extract checkpoint and LoRA tags
     if (metadata.checkpoint) {
       cats.cp.add(this.getBaseName(metadata.checkpoint).toLowerCase());
+      debugLog(`Added checkpoint: ${metadata.checkpoint}`);
     }
     if (metadata.loras) {
       metadata.loras.forEach(l => cats.lora.add(this.getBaseName(l).toLowerCase()));
+      debugLog(`Added ${metadata.loras.length} LoRAs`);
     }
 
     // Extract prompt tags
     if (metadata.generationSteps && metadata.generationSteps.length > 0) {
+      debugLog(`Processing ${metadata.generationSteps.length} generation steps for prompts`);
       metadata.generationSteps.forEach(step => {
         if (step.positive) {
           this.cleanPrompt(step.positive).forEach(tag => cats.pos.add(tag));
@@ -120,6 +145,7 @@ class TagGenerator {
         }
       });
     } else {
+      debugLog('Using fallback format for prompts');
       // Fallback to old format
       if (metadata.positive) {
         this.cleanPrompt(metadata.positive).forEach(tag => cats.pos.add(tag));
@@ -128,16 +154,20 @@ class TagGenerator {
         this.cleanPrompt(metadata.negative, 'neg:').forEach(tag => cats.neg.add(tag));
       }
     }
+    debugLog(`Prompt tags: positive=${cats.pos.size}, negative=${cats.neg.size}`);
 
     // Extract parameter tags
     // Check if user wants all samplers or first only (default: first only)
     const includeAllSamplers = settings.includeAllSamplers === true;
+    debugLog(`includeAllSamplers: ${includeAllSamplers}`);
     
     if (metadata.generationSteps && metadata.generationSteps.length > 0) {
       // Use generationSteps for multi-sampler workflows
       const stepsToProcess = includeAllSamplers 
         ? metadata.generationSteps 
         : [metadata.generationSteps[0]]; // First sampler only
+      
+      debugLog(`Processing ${stepsToProcess.length} of ${metadata.generationSteps.length} generation steps for parameters`);
       
       stepsToProcess.forEach(step => {
         if (step.seed !== undefined) {

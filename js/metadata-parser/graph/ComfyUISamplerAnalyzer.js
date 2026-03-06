@@ -107,28 +107,59 @@ class ComfyUISamplerAnalyzer {
    * // }
    */
   findBaseSampler() {
+    // Debug logging helper
+    const debugLog = (msg, level = 'info') => {
+      if (typeof window !== 'undefined' && window.isDebugMode && window.isDebugMode()) {
+        const levelPrefix = '[' + level.toUpperCase() + ']';
+        const fullMsg = '[ComfyUISamplerAnalyzer] ' + msg;
+        switch(level) {
+          case 'error':
+            console.error(levelPrefix + ' ' + fullMsg);
+            break;
+          case 'warn':
+            console.warn(levelPrefix + ' ' + fullMsg);
+            break;
+          default:
+            console.log(levelPrefix + ' ' + fullMsg);
+        }
+      }
+    };
+
+    debugLog('=== Starting Base Sampler Search ===');
+    
     // Step 1: Get all samplers
     const samplerIds = this.graph.getNodesByType('sampler');
+    debugLog('Step 1: Found ' + samplerIds.length + ' sampler nodes: ' + JSON.stringify(samplerIds));
+    
     if (samplerIds.length === 0) {
+      debugLog('No samplers found in workflow', 'warn');
       return { baseSampler: null, allSamplers: [], isFallback: false };
     }
     
     // Step 2: Get output nodes (SaveImage, PreviewImage, etc.)
     const outputNodeIds = this.graph.getOutputNodes();
+    debugLog('Step 2: Found ' + outputNodeIds.length + ' output nodes: ' + JSON.stringify(outputNodeIds));
     
     // Step 3: Find samplers reachable from output nodes
     let reachableSamplers = new Set();
     let allSuspiciousNodes = [];
     
     if (outputNodeIds.length > 0) {
+      debugLog('Step 3: Tracing from output nodes to find reachable samplers');
       for (const outputId of outputNodeIds) {
+        debugLog('  Tracing from output node: ' + outputId);
         // Use BFS to find all reachable samplers
         const result = this.graph.traceToType(outputId, 'sampler');
-        result.nodes.forEach(s => reachableSamplers.add(s.id));
+        debugLog('    Found ' + result.nodes.length + ' reachable samplers: ' + JSON.stringify(result.nodes.map(function(n) { return n.id; })));
+        result.nodes.forEach(function(s) { reachableSamplers.add(s.id); });
         
         // Collect suspicious nodes
         if (result.suspiciousNodes && result.suspiciousNodes.length > 0) {
-          allSuspiciousNodes.push(...result.suspiciousNodes);
+          debugLog('    Found ' + result.suspiciousNodes.length + ' suspicious nodes', 'warn');
+          result.suspiciousNodes.forEach(function(node) {
+            debugLog('      Suspicious: ' + node.nodeId + ' (' + node.nodeType + ') - Missing: ' + JSON.stringify(node.missingInputs), 'warn');
+          });
+          allSuspiciousNodes.push.apply(allSuspiciousNodes, result.suspiciousNodes);
         }
       }
     }
@@ -136,29 +167,46 @@ class ComfyUISamplerAnalyzer {
     // Deduplicate suspicious nodes by nodeId
     const uniqueSuspiciousNodes = [];
     const seenNodeIds = new Set();
-    for (const node of allSuspiciousNodes) {
+    for (var i = 0; i < allSuspiciousNodes.length; i++) {
+      var node = allSuspiciousNodes[i];
       if (!seenNodeIds.has(node.nodeId)) {
         seenNodeIds.add(node.nodeId);
         uniqueSuspiciousNodes.push(node);
       }
     }
     
+    if (uniqueSuspiciousNodes.length > 0) {
+      debugLog('Total unique suspicious nodes: ' + uniqueSuspiciousNodes.length, 'warn');
+    }
+    
     // Fallback: If no output nodes OR no samplers reachable from output nodes
     const isFallback = outputNodeIds.length === 0 || reachableSamplers.size === 0;
     if (isFallback) {
+      debugLog('Using fallback: including all samplers (no output nodes or no reachable samplers)', 'warn');
       reachableSamplers = new Set(samplerIds);
+    } else {
+      debugLog('Reachable samplers: ' + reachableSamplers.size + ' of ' + samplerIds.length);
     }
     
     // Filter out samplers with no latent_image connection (Silent_Drop)
+    debugLog('Step 4: Filtering valid samplers (checking latent connections, muted/bypassed status)');
     const validSamplers = [];
-    for (const samplerId of reachableSamplers) {
+    var reachableArray = Array.from(reachableSamplers);
+    for (var j = 0; j < reachableArray.length; j++) {
+      var samplerId = reachableArray[j];
       const node = this.graph.getNode(samplerId);
-      if (!node) continue;
+      if (!node) {
+        debugLog('  Sampler ' + samplerId + ': Node not found', 'warn');
+        continue;
+      }
+      
+      debugLog('  Checking sampler ' + samplerId + ' (' + node.class_type + ')');
       
       // Check if node is Muted or Bypassed
       if (node.mode === 2 || node.mode === 4) {
         // mode 2 = Muted, mode 4 = Bypassed
         const reason = node.mode === 2 ? 'muted' : 'bypassed';
+        debugLog('    EXCLUDED: ' + reason, 'warn');
         if (this.reporter) {
           this.reporter.logNodeExclusion(samplerId, node.class_type, reason);
         }
@@ -169,12 +217,17 @@ class ComfyUISamplerAnalyzer {
       const hasLatentInput = this.graph.hasInputPort(samplerId, 'latent_image') || 
                              this.graph.hasInputPort(samplerId, 'latent');
       
+      debugLog('    Has latent input port: ' + hasLatentInput);
+      
       if (hasLatentInput) {
         const latentConnection = this.graph.getConnectedNodeId(samplerId, 'latent_image') ||
                                  this.graph.getConnectedNodeId(samplerId, 'latent');
         
+        debugLog('    Latent connection: ' + (latentConnection || 'none'));
+        
         if (!latentConnection) {
           // No connection - exclude this sampler
+          debugLog('    EXCLUDED: no latent input connection', 'warn');
           if (this.reporter) {
             this.reporter.logNodeExclusion(samplerId, node.class_type, 'no_latent_input');
           }
@@ -182,23 +235,34 @@ class ComfyUISamplerAnalyzer {
         }
       }
       
+      debugLog('    VALID: included in analysis');
       validSamplers.push(samplerId);
     }
     
+    debugLog('Valid samplers after filtering: ' + validSamplers.length + ' of ' + reachableSamplers.size);
+    
     // If all samplers were excluded, return empty result
     if (validSamplers.length === 0) {
-      return { baseSampler: null, allSamplers: [], isFallback, suspiciousNodes: uniqueSuspiciousNodes };
+      debugLog('No valid samplers found after filtering', 'error');
+      return { baseSampler: null, allSamplers: [], isFallback: isFallback, suspiciousNodes: uniqueSuspiciousNodes };
     }
     
     // Step 4: Calculate distance to latent source for each valid sampler
-    const scored = validSamplers.map(id => ({
-      id,
-      distance: this._calculateDistanceToSource(id),
-      executionOrder: this.graph.getExecutionOrder(id)
-    }));
+    debugLog('Step 5: Calculating distances to latent source');
+    const scored = validSamplers.map(function(id) {
+      var distance = this._calculateDistanceToSource(id);
+      var executionOrder = this.graph.getExecutionOrder(id);
+      debugLog('  Sampler ' + id + ': distance=' + distance + ', executionOrder=' + executionOrder);
+      return {
+        id: id,
+        distance: distance,
+        executionOrder: executionOrder
+      };
+    }.bind(this));
     
     // Step 5: Sort by distance, then by execution order (topological sort)
-    scored.sort((a, b) => {
+    debugLog('Step 6: Sorting samplers by distance and execution order');
+    scored.sort(function(a, b) {
       if (a.distance !== b.distance) {
         return a.distance - b.distance;
       }
@@ -206,10 +270,19 @@ class ComfyUISamplerAnalyzer {
       return a.executionOrder - b.executionOrder;
     });
     
+    var baseSampler = scored[0] ? scored[0].id : null;
+    debugLog('=== Base Sampler Selection Complete ===');
+    debugLog('Selected base sampler: ' + baseSampler);
+    debugLog('Total samplers in workflow: ' + scored.length);
+    debugLog('Is fallback mode: ' + isFallback);
+    if (uniqueSuspiciousNodes.length > 0) {
+      debugLog('Suspicious nodes detected: ' + uniqueSuspiciousNodes.length, 'warn');
+    }
+    
     return {
-      baseSampler: scored[0]?.id || null,
+      baseSampler: baseSampler,
       allSamplers: scored,
-      isFallback,
+      isFallback: isFallback,
       suspiciousNodes: uniqueSuspiciousNodes
     };
   }

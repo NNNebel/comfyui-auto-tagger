@@ -94,6 +94,7 @@
             "completed": "削除完了。(削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})",
             "cancelledMessage": "削除中止。(削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})"
         },
+        "debugLogFile": "デバッグログファイル: {{path}}",
         "cancelling": "... 処理を中止しています ..."
     },
     "alert": {

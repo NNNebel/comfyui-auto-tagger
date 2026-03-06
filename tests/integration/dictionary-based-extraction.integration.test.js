@@ -5,10 +5,22 @@
  * works correctly with real ComfyUI workflows.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { createRequire } from 'module';
 import ComfyUIParser from '../../js/metadata-parser/parsers/ComfyUIParser.js';
 
+const require = createRequire(import.meta.url);
+const MetadataService = require('../../js/metadata-parser/integration/MetadataService.js');
+
 describe('Dictionary-Based Metadata Extraction', () => {
+  let metadataService;
+
+  beforeAll(() => {
+    metadataService = new MetadataService();
+  });
+
   describe('Standard KSampler (baseline)', () => {
     it('should extract metadata from standard KSampler', () => {
       // Standard KSampler workflow (baseline test)
@@ -112,11 +124,41 @@ describe('Dictionary-Based Metadata Extraction', () => {
     });
   });
 
-  describe('Dictionary-based extraction (future)', () => {
-    it.skip('should extract metadata using dictionary definitions for SamplerCustomAdvanced', () => {
-      // TODO: This test is for future implementation
-      // Currently, the dictionary-based extraction for SamplerCustomAdvanced
-      // requires more complex workflow setup with proper guider connections
+  describe('Dictionary-based extraction with real fixture', () => {
+    it('should extract metadata from SamplerCustomAdvanced workflow', () => {
+      // Use the real fixture image
+      const fixturePath = join(process.cwd(), 'tests/fixtures/comfy-samplerCustomAdvanced.png');
+      const buffer = readFileSync(fixturePath);
+      
+      // Parse using MetadataService
+      const results = metadataService.extractMetadata(buffer, 'image/png');
+      
+      // Load expected output
+      const expectedPath = join(process.cwd(), 'tests/expected/comfy-samplerCustomAdvanced.json');
+      const expected = JSON.parse(readFileSync(expectedPath, 'utf-8'));
+      
+      // Should have exactly one result (ComfyUI format)
+      expect(results).toHaveLength(1);
+      const result = results[0];
+      
+      // Verify key fields match expected output
+      expect(result.format).toBe(expected.format);
+      expect(result.sampler_fallback).toBe(expected.sampler_fallback);
+      expect(result.seed).toBe(expected.seed);
+      expect(result.steps).toBe(expected.steps);
+      expect(result.cfg).toBe(expected.cfg);
+      expect(result.sampler).toBe(expected.sampler);
+      expect(result.scheduler).toBe(expected.scheduler);
+      expect(result.checkpoint).toBe(expected.checkpoint);
+      
+      // Verify generationSteps structure
+      expect(result.generationSteps).toBeDefined();
+      expect(result.generationSteps.length).toBe(1);
+      expect(result.generationSteps[0].nodeType).toBe('SamplerCustomAdvanced');
+      expect(result.generationSteps[0].isBase).toBe(true);
+      
+      // Verify no fallback was used (dictionary-based extraction succeeded)
+      expect(result.sampler_fallback).toBe(false);
     });
   });
 

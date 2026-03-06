@@ -215,19 +215,44 @@ Promise.all([
         } catch(e) { console.error(e); } 
     })();
 
-    async function debugLog(msg, item = null) {
+    // Unified debug logging function
+    async function debugLog(msg, item = null, level = 'info') {
         if (!checkboxes.debug || !checkboxes.debug.checked) return;
-        const line = `[${new Date().toISOString()}] ${item ? `[${item.name}] ` : ''}${msg}\n`;
-        console.log(msg);
-        try { if(DEBUG_LOG_FILE) await fsp.appendFile(DEBUG_LOG_FILE, line); } catch(e){}
+        
+        const timestamp = new Date().toISOString();
+        const itemPrefix = item ? `[${item.name}] ` : '';
+        const levelPrefix = `[${level.toUpperCase()}]`;
+        const line = `[${timestamp}] ${levelPrefix} ${itemPrefix}${msg}\n`;
+        
+        // Output to console based on level
+        switch(level) {
+            case 'error':
+                console.error(`${levelPrefix} ${itemPrefix}${msg}`);
+                break;
+            case 'warn':
+                console.warn(`${levelPrefix} ${itemPrefix}${msg}`);
+                break;
+            default:
+                console.log(`${levelPrefix} ${itemPrefix}${msg}`);
+        }
+        
+        // Write to log file
+        try { 
+            if(DEBUG_LOG_FILE) await fsp.appendFile(DEBUG_LOG_FILE, line); 
+        } catch(e){
+            console.error('Failed to write debug log:', e);
+        }
     }
+
+    // Make debugLog available globally for other modules
+    window.debugLog = debugLog;
+    window.isDebugMode = () => checkboxes.debug && checkboxes.debug.checked;
 
     function getSettings() {
         const s = {};
         for(const k in checkboxes) if(checkboxes[k]) s[k] = checkboxes[k].checked;
         return s;
     }
-
     function log(key, replacements={}) {
         const msg = t(key, replacements);
         const div = document.createElement('div');
@@ -337,27 +362,81 @@ Promise.all([
         setUIState(true); 
         const settings = getSettings();
         
-        if (checkboxes.debug.checked) log(`[Debug] Log file: ${DEBUG_LOG_FILE}`);
-        await debugLog(`START: ${items.length} items`);
+        // Get chunk size from input
+        const currentChunkSize = parseInt(chunkSizeInput.value, 10) || 5;
+        
+        // Debug: Output current settings
+        await debugLog('=== PROCESSING STARTED ===');
+        await debugLog('Selected items: ' + items.length);
+        await debugLog('Current settings: ' + JSON.stringify(settings, null, 2));
+        await debugLog('Chunk size: ' + currentChunkSize);
+        await debugLog('Suspicious node handling: ' + (window.getSuspiciousNodeHandling ? window.getSuspiciousNodeHandling() : 'exclude'));
+        
+        if (checkboxes.debug.checked && DEBUG_LOG_FILE) {
+            log('log.debugLogFile', { path: DEBUG_LOG_FILE });
+        }
+        await debugLog('Debug log file: ' + DEBUG_LOG_FILE);
 
         // Initialize MetadataService
         const metadataService = new MetadataService();
+        await debugLog('MetadataService initialized');
 
         const processItem = async (item) => {
             try {
+                await debugLog('--- Processing item: ' + item.name + ' ---');
                 log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
                 const buffer = await fsp.readFile(item.filePath);
                 const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
                 
+                await debugLog('File info: ext=' + ext + ', size=' + buffer.length + ' bytes, mimeType=' + mimeType, item);
+                
                 // Get suspicious node handling option from UI
                 const suspiciousNodeHandling = window.getSuspiciousNodeHandling ? window.getSuspiciousNodeHandling() : 'exclude';
+                await debugLog('Suspicious node handling: ' + suspiciousNodeHandling, item);
                 
                 // Use new MetadataService with options
+                await debugLog('Extracting metadata...', item);
                 const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui', {
                     suspiciousNodeHandling: suspiciousNodeHandling
                 });
-                await debugLog(`Metadata: ${JSON.stringify(metadata)}`, item);
+                
+                if (metadata) {
+                    await debugLog('=== METADATA EXTRACTION COMPLETE ===', item);
+                    await debugLog('Format: ' + metadata.format, item);
+                    
+                    // Log full metadata content
+                    await debugLog('--- Full Metadata Content ---', item);
+                    await debugLog(JSON.stringify(metadata, null, 2), item);
+                    await debugLog('--- End of Full Metadata ---', item);
+                    
+                    // Log summary
+                    await debugLog('--- Metadata Summary ---', item);
+                    await debugLog('Checkpoint: ' + (metadata.checkpoint || 'none'), item);
+                    await debugLog('LoRAs: ' + (metadata.loras ? metadata.loras.length : 0), item);
+                    if (metadata.loras && metadata.loras.length > 0) {
+                        for (var loraIdx = 0; loraIdx < metadata.loras.length; loraIdx++) {
+                            var lora = metadata.loras[loraIdx];
+                            await debugLog('  LoRA ' + (loraIdx + 1) + ': ' + lora.name + ' (weight: ' + lora.weight + ')', item);
+                        }
+                    }
+                    await debugLog('Sampler: ' + (metadata.sampler || 'none'), item);
+                    await debugLog('Scheduler: ' + (metadata.scheduler || 'none'), item);
+                    await debugLog('Seed: ' + (metadata.seed || 'none'), item);
+                    await debugLog('Steps: ' + (metadata.steps || 'none'), item);
+                    await debugLog('CFG: ' + (metadata.cfg || 'none'), item);
+                    await debugLog('Generation Steps: ' + (metadata.generationSteps ? metadata.generationSteps.length : 0), item);
+                    if (metadata.generationSteps && metadata.generationSteps.length > 0) {
+                        for (var stepIdx = 0; stepIdx < metadata.generationSteps.length; stepIdx++) {
+                            var step = metadata.generationSteps[stepIdx];
+                            await debugLog('  Step ' + (stepIdx + 1) + ': ' + (step.label || 'Unlabeled') + ' (sampler: ' + step.sampler + ')', item);
+                        }
+                    }
+                    await debugLog('Suspicious Nodes: ' + (metadata.suspiciousNodes ? metadata.suspiciousNodes.length : 0), item);
+                    await debugLog('Sampler Fallback: ' + (metadata.sampler_fallback ? 'YES' : 'NO'), item);
+                } else {
+                    await debugLog('No metadata found', item, 'warn');
+                }
 
                 if (!metadata) {
                     log('log.noMetadata', {name: item.name});
@@ -370,16 +449,41 @@ Promise.all([
                 // Check if there are suspicious nodes and handle them
                 if (metadata.suspiciousNodes && metadata.suspiciousNodes.length > 0) {
                     hasSuspiciousNodes = true;
-                    await debugLog(`Suspicious nodes detected: ${JSON.stringify(metadata.suspiciousNodes)}`, item);
+                    await debugLog('=== SUSPICIOUS NODES DETECTED ===', item, 'warn');
+                    await debugLog('Count: ' + metadata.suspiciousNodes.length, item, 'warn');
+                    
+                    for (var i = 0; i < metadata.suspiciousNodes.length; i++) {
+                        var node = metadata.suspiciousNodes[i];
+                        await debugLog('  Node ' + (i + 1) + ':', item, 'warn');
+                        await debugLog('    ID: ' + node.nodeId, item, 'warn');
+                        await debugLog('    Type: ' + node.nodeType, item, 'warn');
+                        await debugLog('    Reason Key: ' + (node.reasonKey || 'unknown'), item, 'warn');
+                        if (node.missingInputs && Array.isArray(node.missingInputs)) {
+                            await debugLog('    Missing inputs: ' + JSON.stringify(node.missingInputs), item, 'warn');
+                            await debugLog('    Reason: ' + (node.missingInputs.includes('latent_image') || node.missingInputs.includes('latent') ? 'Missing latent connection' : 
+                                                            node.missingInputs.includes('image') ? 'Missing image connection' : 
+                                                            'Missing required inputs: ' + node.missingInputs.join(', ')), item, 'warn');
+                        }
+                        if (node.affectedSteps && node.affectedSteps.length > 0) {
+                            await debugLog('    Affected steps: ' + node.affectedSteps.length, item, 'warn');
+                            for (var j = 0; j < node.affectedSteps.length; j++) {
+                                var step = node.affectedSteps[j];
+                                await debugLog('      Step ' + (j + 1) + ': index=' + step.stepIndex + ', nodeId=' + step.stepNodeId + ', type=' + step.stepNodeType, item, 'warn');
+                            }
+                        }
+                    }
                     
                     if (suspiciousNodeHandling === 'exclude') {
+                        await debugLog('Action: Automatically excluding suspicious nodes', item);
                         log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
                     } else if (suspiciousNodeHandling === 'include') {
+                        await debugLog('Action: Including all nodes (ignoring suspicious status)', item);
                         log('log.caution.suspicious_nodes_included', {name: item.name, count: metadata.suspiciousNodes.length});
                     } else if (suspiciousNodeHandling === 'ask') {
+                        await debugLog('Action: Showing dialog to user', item);
                         // Check if handleSuspiciousNodes is available
                         if (typeof window.handleSuspiciousNodes !== 'function') {
-                            await debugLog('ERROR: window.handleSuspiciousNodes is not defined!', item);
+                            await debugLog('ERROR: window.handleSuspiciousNodes is not defined!', item, 'error');
                             log('log.error.generic', { name: item.name, message: 'Dialog function not available' });
                             // Fallback to exclude mode
                             log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
@@ -390,15 +494,17 @@ Promise.all([
                                 // Show dialog and wait for user decision
                                 const decision = await window.handleSuspiciousNodes(item, metadata.suspiciousNodes);
                                 
-                                await debugLog(`User decision: ${JSON.stringify(decision)}`, item);
+                                await debugLog('User decision received: ' + JSON.stringify(decision), item);
                                 
                                 if (decision) {
+                                    await debugLog('Re-parsing with user decision: action=' + decision.action, item);
                                     // Re-parse with user decision
                                     const metadataWithDecision = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui', {
                                         suspiciousNodeHandling: decision.action, // Use user's decision ('exclude' or 'include')
                                         overrides: decision.overrides || {} // Apply per-node overrides if any
                                     });
                                     if (metadataWithDecision) {
+                                        await debugLog('Metadata updated with user decision', item);
                                         Object.assign(metadata, metadataWithDecision);
                                     }
                                     
@@ -408,6 +514,8 @@ Promise.all([
                                     } else if (decision.action === 'include') {
                                         log('log.caution.suspicious_nodes_included', {name: item.name, count: metadata.suspiciousNodes.length});
                                     }
+                                } else {
+                                    await debugLog('User cancelled dialog', item, 'warn');
                                 }
                             } catch (error) {
                                 await debugLog(`ERROR in handleSuspiciousNodes: ${error.message}`, item);
@@ -502,6 +610,10 @@ Promise.all([
         };
         
         await debugLog(`REMOVE (Force: ${isForceMode}): ${items.length} items`);
+        
+        if (checkboxes.debug.checked && DEBUG_LOG_FILE) {
+            log('log.debugLogFile', { path: DEBUG_LOG_FILE });
+        }
 
         const processItem = async (item) => {
             try {

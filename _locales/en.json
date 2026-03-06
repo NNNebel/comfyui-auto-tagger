@@ -94,6 +94,7 @@
             "completed": "Removal complete. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})",
             "cancelledMessage": "Removal cancelled. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})"
         },
+        "debugLogFile": "Debug log file: {{path}}",
         "cancelling": "... Cancelling process ..."
     },
     "alert": {

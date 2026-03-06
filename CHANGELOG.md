@@ -21,6 +21,12 @@ All notable changes to this project will be documented in this file.
 - Better support for custom ComfyUI nodes
 - Enhanced error reporting with detailed trace logs
 
+#### 🐛 Bug Fixes
+- Fixed false positive detection of provider nodes (e.g., `KSamplerSelect`, `BasicScheduler`, `RandomNoise`) as suspicious nodes
+  - These nodes provide configuration values to samplers but are not samplers themselves
+  - Now uses dictionary-based detection to correctly identify and exclude provider nodes
+  - Improved accuracy of suspicious node detection in complex workflows
+
 ### 🇯🇵 日本語
 #### 🎉 新機能
 - **設定ダイアログ**: 設定オプションを整理するための専用設定ダイアログを追加
@@ -28,15 +34,21 @@ All notable changes to this project will be documented in this file.
   - 辞書設定（オンライン取得の切り替え）
   - デバッグモードの切り替え
   - GitHub Issue報告ボタン
-- **GitHub Issue報告**: プラグインから直接Issueを報告できるようになりました
-  - ワンクリックでGitHubのIssue作成ページを開くボタン
-  - トレースログを含む自動エラーレポート生成
+- **GitHub Issue報告**: プラグインから直接問題を報告
+  - ワンクリックでGitHub issue作成ページを開く
+  - トレースログ付きの自動エラーレポート生成
   - エラー詳細のクリップボードコピー機能
 
 #### ✨ 改善
 - 辞書ベースシステムによるメタデータ抽出精度の向上
-- カスタムComfyUIノードのサポート強化
-- 詳細なトレースログによるエラー報告の改善
+- カスタムComfyUIノードのサポート改善
+- 詳細なトレースログによるエラー報告の強化
+
+#### 🐛 バグ修正
+- providerノード（例：`KSamplerSelect`、`BasicScheduler`、`RandomNoise`）が疑わしいノードとして誤検知される問題を修正
+  - これらのノードはサンプラーに設定値を提供するものであり、サンプラー自体ではない
+  - 辞書ベースの検出を使用して、providerノードを正しく識別・除外するようになりました
+  - 複雑なワークフローでの疑わしいノード検出の精度が向上しました
 
 ## [1.3.3] - 2026-02-13
 
