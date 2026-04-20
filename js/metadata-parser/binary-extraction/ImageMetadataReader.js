@@ -216,6 +216,7 @@ class ImageMetadataReader {
     // Extract workflow and prompt JSON
     parseJson('workflow');
     parseJson('prompt');
+    parseJson('eagle_bridge');
   }
 
   /**
