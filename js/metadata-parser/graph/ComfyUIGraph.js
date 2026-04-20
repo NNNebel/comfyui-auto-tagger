@@ -48,7 +48,8 @@ class ComfyUIGraph {
      */
     this.options = {
       suspiciousNodeHandling: options.suspiciousNodeHandling || 'exclude',
-      overrides: options.overrides || {}
+      overrides: options.overrides || {},
+      forcedOutputNodeIds: options.forcedOutputNodeIds || []
     };
     
     /**
@@ -170,9 +171,16 @@ class ComfyUIGraph {
    * @private
    */
   _classifyNodes() {
+    const forcedOutputIds = new Set(
+      (this.options.forcedOutputNodeIds || []).map(String)
+    );
     for (const [id, node] of this.nodes) {
-      const type = this._getNodeType(node);
-      this.nodeTypes.set(id, type);
+      if (forcedOutputIds.has(id)) {
+        this.nodeTypes.set(id, 'output');
+      } else {
+        const type = this._getNodeType(node);
+        this.nodeTypes.set(id, type);
+      }
     }
   }
   

@@ -51,10 +51,18 @@ class ComfyUIParser extends MetadataParserBase {
       format: 'comfyui'
     };
 
+    // Merge eagle_bridge signals into options before graph construction
+    const effectiveOptions = { ...options };
+    if (rawChunks.eagle_bridge && rawChunks.eagle_bridge.final_node_id) {
+      const nodeId = String(rawChunks.eagle_bridge.final_node_id);
+      effectiveOptions.forcedOutputNodeIds = [nodeId];
+      console.log(`[EagleMetadataBridge] eagle_bridge detected: node ${nodeId} forced as output`);
+    }
+
     // Extract from prompt JSON (contains generation parameters)
     if (rawChunks.prompt) {
       ErrorHandler.safeExecute(
-        () => this.extractFromPrompt(rawChunks.prompt, metadata, options),
+        () => this.extractFromPrompt(rawChunks.prompt, metadata, effectiveOptions),
         null,
         'ComfyUIParser',
         { source: 'prompt' }

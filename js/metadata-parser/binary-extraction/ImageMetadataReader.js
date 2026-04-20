@@ -84,36 +84,20 @@ class ImageMetadataReader {
       if (type === 'tEXt') {
         const chunkData = BinaryUtils.slice(buffer, offset, offset + length);
         const { keyword, text } = this._decodePngText(chunkData);
-        
-        // Try to parse as JSON for workflow and prompt
-        if (keyword === 'workflow' || keyword === 'prompt') {
-          const parsed = ParsingUtils.parseJsonSafely(text, null);
-          if (parsed !== null) {
-            result[keyword] = parsed;
-          } else {
-            result[keyword] = text;
-          }
-        } else {
-          result[keyword] = text;
-        }
+
+        // Try to parse all tEXt chunks as JSON; fall back to raw string
+        const parsed = ParsingUtils.parseJsonSafely(text, null);
+        result[keyword] = parsed !== null ? parsed : text;
       }
       
       // Process comf chunks (ComfyUI custom chunk)
       if (type === 'comf') {
         const chunkData = BinaryUtils.slice(buffer, offset, offset + length);
         const { keyword, text } = this._decodeComfChunk(chunkData);
-        
-        // Try to parse as JSON for workflow and prompt
-        if (keyword === 'workflow' || keyword === 'prompt') {
-          const parsed = ParsingUtils.parseJsonSafely(text, null);
-          if (parsed !== null) {
-            result[keyword] = parsed;
-          } else {
-            result[keyword] = text;
-          }
-        } else {
-          result[keyword] = text;
-        }
+
+        // Try to parse all comf chunks as JSON; fall back to raw string
+        const parsed = ParsingUtils.parseJsonSafely(text, null);
+        result[keyword] = parsed !== null ? parsed : text;
       }
       
       // Move to next chunk (data + CRC)
