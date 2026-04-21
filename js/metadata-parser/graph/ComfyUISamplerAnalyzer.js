@@ -136,9 +136,20 @@ class ComfyUISamplerAnalyzer {
       return { baseSampler: null, allSamplers: [], isFallback: false };
     }
     
-    // Step 2: Get output nodes (SaveImage, PreviewImage, etc.)
-    const outputNodeIds = this.graph.getOutputNodes();
-    debugLog('Step 2: Found ' + outputNodeIds.length + ' output nodes: ' + JSON.stringify(outputNodeIds));
+    // Step 2: Get output nodes to trace from.
+    //
+    // Deterministic mode (eagle_bridge): when forcedOutputNodeIds is set,
+    // trace ONLY from those nodes so we stay within the correct pipeline.
+    // Heuristic mode: use all nodes classified as 'output' (SaveImage, etc.).
+    const forcedIds = this.graph.options && this.graph.options.forcedOutputNodeIds;
+    let outputNodeIds;
+    if (forcedIds && forcedIds.length > 0) {
+      outputNodeIds = forcedIds.map(String).filter(id => this.graph.hasNode(id));
+      debugLog('Step 2: Deterministic mode – forced output nodes: ' + JSON.stringify(outputNodeIds));
+    } else {
+      outputNodeIds = this.graph.getOutputNodes();
+      debugLog('Step 2: Heuristic mode – found ' + outputNodeIds.length + ' output nodes: ' + JSON.stringify(outputNodeIds));
+    }
     
     // Step 3: Find samplers reachable from output nodes
     let reachableSamplers = new Set();

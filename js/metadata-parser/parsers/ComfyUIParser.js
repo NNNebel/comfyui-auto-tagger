@@ -220,12 +220,33 @@ class ComfyUIParser extends MetadataParserBase {
     if (allPos.size > 0) metadata.positive = Array.from(allPos).join("\n");
     if (allNeg.size > 0) metadata.negative = Array.from(allNeg).join("\n");
     
-    // Extract LoRA information
+    // Determine which node IDs to scan for LoRA and checkpoint fallback.
+    //
+    // Deterministic mode (eagle_bridge): restrict scan to ancestors of the
+    // forced output node(s) so we never pick up LoRAs / checkpoints from a
+    // different pipeline in a multi-pipeline workflow.
+    // Heuristic mode: scan all nodes in the prompt (legacy behaviour).
+    const forcedOutputIds = options.forcedOutputNodeIds;
+    let scanNodeIds;
+    if (forcedOutputIds && forcedOutputIds.length > 0) {
+      const ancestorSet = new Set();
+      for (const nodeId of forcedOutputIds.map(String)) {
+        if (graph.hasNode(nodeId)) {
+          ancestorSet.add(nodeId);
+          graph.getAllAncestors(nodeId).forEach(id => ancestorSet.add(id));
+        }
+      }
+      scanNodeIds = Array.from(ancestorSet);
+    } else {
+      scanNodeIds = Object.keys(promptData);
+    }
+
+    // Extract LoRA information (scoped to scanNodeIds)
     const loras = new Set();
-    for (const id in promptData) {
+    for (const id of scanNodeIds) {
       const node = promptData[id];
       if (!node || !node.class_type) continue;
-      
+
       // Fallback: If no checkpoint found from samplers, use first CheckpointLoader or UNETLoader
       if (!metadata.checkpoint) {
         if (node.class_type.includes("CheckpointLoader")) {
@@ -240,7 +261,7 @@ class ComfyUIParser extends MetadataParserBase {
           }
         }
       }
-      
+
       // Extract LoRA from LoraLoader nodes
       if (node.class_type && node.class_type.toLowerCase().includes("lora")) {
         if (node.class_type.includes("LoraLoader")) {
@@ -264,7 +285,7 @@ class ComfyUIParser extends MetadataParserBase {
         }
       }
     }
-    
+
     if (loras.size > 0) metadata.loras = Array.from(loras);
     
     // Check for excluded nodes and log warnings
