@@ -180,115 +180,19 @@
      * @returns {NodeDefinitionDictionary} The default dictionary
      */
     static getDefault() {
-      const defaultData = {
-        "version": "1.0.0",
-        "nodes": {
-          "RandomNoise": {
-            "type": "provider",
-            "value_path": ["inputs", "noise_seed"],
-            "metadata_type": "seed"
-          },
-          "BasicScheduler": {
-            "type": "provider",
-            "value_paths": {
-              "steps": ["inputs", "steps"],
-              "scheduler": ["inputs", "scheduler"]
-            }
-          },
-          "KSamplerSelect": {
-            "type": "provider",
-            "value_path": ["inputs", "sampler_name"],
-            "metadata_type": "sampler"
-          },
-          "FluxGuidance": {
-            "type": "provider",
-            "value_path": ["inputs", "guidance"],
-            "metadata_type": "cfg"
-          },
-          "CLIPTextEncode": {
-            "type": "provider",
-            "value_paths": {
-              "positive": ["inputs", "text"],
-              "negative": ["inputs", "text"]
-            }
-          },
-          "CLIPTextEncodeSDXL": {
-            "type": "provider",
-            "value_paths": {
-              "positive": ["inputs", "text_g"],
-              "negative": ["inputs", "text_g"]
-            }
-          },
-          "ConditioningCombine": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["conditioning_1", "conditioning_2"]
-            }
-          },
-          "ImpactCombineConditionings": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["conditioning1", "conditioning2", "conditioning3", "conditioning4", "conditioning5"]
-            }
-          },
-          "ConditioningAverage": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["conditioning_to", "conditioning_from"]
-            }
-          },
-          "ConditioningConcat": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["conditioning_to", "conditioning_from"]
-            }
-          },
-          "ConditioningSetArea": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["conditioning"]
-            }
-          },
-          "ConditioningSetMask": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["conditioning"]
-            }
-          },
-          "ConditioningSetTimestepRange": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["conditioning"]
-            }
-          },
-          "SamplerCustomAdvanced": {
-            "type": "sampler",
-            "port_mapping": {
-              "seed": ["noise", "noise_seed"],
-              "steps": ["sigmas", "steps"],
-              "cfg": ["guider", "guidance"],
-              "sampler": ["sampler", "sampler_name"],
-              "scheduler": ["sigmas", "scheduler"],
-              "positive": ["guider", "conditioning", "text"],
-              "negative": []
-            }
-          },
-          "AnySwitch": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["input1", "input2", "input3", "input4", "input5"]
-            }
-          },
-          "Switch": {
-            "type": "router",
-            "passthrough_rules": {
-              "output": ["input_true", "input_false"]
-            }
-          }
+      // Node.js / Electron (Eagle plugin) environment: load from JSON file
+      if (typeof require !== 'undefined') {
+        try {
+          const path = require('path');
+          const fs = require('fs');
+          const jsonPath = path.join(__dirname, 'default-dictionary.json');
+          const defaultData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+          return new NodeDefinitionDictionary(defaultData);
+        } catch (e) {
+          console.warn('Failed to load default-dictionary.json, using empty dictionary:', e);
         }
-      };
-      
-      return new NodeDefinitionDictionary(defaultData);
+      }
+      return new NodeDefinitionDictionary({ version: '1.0.0', nodes: {} });
     }
   }
 
