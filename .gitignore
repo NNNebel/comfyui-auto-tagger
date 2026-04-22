@@ -37,7 +37,9 @@ out/
 
 # AI development files - NEVER commit these
 AGENTS.md
+CLAUDE.md
 gemini.md
+.claude/
 .kiro/
 
 # Test fixture files - developers should generate their own
