@@ -225,6 +225,12 @@
               "output": ["conditioning_1", "conditioning_2"]
             }
           },
+          "ImpactCombineConditionings": {
+            "type": "router",
+            "passthrough_rules": {
+              "output": ["conditioning1", "conditioning2", "conditioning3", "conditioning4", "conditioning5"]
+            }
+          },
           "ConditioningAverage": {
             "type": "router",
             "passthrough_rules": {
