@@ -1,0 +1,13 @@
+{
+  "format": "comfyui",
+  "checkpoint": "perfectdeliberate_v60.safetensors",
+  "seed": -610949533109756,
+  "steps": 30,
+  "cfg": 6,
+  "sampler": "dpmpp_2m",
+  "scheduler": "normal",
+  "sampler_fallback": false,
+  "eagle_bridge": {
+    "final_node_id": "426"
+  }
+}

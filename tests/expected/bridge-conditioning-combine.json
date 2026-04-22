@@ -1,0 +1,95 @@
+{
+  "format": "comfyui",
+  "sampler_fallback": false,
+  "generationSteps": [
+    {
+      "nodeId": "3",
+      "nodeName": "KSampler",
+      "nodeType": "KSampler",
+      "isBase": true,
+      "seed": 111113,
+      "steps": 30,
+      "cfg": 6,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "positive": "green hair, masterpiece, best quality, 1girl, detailed face, beautiful eyes",
+      "negative": "worst quality, low quality, blurry, bad anatomy",
+      "checkpoint": "boleromixIllustrious_v700.safetensors",
+      "distance": 1,
+      "stepIndex": 1
+    },
+    {
+      "nodeId": "32",
+      "nodeName": "KSampler",
+      "nodeType": "KSampler",
+      "isBase": false,
+      "seed": 222222,
+      "steps": 20,
+      "cfg": 6,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "positive": "masterpiece, best quality, 1girl, detailed face, beautiful eyes,\nsuper resolution,",
+      "negative": "character sheet, character design, multiple people, 2girl, 3girl, twins, cloned face, extra girl, \nworst quality, low quality, blurry, bad anatomy,",
+      "checkpoint": "boleromixIllustrious_v700.safetensors",
+      "distance": 2,
+      "stepIndex": 2
+    },
+    {
+      "nodeId": "430",
+      "nodeName": "KSampler",
+      "nodeType": "KSampler",
+      "isBase": false,
+      "seed": 444444,
+      "steps": 2,
+      "cfg": 2,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "positive": "4 sampler positive pronpt",
+      "negative": "4 sampler negative prompt",
+      "checkpoint": "boleromixIllustrious_v700.safetensors",
+      "distance": 5,
+      "stepIndex": 3
+    }
+  ],
+  "extra_samplers": [
+    {
+      "id": "3",
+      "seed": 111113,
+      "steps": 30,
+      "cfg": 6,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": true
+    },
+    {
+      "id": "32",
+      "seed": 222222,
+      "steps": 20,
+      "cfg": 6,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": false
+    },
+    {
+      "id": "430",
+      "seed": 444444,
+      "steps": 2,
+      "cfg": 2,
+      "sampler": "dpmpp_2m",
+      "scheduler": "normal",
+      "is_base": false
+    }
+  ],
+  "seed": 111113,
+  "steps": 30,
+  "cfg": 6,
+  "sampler": "dpmpp_2m",
+  "scheduler": "normal",
+  "checkpoint": "boleromixIllustrious_v700.safetensors",
+  "positive": "green hair, masterpiece, best quality, 1girl, detailed face, beautiful eyes\nmasterpiece, best quality, 1girl, detailed face, beautiful eyes,\nsuper resolution,\n4 sampler positive pronpt",
+  "negative": "worst quality, low quality, blurry, bad anatomy\ncharacter sheet, character design, multiple people, 2girl, 3girl, twins, cloned face, extra girl, \nworst quality, low quality, blurry, bad anatomy,\n4 sampler negative prompt",
+  "loras": [
+    "Little Red Riding Hood_illustrious_V1.0.safetensors",
+    "choker_illustrious_V1.0.safetensors"
+  ]
+}
