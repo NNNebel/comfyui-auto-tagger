@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🇬🇧 English
+#### 🐛 Bug Fixes
+- Fixed incorrect negative prompt extraction when conditioning passes through an intermediate node (e.g. `ConditioningCombine`) not registered in the dictionary. Previously, BFS traversal could accidentally pick up a positive `CLIPTextEncode`'s text as the negative prompt.
+- Fixed `CLIPTextEncode` dictionary entry so it correctly returns its text when reached via either the positive or negative conditioning chain.
+
+#### ✨ Improvements
+- Added `CLIPTextEncodeSDXL` to the default node dictionary, enabling correct positive/negative prompt extraction for SDXL workflows (uses `text_g` field).
+- Clarified comment on custom LoRA loader input key matching: `.safetensors` extension check already guards against false positives from non-filename keys like `lora_strength`.
+
+### 🇯🇵 日本語
+#### 🐛 バグ修正
+- `ConditioningCombine` などの中間ノード経由で negative プロンプトを取得する際に、positive 側の `CLIPTextEncode` テキストが誤って negative として取得される不具合を修正。BFS パターンから `text` / `prompt` を negative 用に除外し、辞書登録済みの `CLIPTextEncode` が文脈に応じて正しくテキストを返すよう対応。
+- `CLIPTextEncode` の辞書エントリを修正し、positive/negative どちらの経路から到達した場合もテキストを返すよう対応。
+
+#### ✨ 改善
+- デフォルト辞書に `CLIPTextEncodeSDXL` を追加。SDXL ワークフローで positive/negative プロンプトが正しく取得できるようになった（`text_g` フィールドを使用）。
+
+---
+
 ## [1.3.4] - 2026-03-07
 
 ### 🇬🇧 English

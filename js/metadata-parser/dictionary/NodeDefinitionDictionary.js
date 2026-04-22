@@ -207,8 +207,53 @@
           },
           "CLIPTextEncode": {
             "type": "provider",
-            "value_path": ["inputs", "text"],
-            "metadata_type": "positive"
+            "value_paths": {
+              "positive": ["inputs", "text"],
+              "negative": ["inputs", "text"]
+            }
+          },
+          "CLIPTextEncodeSDXL": {
+            "type": "provider",
+            "value_paths": {
+              "positive": ["inputs", "text_g"],
+              "negative": ["inputs", "text_g"]
+            }
+          },
+          "ConditioningCombine": {
+            "type": "router",
+            "passthrough_rules": {
+              "output": ["conditioning_1", "conditioning_2"]
+            }
+          },
+          "ConditioningAverage": {
+            "type": "router",
+            "passthrough_rules": {
+              "output": ["conditioning_to", "conditioning_from"]
+            }
+          },
+          "ConditioningConcat": {
+            "type": "router",
+            "passthrough_rules": {
+              "output": ["conditioning_to", "conditioning_from"]
+            }
+          },
+          "ConditioningSetArea": {
+            "type": "router",
+            "passthrough_rules": {
+              "output": ["conditioning"]
+            }
+          },
+          "ConditioningSetMask": {
+            "type": "router",
+            "passthrough_rules": {
+              "output": ["conditioning"]
+            }
+          },
+          "ConditioningSetTimestepRange": {
+            "type": "router",
+            "passthrough_rules": {
+              "output": ["conditioning"]
+            }
           },
           "SamplerCustomAdvanced": {
             "type": "sampler",

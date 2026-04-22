@@ -2,6 +2,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import ComfyUIGraph from '../../js/metadata-parser/graph/ComfyUIGraph.js';
 import ComfyUISamplerAnalyzer from '../../js/metadata-parser/graph/ComfyUISamplerAnalyzer.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const NodeDefinitionDictionary = require('../../js/metadata-parser/dictionary/NodeDefinitionDictionary.js');
 
 describe('ComfyUISamplerAnalyzer', () => {
   describe('Constructor', () => {
@@ -833,5 +836,136 @@ describe('ComfyUISamplerAnalyzer', () => {
       
       const imageScaleNode = result.suspiciousNodes.find(n => n.nodeId === '175');
       expect(imageScaleNode.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // _traceConditioningText
+  // ---------------------------------------------------------------------------
+  describe('_traceConditioningText (via extractSamplerMetadata)', () => {
+    // Helper to build a minimal prompt with a KSampler
+    function makePrompt(extra) {
+      return Object.assign({
+        '99': { class_type: 'EmptyLatentImage', inputs: {} },
+        '10': {
+          class_type: 'KSampler',
+          inputs: {
+            latent_image: ['99', 0],
+            seed: 1, steps: 20, cfg: 7,
+            positive: ['20', 0],
+            negative: ['30', 0],
+          }
+        }
+      }, extra);
+    }
+
+    it('should extract positive and negative text from direct CLIPTextEncode', () => {
+      const prompt = makePrompt({
+        '20': { class_type: 'CLIPTextEncode', inputs: { text: 'beautiful landscape' } },
+        '30': { class_type: 'CLIPTextEncode', inputs: { text: 'ugly' } },
+      });
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.positive).toBe('beautiful landscape');
+      expect(meta.negative).toBe('ugly');
+    });
+
+    it('should collect and join texts from ConditioningCombine (positive)', () => {
+      const prompt = makePrompt({
+        '21': { class_type: 'CLIPTextEncode', inputs: { text: 'beautiful landscape' } },
+        '22': { class_type: 'CLIPTextEncode', inputs: { text: 'cinematic lighting' } },
+        '20': { class_type: 'ConditioningCombine', inputs: { conditioning_1: ['21', 0], conditioning_2: ['22', 0] } },
+        '30': { class_type: 'CLIPTextEncode', inputs: { text: 'ugly' } },
+      });
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      analyzer.setDictionary(NodeDefinitionDictionary.getDefault());
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.positive).toContain('beautiful landscape');
+      expect(meta.positive).toContain('cinematic lighting');
+    });
+
+    it('should collect and join texts from ConditioningCombine (negative)', () => {
+      const prompt = makePrompt({
+        '20': { class_type: 'CLIPTextEncode', inputs: { text: 'masterpiece' } },
+        '31': { class_type: 'CLIPTextEncode', inputs: { text: 'ugly' } },
+        '32': { class_type: 'CLIPTextEncode', inputs: { text: 'blurry' } },
+        '30': { class_type: 'ConditioningCombine', inputs: { conditioning_1: ['31', 0], conditioning_2: ['32', 0] } },
+      });
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      analyzer.setDictionary(NodeDefinitionDictionary.getDefault());
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.negative).toContain('ugly');
+      expect(meta.negative).toContain('blurry');
+    });
+
+    it('should pass through ConditioningSetArea to reach CLIPTextEncode', () => {
+      const prompt = makePrompt({
+        '21': { class_type: 'CLIPTextEncode', inputs: { text: 'area prompt' } },
+        '20': { class_type: 'ConditioningSetArea', inputs: { conditioning: ['21', 0], width: 512, height: 512, x: 0, y: 0, strength: 1.0 } },
+        '30': { class_type: 'CLIPTextEncode', inputs: { text: 'ugly' } },
+      });
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      analyzer.setDictionary(NodeDefinitionDictionary.getDefault());
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.positive).toBe('area prompt');
+    });
+
+    it('should stop at unknown conditioning node and return empty string', () => {
+      const prompt = makePrompt({
+        '21': { class_type: 'CLIPTextEncode', inputs: { text: 'some text' } },
+        // UnknownConditioner is not in the dictionary — traversal stops here
+        '20': { class_type: 'UnknownConditioner', inputs: { conditioning: ['21', 0] } },
+        '30': { class_type: 'CLIPTextEncode', inputs: { text: 'ugly' } },
+      });
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.positive).toBe('');
+    });
+
+    it('should extract text_g from CLIPTextEncodeSDXL', () => {
+      const prompt = makePrompt({
+        '20': { class_type: 'CLIPTextEncodeSDXL', inputs: { text_g: 'sdxl positive', text_l: 'local text' } },
+        '30': { class_type: 'CLIPTextEncodeSDXL', inputs: { text_g: 'sdxl negative', text_l: 'local neg' } },
+      });
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.positive).toBe('sdxl positive');
+      expect(meta.negative).toBe('sdxl negative');
+    });
+
+    it('should return empty string when positive port has no connection', () => {
+      const prompt = {
+        '99': { class_type: 'EmptyLatentImage', inputs: {} },
+        '10': {
+          class_type: 'KSampler',
+          inputs: { latent_image: ['99', 0], seed: 1, steps: 20, cfg: 7 }
+          // no positive / negative inputs
+        }
+      };
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.positive).toBe('');
+      expect(meta.negative).toBe('');
+    });
+
+    it('should skip empty text values when combining', () => {
+      const prompt = makePrompt({
+        '21': { class_type: 'CLIPTextEncode', inputs: { text: 'valid text' } },
+        '22': { class_type: 'CLIPTextEncode', inputs: { text: '   ' } }, // whitespace only
+        '20': { class_type: 'ConditioningCombine', inputs: { conditioning_1: ['21', 0], conditioning_2: ['22', 0] } },
+        '30': { class_type: 'CLIPTextEncode', inputs: { text: 'ugly' } },
+      });
+      const graph = new ComfyUIGraph(prompt);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      analyzer.setDictionary(NodeDefinitionDictionary.getDefault());
+      const meta = analyzer.extractSamplerMetadata('10');
+      expect(meta.positive).toBe('valid text');
     });
   });

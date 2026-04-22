@@ -270,7 +270,9 @@ class ComfyUIParser extends MetadataParserBase {
             loras.add(ParsingUtils.extractFilename(loraName));
           }
         } else if (node.inputs) {
-          // Custom LoRA loader variants
+          // Custom LoRA loader variants (e.g. rgthree "Lora Loader Stack" uses lora_01, lora_02, etc.)
+          // Match any input key containing "lora". False positives (lora_strength etc.) are
+          // filtered out below by the .safetensors extension check.
           for (const inputKey in node.inputs) {
             if (inputKey.toLowerCase().includes("lora")) {
               const loraValue = graph.resolveInput(id, inputKey);

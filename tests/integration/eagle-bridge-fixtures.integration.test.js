@@ -48,15 +48,28 @@ const TEST_CASES = [
     mimeType: 'image/png',
     // Snapshot fields verified against expected JSON
     checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback']
+  },
+  {
+    name: 'bridge-multi (3x KSampler + LoraLoaderStack rgthree, boleromix)',
+    fixture: 'tests/fixtures/bridge-multi.png',
+    expected: 'tests/expected/bridge-multi.json',
+    mimeType: 'image/png',
+    // Verifies: distance-based base sampler selection, LoRA ancestor scan
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback'],
+    checkLoras: [
+      'Little Red Riding Hood_illustrious_V1.0.safetensors',
+      'choker_illustrious_V1.0.safetensors'
+    ]
+  },
+  {
+    name: 'bridge-conditioning-combine (ConditioningCombine in base sampler positive)',
+    fixture: 'tests/fixtures/bridge-conditioning-combine.png',
+    expected: 'tests/expected/bridge-conditioning-combine.json',
+    mimeType: 'image/png',
+    // Verifies: _traceConditioningText collects all texts via ConditioningCombine
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback'],
+    checkBasePositiveContains: 'green hair'
   }
-  // Add more fixtures here as they are collected from real ComfyUI runs:
-  // {
-  //   name: 'bridge-hiresfix (KSampler base + hires)',
-  //   fixture: 'tests/fixtures/bridge-hiresfix.png',
-  //   expected: 'tests/expected/bridge-hiresfix.json',
-  //   mimeType: 'image/png',
-  //   checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback']
-  // }
 ];
 
 // ---------------------------------------------------------------------------
@@ -69,7 +82,7 @@ describe('eagle_bridge real-fixture integration tests', () => {
     service = new MetadataService();
   });
 
-  TEST_CASES.forEach(({ name, fixture, expected: expectedPath, mimeType, checkFields }) => {
+  TEST_CASES.forEach(({ name, fixture, expected: expectedPath, mimeType, checkFields, checkLoras, checkBasePositiveContains }) => {
     describe(name, () => {
       it('fixture file exists', () => {
         expect(existsSync(join(ROOT, fixture))).toBe(true);
@@ -129,6 +142,30 @@ describe('eagle_bridge real-fixture integration tests', () => {
         const comfy = results.find(r => r.format === 'comfyui');
         expect(comfy?.sampler_fallback).toBe(false);
       });
+
+      if (checkLoras) {
+        it('base sampler ancestor scan finds expected LoRAs', () => {
+          const buffer = readFixture(fixture);
+          if (!buffer) return;
+          const results = service.extractMetadata(buffer, mimeType);
+          const comfy = results.find(r => r.format === 'comfyui');
+          expect(comfy?.loras).toBeDefined();
+          for (const lora of checkLoras) {
+            expect(comfy.loras, `expected lora: ${lora}`).toContain(lora);
+          }
+        });
+      }
+
+      if (checkBasePositiveContains) {
+        it('base sampler positive text contains expected string (ConditioningCombine)', () => {
+          const buffer = readFixture(fixture);
+          if (!buffer) return;
+          const results = service.extractMetadata(buffer, mimeType);
+          const comfy = results.find(r => r.format === 'comfyui');
+          const base = comfy?.generationSteps?.find(s => s.isBase);
+          expect(base?.positive).toContain(checkBasePositiveContains);
+        });
+      }
     });
   });
 });

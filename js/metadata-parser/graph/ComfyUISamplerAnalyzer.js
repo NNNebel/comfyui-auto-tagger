@@ -439,28 +439,22 @@ class ComfyUISamplerAnalyzer {
     }
     
     // Standard KSampler handling
-    // Get raw prompt values (check if inputs exist)
-    const positiveRaw = node.inputs ? this.graph.resolveInput(samplerId, 'positive') : null;
-    const negativeRaw = node.inputs ? this.graph.resolveInput(samplerId, 'negative') : null;
-    
-    // Convert to string and trim, or empty string if not present
-    const positive = typeof positiveRaw === 'string' ? positiveRaw.trim() : '';
-    const negative = typeof negativeRaw === 'string' ? negativeRaw.trim() : '';
-    
-    // Get other values
     const seed = node.inputs ? this.graph.resolveInput(samplerId, 'seed') : null;
     const steps = node.inputs ? this.graph.resolveInput(samplerId, 'steps') : null;
     const cfg = node.inputs ? this.graph.resolveInput(samplerId, 'cfg') : null;
     const sampler = node.inputs ? this.graph.resolveInput(samplerId, 'sampler_name') : null;
     const scheduler = node.inputs ? this.graph.resolveInput(samplerId, 'scheduler') : null;
-    
+
+    // Use _traceConditioningText for positive/negative so that ConditioningCombine
+    // and other conditioning routers are handled correctly (all texts collected & joined).
+    const positive = this._traceConditioningText(samplerId, 'positive');
+    const negative = this._traceConditioningText(samplerId, 'negative');
+
     return {
       nodeId: samplerId,
       nodeName: node.class_type || 'Unknown',
       nodeType: node.class_type,
       isBase,
-      // Convert null to undefined only for optional fields (sampler, scheduler)
-      // Keep null for numeric fields (seed, steps, cfg) as they might be 0
       seed: seed,
       steps: steps,
       cfg: cfg,
@@ -496,28 +490,21 @@ class ComfyUISamplerAnalyzer {
       this.reporter.startTrace(samplerId);
     }
     
-    // Extract each metadata type using the new trace-based approach
-    const metadataTypes = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'positive', 'negative'];
-    
-    for (const type of metadataTypes) {
+    // Extract scalar metadata (seed, steps, cfg, sampler, scheduler)
+    const scalarTypes = ['seed', 'steps', 'cfg', 'sampler', 'scheduler'];
+    for (const type of scalarTypes) {
       const value = this._traceMetadataValue(samplerId, type, this._getPortPatterns(type));
       if (value !== null && value !== undefined) {
-        // For string values, trim whitespace
-        if (typeof value === 'string') {
-          metadata[type] = value.trim();
-        } else {
-          metadata[type] = value;
-        }
+        metadata[type] = value;
       } else {
-        // Set appropriate default values
-        if (type === 'positive' || type === 'negative') {
-          metadata[type] = '';
-        } else if (type === 'sampler' || type === 'scheduler') {
-          metadata[type] = undefined;
-        } else {
-          metadata[type] = null;
-        }
+        metadata[type] = (type === 'sampler' || type === 'scheduler') ? undefined : null;
       }
+    }
+
+    // Extract conditioning text (positive, negative) via dedicated method that
+    // collects all text across the conditioning subgraph (e.g. ConditioningCombine).
+    for (const type of ['positive', 'negative']) {
+      metadata[type] = this._traceConditioningText(samplerId, type);
     }
     
     // Find checkpoint
@@ -635,14 +622,14 @@ class ComfyUISamplerAnalyzer {
    * @private
    */
   _getPortPatterns(metadataType) {
+    // Scalar metadata port patterns only.
+    // positive/negative are handled by _traceConditioningText, not here.
     const patterns = {
-      seed: ['seed', 'noise_seed', 'noise'],
-      steps: ['steps'],
-      cfg: ['cfg', 'guidance'],
-      sampler: ['sampler', 'sampler_name'],
+      seed:      ['seed', 'noise_seed', 'noise'],
+      steps:     ['steps'],
+      cfg:       ['cfg', 'guidance'],
+      sampler:   ['sampler', 'sampler_name'],
       scheduler: ['scheduler'],
-      positive: ['positive', 'text', 'prompt', 'cond', 'conditioning', 'text_g', 'text_l'],
-      negative: ['negative', 'text', 'prompt']
     };
     return patterns[metadataType] || [];
   }
@@ -714,7 +701,7 @@ class ComfyUISamplerAnalyzer {
         return value;
       }
       
-      // Continue traversing to parent nodes
+      // Continue traversing to parent nodes (scalar metadata only).
       const parents = this.graph.getParents(nodeId);
       for (const parentId of parents) {
         if (!visited.has(parentId)) {
@@ -878,6 +865,105 @@ class ComfyUISamplerAnalyzer {
     }
     
     return [];
+  }
+
+  /**
+   * Trace conditioning text for positive or negative metadata.
+   *
+   * Unlike _traceMetadataValue (which returns the first scalar found), this method
+   * collects ALL text values reachable within the conditioning subgraph and joins
+   * them. This correctly handles ConditioningCombine and similar nodes where multiple
+   * CLIPTextEncode outputs are merged before reaching the sampler.
+   *
+   * From the KSampler's perspective, everything arriving at its 'positive'/'negative'
+   * port is that conditioning — including all branches of a ConditioningCombine.
+   *
+   * Traversal rules:
+   *   - Dictionary provider  → extract text, add to collection
+   *   - Dictionary router    → follow passthrough ports, continue BFS
+   *   - Unknown node         → stop (do not expand parents)
+   *
+   * @param {string} startNodeId - The sampler node to start from
+   * @param {string} metadataType - 'positive' or 'negative'
+   * @returns {string} Collected text joined by ', ', or '' if nothing found
+   * @private
+   */
+  _traceConditioningText(startNodeId, metadataType) {
+    const portName = metadataType; // 'positive' or 'negative' — matches KSampler input key
+
+    // Step 1: follow the direct port link from the sampler
+    const condNodeId = this.graph.getConnectedNodeId(startNodeId, portName);
+    if (!condNodeId) {
+      return '';
+    }
+
+    // Step 2: BFS within the conditioning subgraph, collecting all text
+    const visited = new Set();
+    const queue = [condNodeId];
+    const texts = [];
+
+    while (queue.length > 0) {
+      const nodeId = queue.shift();
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
+
+      const node = this.graph.getNode(nodeId);
+      if (!node) continue;
+
+      // Dictionary lookup first
+      if (this.dictionary && this.dictionary.hasDefinition(node.class_type)) {
+        const definition = this.dictionary.getNodeDefinition(node.class_type);
+
+        if (definition.type === 'provider') {
+          // Extract text and add to collection
+          const value = this._applyDictionaryDefinition(nodeId, definition, metadataType);
+          if (value !== null && value !== undefined && typeof value === 'string' && value.trim()) {
+            texts.push(value.trim());
+          }
+          continue; // provider is a leaf — don't traverse further
+        }
+
+        if (definition.type === 'router' && definition.passthrough_rules) {
+          // Follow all passthrough ports
+          const allInputPorts = new Set();
+          for (const outputPort in definition.passthrough_rules) {
+            const inputPorts = definition.passthrough_rules[outputPort];
+            if (Array.isArray(inputPorts)) {
+              inputPorts.forEach(p => allInputPorts.add(p));
+            }
+          }
+          for (const port of allInputPorts) {
+            const nextId = this.graph.getConnectedNodeId(nodeId, port);
+            if (nextId && !visited.has(nextId)) {
+              queue.push(nextId);
+            }
+          }
+          continue;
+        }
+      }
+
+      // Unknown node: apply a lightweight heuristic for well-known text provider ports
+      // before giving up. This covers CLIPTextEncode (and similar) when no dictionary
+      // is loaded, without expanding into unrelated ancestors.
+      const TEXT_PORT_NAMES = ['text', 'text_g', 'text_l', 'prompt', 'string'];
+      let foundText = false;
+      if (node.inputs) {
+        for (const portName of TEXT_PORT_NAMES) {
+          if (portName in node.inputs) {
+            const val = node.inputs[portName];
+            if (typeof val === 'string' && val.trim()) {
+              texts.push(val.trim());
+              foundText = true;
+              break;
+            }
+          }
+        }
+      }
+      // If no text was found here, stop — do not expand parents.
+      // Intentional: we don't traverse into unrelated parts of the graph.
+    }
+
+    return texts.join(', ');
   }
 }
 
