@@ -50,5 +50,8 @@ tests/fixtures/*.jpeg
 
 # Test expected files - developers generate from their own samples
 tests/expected/*.json
+# Bridge fixture expected files are committed as cross-repo contract
+# (eagle-metadata-bridge Python tests verify against these same values)
+!tests/expected/bridge-*.json
 !tests/expected/sample/
 tests/expected/raw-metadata/
