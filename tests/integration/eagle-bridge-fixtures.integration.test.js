@@ -75,7 +75,7 @@ const TEST_CASES = [
     expected: 'tests/expected/bridge-conditioning-combine.json',
     mimeType: 'image/png',
     checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkBasePositiveContains: 'brown hair'
+    checkBasePositiveContains: 'tailored jacket'
   },
   {
     name: 'bridge-conditioning-combine (ImpactCombineConditionings, boleromix) WebP',
@@ -83,7 +83,7 @@ const TEST_CASES = [
     expected: 'tests/expected/bridge-conditioning-combine.json',
     mimeType: 'image/webp',
     checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkBasePositiveContains: 'brown hair'
+    checkBasePositiveContains: 'tailored jacket'
   }
 ];
 

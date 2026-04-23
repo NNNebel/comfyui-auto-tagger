@@ -15,9 +15,9 @@
       "cfg": 8,
       "sampler": "euler_ancestral",
       "scheduler": "simple",
-      "positive": "masterpiece, 1girl, bronze hair, portlate",
+      "positive": "masterpiece, 1girl, basque beret,",
       "negative": "worst quality,",
-      "checkpoint": "hassakuXLIllustrious_v33.safetensors",
+      "checkpoint": "novaAnimeXL_ilV140.safetensors",
       "distance": 1,
       "stepIndex": 1
     },
@@ -32,8 +32,8 @@
       "sampler": "euler_ancestral",
       "scheduler": "normal",
       "positive": "(ultra-detailed),",
-      "negative": "nude,",
-      "checkpoint": "hassakuXLIllustrious_v33.safetensors",
+      "negative": "bad hands",
+      "checkpoint": "novaAnimeXL_ilV140.safetensors",
       "distance": 2,
       "stepIndex": 2
     }
@@ -43,8 +43,8 @@
   "cfg": 8,
   "sampler": "euler_ancestral",
   "scheduler": "simple",
-  "checkpoint": "hassakuXLIllustrious_v33.safetensors",
-  "positive": "masterpiece, 1girl, bronze hair, portlate\n(ultra-detailed),",
-  "negative": "worst quality,\nnude,",
+  "checkpoint": "novaAnimeXL_ilV140.safetensors",
+  "positive": "masterpiece, 1girl, basque beret,\n(ultra-detailed),",
+  "negative": "worst quality,\nbad hands",
   "loras": []
 }

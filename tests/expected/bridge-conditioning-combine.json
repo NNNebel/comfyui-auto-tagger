@@ -15,9 +15,9 @@
       "cfg": 8,
       "sampler": "dpmpp_2m",
       "scheduler": "simple",
-      "positive": "masterpiece,, 1girl,, brown hair, hime cut, summer sweater",
+      "positive": "masterpiece,, 1girl,, tailored jacket,stick pants",
       "negative": "worst quality,, bad quality,, bad hands, extra limbs,",
-      "checkpoint": "boleromixIllustrious_v815.safetensors",
+      "checkpoint": "novaAnimeXL_ilV140.safetensors",
       "distance": 1,
       "stepIndex": 1
     }
@@ -27,8 +27,8 @@
   "cfg": 8,
   "sampler": "dpmpp_2m",
   "scheduler": "simple",
-  "checkpoint": "boleromixIllustrious_v815.safetensors",
-  "positive": "masterpiece,, 1girl,, brown hair, hime cut, summer sweater",
+  "checkpoint": "novaAnimeXL_ilV140.safetensors",
+  "positive": "masterpiece,, 1girl,, tailored jacket,stick pants",
   "negative": "worst quality,, bad quality,, bad hands, extra limbs,",
   "loras": []
 }

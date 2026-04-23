@@ -15,7 +15,7 @@
       "cfg": 8,
       "sampler": "dpmpp_2m",
       "scheduler": "simple",
-      "positive": "masterpiece, 1girl, bronze hair, portlate",
+      "positive": "masterpiece, 1girl,  casual blouse",
       "negative": "worst quality,",
       "checkpoint": "novaAnimeXL_ilV150.safetensors",
       "distance": 1,
@@ -28,7 +28,7 @@
   "sampler": "dpmpp_2m",
   "scheduler": "simple",
   "checkpoint": "novaAnimeXL_ilV150.safetensors",
-  "positive": "masterpiece, 1girl, bronze hair, portlate",
+  "positive": "masterpiece, 1girl,  casual blouse",
   "negative": "worst quality,",
   "loras": []
 }
