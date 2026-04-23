@@ -84,6 +84,38 @@ const TEST_CASES = [
     mimeType: 'image/webp',
     checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
     checkBasePositiveContains: 'tailored jacket'
+  },
+  {
+    name: 'bridge-lora-simple (LoraLoader single, novaAnimeXL) PNG',
+    fixture: 'tests/fixtures/bridge-lora-simple.png',
+    expected: 'tests/expected/bridge-lora-simple.json',
+    mimeType: 'image/png',
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
+    checkLoras: ['hime cut_XL_illustrious_V1.0.safetensors']
+  },
+  {
+    name: 'bridge-lora-simple (LoraLoader single, novaAnimeXL) WebP',
+    fixture: 'tests/fixtures/bridge-lora-simple.webp',
+    expected: 'tests/expected/bridge-lora-simple.json',
+    mimeType: 'image/webp',
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
+    checkLoras: ['hime cut_XL_illustrious_V1.0.safetensors']
+  },
+  {
+    name: 'bridge-lora-stack (LoraLoaderStack rgthree, novaAnimeXL) PNG',
+    fixture: 'tests/fixtures/bridge-lora-stack.png',
+    expected: 'tests/expected/bridge-lora-stack.json',
+    mimeType: 'image/png',
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
+    checkLoras: ['half twintail_illustrious_V1.0.safetensors']
+  },
+  {
+    name: 'bridge-lora-stack (LoraLoaderStack rgthree, novaAnimeXL) WebP',
+    fixture: 'tests/fixtures/bridge-lora-stack.webp',
+    expected: 'tests/expected/bridge-lora-stack.json',
+    mimeType: 'image/webp',
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
+    checkLoras: ['half twintail_illustrious_V1.0.safetensors']
   }
 ];
 
