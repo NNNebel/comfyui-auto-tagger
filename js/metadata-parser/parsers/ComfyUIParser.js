@@ -56,6 +56,7 @@ class ComfyUIParser extends MetadataParserBase {
     if (rawChunks.eagle_bridge && rawChunks.eagle_bridge.final_node_id) {
       const nodeId = String(rawChunks.eagle_bridge.final_node_id);
       effectiveOptions.forcedOutputNodeIds = [nodeId];
+      metadata.eagle_bridge = { final_node_id: nodeId };
       console.log(`[EagleMetadataBridge] eagle_bridge detected: node ${nodeId} forced as output`);
     }
 

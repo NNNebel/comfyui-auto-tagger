@@ -42,33 +42,48 @@ function readExpected(relativePath) {
 // ---------------------------------------------------------------------------
 const TEST_CASES = [
   {
-    name: 'bridge-simple (single KSampler, perfectdeliberate_v60)',
+    name: 'bridge-simple (single KSampler, novaAnimeXL) PNG',
     fixture: 'tests/fixtures/bridge-simple.png',
     expected: 'tests/expected/bridge-simple.json',
     mimeType: 'image/png',
-    // Snapshot fields verified against expected JSON
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback']
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
   },
   {
-    name: 'bridge-multi (3x KSampler + LoraLoaderStack rgthree, boleromix)',
+    name: 'bridge-simple (single KSampler, novaAnimeXL) WebP',
+    fixture: 'tests/fixtures/bridge-simple.webp',
+    expected: 'tests/expected/bridge-simple.json',
+    mimeType: 'image/webp',
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
+  },
+  {
+    name: 'bridge-multi (2x KSampler, hassakuXL) PNG',
     fixture: 'tests/fixtures/bridge-multi.png',
     expected: 'tests/expected/bridge-multi.json',
     mimeType: 'image/png',
-    // Verifies: distance-based base sampler selection, LoRA ancestor scan
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback'],
-    checkLoras: [
-      'Little Red Riding Hood_illustrious_V1.0.safetensors',
-      'choker_illustrious_V1.0.safetensors'
-    ]
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
   },
   {
-    name: 'bridge-conditioning-combine (ConditioningCombine in base sampler positive)',
+    name: 'bridge-multi (2x KSampler, hassakuXL) WebP',
+    fixture: 'tests/fixtures/bridge-multi.webp',
+    expected: 'tests/expected/bridge-multi.json',
+    mimeType: 'image/webp',
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
+  },
+  {
+    name: 'bridge-conditioning-combine (ImpactCombineConditionings, boleromix) PNG',
     fixture: 'tests/fixtures/bridge-conditioning-combine.png',
     expected: 'tests/expected/bridge-conditioning-combine.json',
     mimeType: 'image/png',
-    // Verifies: _traceConditioningText collects all texts via ConditioningCombine
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback'],
-    checkBasePositiveContains: 'green hair'
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
+    checkBasePositiveContains: 'brown hair'
+  },
+  {
+    name: 'bridge-conditioning-combine (ImpactCombineConditionings, boleromix) WebP',
+    fixture: 'tests/fixtures/bridge-conditioning-combine.webp',
+    expected: 'tests/expected/bridge-conditioning-combine.json',
+    mimeType: 'image/webp',
+    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
+    checkBasePositiveContains: 'brown hair'
   }
 ];
 
@@ -121,10 +136,21 @@ describe('eagle_bridge real-fixture integration tests', () => {
         expect(comfy).toBeDefined();
 
         for (const field of checkFields) {
+          if (field === 'eagle_bridge') continue; // checked separately below
           if (expected[field] !== undefined) {
             expect(comfy[field], `field: ${field}`).toBe(expected[field]);
           }
         }
+      });
+
+      it('eagle_bridge.final_node_id matches expected', () => {
+        const buffer = readFixture(fixture);
+        const expected = readExpected(expectedPath);
+        if (!buffer || !expected?.eagle_bridge) return;
+        const results = service.extractMetadata(buffer, mimeType);
+        const comfy = results.find(r => r.format === 'comfyui');
+        expect(comfy?.eagle_bridge?.final_node_id, 'eagle_bridge.final_node_id')
+          .toBe(expected.eagle_bridge.final_node_id);
       });
 
       it('has at least one generation step', () => {
