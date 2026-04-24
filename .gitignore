@@ -46,6 +46,11 @@ tests/fixtures/*.png
 tests/fixtures/*.webp
 tests/fixtures/*.jpg
 tests/fixtures/*.jpeg
+# Bridge fixtures are committed as CI test data
+!tests/fixtures/bridge-*.png
+!tests/fixtures/bridge-*.webp
+!tests/fixtures/bridge-*.jpg
+!tests/fixtures/bridge-*.jpeg
 
 # Test expected files - developers generate from their own samples
 tests/expected/*.json
