@@ -20,7 +20,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 > - Sends the image to Eagle
 > - Attaches tags (checkpoint, LoRA, prompt tokens, seed, sampler…) and a structured annotation
 >
-> When used alongside this plugin, tag management becomes even more powerful — images arrive in Eagle already tagged, and you can re-run this plugin at any time to update, filter, or batch-process them further. The node also embeds an `eagle_bridge` signal that lets this plugin reliably trace the exact workflow graph instead of relying on heuristics.
+> When used alongside this plugin, tag management becomes even more powerful — images arrive in Eagle already tagged, and you can re-run this plugin at any time to update, filter, or batch-process them further. The node embeds the final node index into the image (as an `eagle_bridge` signal), allowing this plugin to reliably retrieve the prompt and generation parameters by tracing the exact workflow graph instead of relying on heuristics or inference.
 
 ### ✨ Features
 
@@ -150,7 +150,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 > - Eagle へ画像を送信
 > - タグ（チェックポイント・LoRA・プロンプトトークン・Seed・サンプラーなど）と構造化アノテーションを付与
 >
-> 本プラグインと組み合わせることで、タグ管理がさらに便利になります。Eagle に届いた時点で既にタグが付いており、後からいつでも本プラグインで一括処理・フィルタリング・追加編集が可能です。またノードは画像に `eagle_bridge` シグナルを埋め込むため、本プラグインがヒューリスティックに頼らずワークフローグラフを確実にトレースできるようになります。
+> 本プラグインと組み合わせることで、タグ管理がさらに便利になります。Eagle に届いた時点で既にタグが付いており、後からいつでも本プラグインで一括処理・フィルタリング・追加編集が可能です。またノードは画像に最終的なノード番号（`eagle_bridge` シグナル）を埋め込むため、本プラグインがヒューリスティックな推論に頼らず、ワークフローグラフを正確に辿ってプロンプトや各種情報を確実に取得できるようになります。
 
 ### ✨ 機能
 
@@ -264,3 +264,4 @@ ComfyUIの画像に埋め込まれるメタデータには、「実際にどの�
 ### 📄 ライセンス
 
 本プラグインは [MIT License](LICENSE) のもとで公開されています。商用・非商用を問わず、自由にご利用・改変いただけます。
+けます。
