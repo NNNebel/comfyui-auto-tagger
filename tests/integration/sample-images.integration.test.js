@@ -92,6 +92,14 @@ describe('Sample Images Integration Tests', () => {
       mimeType: 'image/webp',
       format: 'comfyui',
       shouldSucceed: true
+    },
+    {
+      name: 'ComfyUI Simple JPEG',
+      imagePath: 'tests/fixtures/comfyui_simple.jpeg',
+      expectedPath: 'tests/expected/comfyui_jpeg_simple.json',
+      mimeType: 'image/jpeg',
+      format: 'comfyui',
+      shouldSucceed: true
     }
   ];
 

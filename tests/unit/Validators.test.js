@@ -290,8 +290,12 @@ describe('Validators', () => {
       expect(Validators.validateMimeType('image/webp')).toBe(true);
     });
 
+    it('should accept image/jpeg', () => {
+      expect(Validators.validateMimeType('image/jpeg')).toBe(true);
+    });
+
     it('should throw error for unsupported MIME type', () => {
-      expect(() => Validators.validateMimeType('image/jpeg')).toThrow('Unsupported MIME type: image/jpeg');
+      expect(() => Validators.validateMimeType('image/gif')).toThrow('Unsupported MIME type: image/gif');
     });
 
     it('should throw error for empty string', () => {

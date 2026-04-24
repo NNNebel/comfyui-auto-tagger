@@ -2,24 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.3.5] - 2026-04-24
 
 ### 🇬🇧 English
+#### 🎉 New Features
+- **JPEG support**: ComfyUI-generated JPEG images can now be read and tagged, just like PNG and WebP.
+
 #### 🐛 Bug Fixes
-- Fixed incorrect negative prompt extraction when conditioning passes through an intermediate node (e.g. `ConditioningCombine`) not registered in the dictionary. Previously, BFS traversal could accidentally pick up a positive `CLIPTextEncode`'s text as the negative prompt.
-- Fixed `CLIPTextEncode` dictionary entry so it correctly returns its text when reached via either the positive or negative conditioning chain.
+- Fixed negative prompt being incorrectly extracted as positive when conditioning passed through an intermediate node (e.g. `ConditioningCombine`).
 
 #### ✨ Improvements
-- Added `CLIPTextEncodeSDXL` to the default node dictionary, enabling correct positive/negative prompt extraction for SDXL workflows (uses `text_g` field).
-- Clarified comment on custom LoRA loader input key matching: `.safetensors` extension check already guards against false positives from non-filename keys like `lora_strength`.
+- Added SDXL workflow support: positive/negative prompts are now correctly extracted from SDXL conditioning nodes.
+
+#### 🧪 Testing
+- Added JPEG fixture tests for all bridge variants (simple, multi, lora-simple, lora-stack, conditioning-combine).
+- Added image-to-image fixture tests (bridge-i2i) for PNG, WebP, and JPEG.
 
 ### 🇯🇵 日本語
+#### 🎉 新機能
+- **JPEG 対応**: ComfyUI で生成した JPEG 画像のメタデータを PNG・WebP と同様に読み取り・タグ付けできるようになった。
+
 #### 🐛 バグ修正
-- `ConditioningCombine` などの中間ノード経由で negative プロンプトを取得する際に、positive 側の `CLIPTextEncode` テキストが誤って negative として取得される不具合を修正。BFS パターンから `text` / `prompt` を negative 用に除外し、辞書登録済みの `CLIPTextEncode` が文脈に応じて正しくテキストを返すよう対応。
-- `CLIPTextEncode` の辞書エントリを修正し、positive/negative どちらの経路から到達した場合もテキストを返すよう対応。
+- `ConditioningCombine` などの中間ノードを経由している場合に、negative プロンプトが positive として誤って取得されていた不具合を修正。
 
 #### ✨ 改善
-- デフォルト辞書に `CLIPTextEncodeSDXL` を追加。SDXL ワークフローで positive/negative プロンプトが正しく取得できるようになった（`text_g` フィールドを使用）。
+- SDXL ワークフローで positive/negative プロンプトが正しく取得できるようになった。
+
+#### 🧪 テスト
+- bridge 系フィクスチャ（simple・multi・lora-simple・lora-stack・conditioning-combine）の JPEG テストを追加。
+- img2img フィクスチャ（bridge-i2i）の PNG・WebP・JPEG テストを追加。
 
 ---
 

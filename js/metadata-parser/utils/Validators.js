@@ -203,7 +203,7 @@
         throw new Error('MIME type must be a non-empty string');
       }
       
-      const validMimeTypes = ['image/png', 'image/webp'];
+      const validMimeTypes = ['image/png', 'image/webp', 'image/jpeg'];
       
       if (!validMimeTypes.includes(mimeType)) {
         throw new Error(`Unsupported MIME type: ${mimeType} (supported: ${validMimeTypes.join(', ')})`);

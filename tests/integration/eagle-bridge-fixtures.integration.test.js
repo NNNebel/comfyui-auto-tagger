@@ -46,77 +46,111 @@ const TEST_CASES = [
     fixture: 'tests/fixtures/bridge-simple.png',
     expected: 'tests/expected/bridge-simple.json',
     mimeType: 'image/png',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
   },
   {
     name: 'bridge-simple (single KSampler, novaAnimeXL) WebP',
     fixture: 'tests/fixtures/bridge-simple.webp',
     expected: 'tests/expected/bridge-simple.json',
     mimeType: 'image/webp',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
   },
   {
     name: 'bridge-multi (2x KSampler, hassakuXL) PNG',
     fixture: 'tests/fixtures/bridge-multi.png',
     expected: 'tests/expected/bridge-multi.json',
     mimeType: 'image/png',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
   },
   {
     name: 'bridge-multi (2x KSampler, hassakuXL) WebP',
     fixture: 'tests/fixtures/bridge-multi.webp',
     expected: 'tests/expected/bridge-multi.json',
     mimeType: 'image/webp',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge']
   },
   {
     name: 'bridge-conditioning-combine (ImpactCombineConditionings, boleromix) PNG',
     fixture: 'tests/fixtures/bridge-conditioning-combine.png',
     expected: 'tests/expected/bridge-conditioning-combine.json',
     mimeType: 'image/png',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkBasePositiveContains: 'tailored jacket'
   },
   {
     name: 'bridge-conditioning-combine (ImpactCombineConditionings, boleromix) WebP',
     fixture: 'tests/fixtures/bridge-conditioning-combine.webp',
     expected: 'tests/expected/bridge-conditioning-combine.json',
     mimeType: 'image/webp',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkBasePositiveContains: 'tailored jacket'
   },
   {
     name: 'bridge-lora-simple (LoraLoader single, novaAnimeXL) PNG',
     fixture: 'tests/fixtures/bridge-lora-simple.png',
     expected: 'tests/expected/bridge-lora-simple.json',
     mimeType: 'image/png',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkLoras: ['hime cut_XL_illustrious_V1.0.safetensors']
   },
   {
     name: 'bridge-lora-simple (LoraLoader single, novaAnimeXL) WebP',
     fixture: 'tests/fixtures/bridge-lora-simple.webp',
     expected: 'tests/expected/bridge-lora-simple.json',
     mimeType: 'image/webp',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkLoras: ['hime cut_XL_illustrious_V1.0.safetensors']
   },
   {
     name: 'bridge-lora-stack (LoraLoaderStack rgthree, novaAnimeXL) PNG',
     fixture: 'tests/fixtures/bridge-lora-stack.png',
     expected: 'tests/expected/bridge-lora-stack.json',
     mimeType: 'image/png',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkLoras: ['half twintail_illustrious_V1.0.safetensors']
   },
   {
     name: 'bridge-lora-stack (LoraLoaderStack rgthree, novaAnimeXL) WebP',
     fixture: 'tests/fixtures/bridge-lora-stack.webp',
     expected: 'tests/expected/bridge-lora-stack.json',
     mimeType: 'image/webp',
-    checkFields: ['format', 'checkpoint', 'seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sampler_fallback', 'eagle_bridge'],
-    checkLoras: ['half twintail_illustrious_V1.0.safetensors']
-  }
+  },
+  // JPEG variants
+  {
+    name: 'bridge-simple (single KSampler, novaAnimeXL) JPEG',
+    fixture: 'tests/fixtures/bridge-simple.jpg',
+    expected: 'tests/expected/bridge-simple.json',
+    mimeType: 'image/jpeg',
+  },
+  {
+    name: 'bridge-multi (2x KSampler, hassakuXL) JPEG',
+    fixture: 'tests/fixtures/bridge-multi.jpg',
+    expected: 'tests/expected/bridge-multi.json',
+    mimeType: 'image/jpeg',
+  },
+  {
+    name: 'bridge-conditioning-combine (ImpactCombineConditionings, boleromix) JPEG',
+    fixture: 'tests/fixtures/bridge-conditioning-combine.jpg',
+    expected: 'tests/expected/bridge-conditioning-combine.json',
+    mimeType: 'image/jpeg',
+  },
+  {
+    name: 'bridge-lora-simple (LoraLoader single, novaAnimeXL) JPEG',
+    fixture: 'tests/fixtures/bridge-lora-simple.jpg',
+    expected: 'tests/expected/bridge-lora-simple.json',
+    mimeType: 'image/jpeg',
+  },
+  {
+    name: 'bridge-lora-stack (LoraLoaderStack rgthree, novaAnimeXL) JPEG',
+    fixture: 'tests/fixtures/bridge-lora-stack.jpg',
+    expected: 'tests/expected/bridge-lora-stack.json',
+    mimeType: 'image/jpeg',
+  },
+  // bridge-i2i (image-to-image + ADetailer, novaAnimeXL) – PNG / WebP / JPEG
+  {
+    name: 'bridge-i2i (DetailerForEachDebug, novaAnimeXL) PNG',
+    fixture: 'tests/fixtures/bridge-i2i.png',
+    expected: 'tests/expected/bridge-i2i.json',
+    mimeType: 'image/png',
+  },
+  {
+    name: 'bridge-i2i (DetailerForEachDebug, novaAnimeXL) WebP',
+    fixture: 'tests/fixtures/bridge-i2i.webp',
+    expected: 'tests/expected/bridge-i2i.json',
+    mimeType: 'image/webp',
+  },
+  {
+    name: 'bridge-i2i (DetailerForEachDebug, novaAnimeXL) JPEG',
+    fixture: 'tests/fixtures/bridge-i2i.jpg',
+    expected: 'tests/expected/bridge-i2i.json',
+    mimeType: 'image/jpeg',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -129,20 +163,15 @@ describe('eagle_bridge real-fixture integration tests', () => {
     service = new MetadataService();
   });
 
-  TEST_CASES.forEach(({ name, fixture, expected: expectedPath, mimeType, checkFields, checkLoras, checkBasePositiveContains }) => {
+  TEST_CASES.forEach(({ name, fixture, expected: expectedPath, mimeType }) => {
     describe(name, () => {
       it('fixture file exists', () => {
         expect(existsSync(join(ROOT, fixture))).toBe(true);
       });
 
       it('eagle_bridge chunk is present in fixture', () => {
-        // Verify the fixture actually contains eagle_bridge metadata
-        // (if it doesn't, this fixture is not testing the right thing)
         const buffer = readFixture(fixture);
         if (!buffer) return;
-        // We can't directly read tEXt chunks here, but we can verify
-        // the parse result shows eagle_bridge was detected (sampler_fallback = false
-        // and a result was extracted from the correct node)
         const results = service.extractMetadata(buffer, mimeType);
         const comfy = results.find(r => r.format === 'comfyui');
         expect(comfy).toBeDefined();
@@ -166,23 +195,7 @@ describe('eagle_bridge real-fixture integration tests', () => {
         const results = service.extractMetadata(buffer, mimeType);
         const comfy = results.find(r => r.format === 'comfyui');
         expect(comfy).toBeDefined();
-
-        for (const field of checkFields) {
-          if (field === 'eagle_bridge') continue; // checked separately below
-          if (expected[field] !== undefined) {
-            expect(comfy[field], `field: ${field}`).toBe(expected[field]);
-          }
-        }
-      });
-
-      it('eagle_bridge.final_node_id matches expected', () => {
-        const buffer = readFixture(fixture);
-        const expected = readExpected(expectedPath);
-        if (!buffer || !expected?.eagle_bridge) return;
-        const results = service.extractMetadata(buffer, mimeType);
-        const comfy = results.find(r => r.format === 'comfyui');
-        expect(comfy?.eagle_bridge?.final_node_id, 'eagle_bridge.final_node_id')
-          .toBe(expected.eagle_bridge.final_node_id);
+        expect(comfy).toMatchObject(expected);
       });
 
       it('has at least one generation step', () => {
@@ -200,30 +213,6 @@ describe('eagle_bridge real-fixture integration tests', () => {
         const comfy = results.find(r => r.format === 'comfyui');
         expect(comfy?.sampler_fallback).toBe(false);
       });
-
-      if (checkLoras) {
-        it('base sampler ancestor scan finds expected LoRAs', () => {
-          const buffer = readFixture(fixture);
-          if (!buffer) return;
-          const results = service.extractMetadata(buffer, mimeType);
-          const comfy = results.find(r => r.format === 'comfyui');
-          expect(comfy?.loras).toBeDefined();
-          for (const lora of checkLoras) {
-            expect(comfy.loras, `expected lora: ${lora}`).toContain(lora);
-          }
-        });
-      }
-
-      if (checkBasePositiveContains) {
-        it('base sampler positive text contains expected string (ConditioningCombine)', () => {
-          const buffer = readFixture(fixture);
-          if (!buffer) return;
-          const results = service.extractMetadata(buffer, mimeType);
-          const comfy = results.find(r => r.format === 'comfyui');
-          const base = comfy?.generationSteps?.find(s => s.isBase);
-          expect(base?.positive).toContain(checkBasePositiveContains);
-        });
-      }
     });
   });
 });

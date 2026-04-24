@@ -21,7 +21,9 @@ const buffer = new Uint8Array(fs.readFileSync(imagePath));
 
 // Determine MIME type from extension
 const ext = path.extname(imagePath).toLowerCase();
-const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
+const mimeType = ext === '.png' ? 'image/png'
+               : (ext === '.jpg' || ext === '.jpeg') ? 'image/jpeg'
+               : 'image/webp';
 
 console.log(`Analyzing: ${imagePath}`);
 console.log(`MIME type: ${mimeType}`);

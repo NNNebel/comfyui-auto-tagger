@@ -289,7 +289,7 @@ class ComfyUIParser extends MetadataParserBase {
       }
     }
 
-    if (loras.size > 0) metadata.loras = Array.from(loras);
+    metadata.loras = Array.from(loras);
     
     // Check for excluded nodes and log warnings
     const excludedNodes = reporter.getExcludedNodes();

@@ -729,7 +729,7 @@ describe('ComfyUIParser - Property Tests: Field Extraction', () => {
             
             // Property: Present fields should be extracted, absent fields should use defaults
             const checkpointOk = flags.hasCheckpoint ? result.checkpoint === checkpoint : result.checkpoint === undefined;
-            const lorasOk = flags.hasLoras ? (result.loras && result.loras.includes(lora)) : result.loras === undefined;
+            const lorasOk = flags.hasLoras ? (result.loras && result.loras.includes(lora)) : (result.loras === undefined || (Array.isArray(result.loras) && result.loras.length === 0));
             // Prompts are trimmed by the parser
             const positiveOk = flags.hasPositive ? result.positive === positive.trim() : result.positive === undefined;
             const negativeOk = flags.hasNegative ? result.negative === negative.trim() : result.negative === undefined;

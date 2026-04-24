@@ -1,0 +1,13 @@
+{
+  "format": "comfyui",
+  "eagle_bridge": {
+    "final_node_id": "20"
+  },
+  "sampler_fallback": false,
+  "seed": 1111111,
+  "steps": 20,
+  "cfg": 8,
+  "sampler": "dpmpp_2m",
+  "scheduler": "simple",
+  "checkpoint": "novaAnimeXL_ilV150.safetensors"
+}
