@@ -14,7 +14,13 @@
 
 It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Forge, and other variants; referred to as "A1111" below), and **Civitai** generated images in **PNG**, **WebP**, and **JPEG** formats, and allows you to filter which information to import.
 
-> **Companion node**: [Eagle Metadata Bridge](https://github.com/NNNebel/eagle-metadata-bridge) is a ComfyUI custom node that saves images directly to Eagle with auto-generated tags and annotations. It embeds an `eagle_bridge` signal that this plugin uses to reliably trace the workflow graph.
+> ### 🔗 Better together: Eagle Metadata Bridge
+>
+> [Eagle Metadata Bridge](https://github.com/NNNebel/eagle-metadata-bridge) is a ComfyUI custom node that replaces the standard Save Image node. Every time you generate an image, it automatically:
+> - Sends the image to Eagle
+> - Attaches tags (checkpoint, LoRA, prompt tokens, seed, sampler…) and a structured annotation
+>
+> When used alongside this plugin, tag management becomes even more powerful — images arrive in Eagle already tagged, and you can re-run this plugin at any time to update, filter, or batch-process them further. The node also embeds an `eagle_bridge` signal that lets this plugin reliably trace the exact workflow graph instead of relying on heuristics.
 
 ### ✨ Features
 
@@ -138,7 +144,13 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 **ComfyUI**、**Stable Diffusion WebUI**（Automatic1111、Forge等の派生版を含む。以下「A1111」と表記）、**Civitai** で生成された **PNG**・**WebP**・**JPEG** 形式の画像に対応しており、取り込む情報を選択できます。
 
-> **コンパニオンノード**: [Eagle Metadata Bridge](https://github.com/NNNebel/eagle-metadata-bridge) は、ComfyUIで生成した画像を自動タグ・アノテーション付きで直接Eagleに送信するカスタムノードです。画像に `eagle_bridge` シグナルを埋め込み、本プラグインがそのシグナルを使ってワークフローグラフを確実にトレースします。
+> ### 🔗 組み合わせるとさらに便利：Eagle Metadata Bridge
+>
+> [Eagle Metadata Bridge](https://github.com/NNNebel/eagle-metadata-bridge) は、ComfyUI の「Save Image」ノードを置き換えるカスタムノードです。画像を生成するたびに自動で：
+> - Eagle へ画像を送信
+> - タグ（チェックポイント・LoRA・プロンプトトークン・Seed・サンプラーなど）と構造化アノテーションを付与
+>
+> 本プラグインと組み合わせることで、タグ管理がさらに便利になります。Eagle に届いた時点で既にタグが付いており、後からいつでも本プラグインで一括処理・フィルタリング・追加編集が可能です。またノードは画像に `eagle_bridge` シグナルを埋め込むため、本プラグインがヒューリスティックに頼らずワークフローグラフを確実にトレースできるようになります。
 
 ### ✨ 機能
 
