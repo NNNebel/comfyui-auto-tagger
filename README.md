@@ -12,7 +12,9 @@
 
 **ComfyUI Auto Tagger** is a plugin for [Eagle](https://en.eagle.cool/) that automatically extracts metadata (Workflow/Prompt JSON) from AI-generated images and saves them as Eagle **Tags** and **Notes**.
 
-It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Forge, and other variants; referred to as "A1111" below), and **Civitai** generated images in both **PNG** and **WebP** formats, and allows you to filter which information to import.
+It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Forge, and other variants; referred to as "A1111" below), and **Civitai** generated images in **PNG**, **WebP**, and **JPEG** formats, and allows you to filter which information to import.
+
+> **Companion node**: [Eagle Metadata Bridge](https://github.com/NNNebel/eagle-metadata-bridge) is a ComfyUI custom node that saves images directly to Eagle with auto-generated tags and annotations. It embeds an `eagle_bridge` signal that this plugin uses to reliably trace the workflow graph.
 
 ### ✨ Features
 
@@ -27,7 +29,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 * **Suspicious Node Detection**: Detects nodes with missing required inputs in ComfyUI workflows and allows users to decide whether to include or exclude them from metadata extraction.
 * **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
-* **No External Dependencies**: Parses PNG/WebP chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
+* **No External Dependencies**: Parses PNG/WebP/JPEG chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
 * **Utility**: Provides a dedicated button to safely remove only the tags/notes added by this plugin.
 
 ### 📸 Screenshots
@@ -134,7 +136,9 @@ This project is licensed under the [MIT License](LICENSE).
 **ComfyUI Auto Tagger** は、画像収集管理ソフト [Eagle](https://jp.eagle.cool/) 用のプラグインです。
 AI画像生成ツールで生成された画像に含まれるメタデータ（Workflow/Prompt）を解析し、モデル名やプロンプトなどを自動でEagleの「タグ」や「メモ」に追加します。
 
-**ComfyUI**、**Stable Diffusion WebUI**（Automatic1111、Forge等の派生版を含む。以下「A1111」と表記）、**Civitai** で生成された **PNG** および **WebP** 形式の画像に対応しており、取り込む情報を選択できます。
+**ComfyUI**、**Stable Diffusion WebUI**（Automatic1111、Forge等の派生版を含む。以下「A1111」と表記）、**Civitai** で生成された **PNG**・**WebP**・**JPEG** 形式の画像に対応しており、取り込む情報を選択できます。
+
+> **コンパニオンノード**: [Eagle Metadata Bridge](https://github.com/NNNebel/eagle-metadata-bridge) は、ComfyUIで生成した画像を自動タグ・アノテーション付きで直接Eagleに送信するカスタムノードです。画像に `eagle_bridge` シグナルを埋め込み、本プラグインがそのシグナルを使ってワークフローグラフを確実にトレースします。
 
 ### ✨ 機能
 
@@ -151,7 +155,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 * **疑わしいノード検出**: ComfyUIのメタデータには実際の実行経路が記録されないため、プラグインは入力の欠落などから「実行されなかった未使用ノード（ノイズ）」を推測します。しかし、未知のカスタムノードを誤って除外しないよう、検知時はダイアログを表示し、抽出情報に含めるか除外するかの判断をユーザーに委ねます。
 * **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
 * **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
-* **外部依存なし**: PNG/WebPの内部データ（tEXt, comf, Exif）を直接解析するため、重い外部ライブラリに依存せず動作。
+* **外部依存なし**: PNG/WebP/JPEGの内部データ（tEXt, comf, Exif）を直接解析するため、重い外部ライブラリに依存せず動作。
 * **ユーティリティ**: このプラグインが生成したタグやメモのみを安全に削除する機能を提供。
 
 ### 📸 スクリーンショット
