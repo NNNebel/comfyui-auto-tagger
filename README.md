@@ -121,7 +121,7 @@ The plugin provides several configuration options accessible via the settings di
 *   **Disclaimer**: ComfyUI workflows can be extremely complex. 100% compatibility is not guaranteed. This plugin operates on advanced trace logic to identify the most relevant generation parameters.
 *   **Bug Reports**: When reporting issues on GitHub, please always attach:
     1.  Information about your generation environment (ComfyUI/A1111 version, custom nodes used, etc.).
-    2.  The original image (PNG/WebP) that retains its metadata.
+    2.  The original image (PNG/WebP/JPEG) that retains its metadata.
 
 ### 📄 License
 
@@ -247,7 +247,7 @@ ComfyUIの画像に埋め込まれるメタデータには、「実際にどの�
 *   **免責事項**: ComfyUIのWorkflowは非常に複雑なため、100%の動作は保証できません。本プラグインは、高度な解析ロジックに基づいて最も関連性の高い生成パラメータを特定します。
 *   **不具合報告**: GitHubのIssueで報告する際は、以下の2点を必ず添付してください。
     1.  生成環境の情報（ComfyUI/A1111のバージョン、使用しているカスタムノード等）
-    2.  メタデータが保持された画像の実ファイル（PNG/WebP）
+    2.  メタデータが保持された画像の実ファイル（PNG/WebP/JPEG）
 
 ### 📄 ライセンス
 
