@@ -112,16 +112,58 @@ This means:
 2. Follow the connection to the connected node
 3. Extract the `noise_seed` value from that node
 
+### 4. Checkpoint Loader Nodes
+
+Checkpoint loader nodes load model weights (checkpoints, UNET models, etc.).
+
+```json
+{
+  "CheckpointLoaderSimple": {
+    "type": "checkpoint_loader",
+    "input_key": "ckpt_name"
+  },
+  "UNETLoader": {
+    "type": "checkpoint_loader",
+    "input_key": "unet_name"
+  }
+}
+```
+
+**Fields:**
+- `type` (string): Must be `"checkpoint_loader"`
+- `input_key` (string): The input port name that holds the model path (e.g., `"ckpt_name"`, `"unet_name"`)
+
+### 5. LoRA Loader Nodes
+
+LoRA loader nodes apply LoRA weights to a model.
+
+```json
+{
+  "LoraLoader": {
+    "type": "lora_loader",
+    "input_key": "lora_name"
+  }
+}
+```
+
+**Fields:**
+- `type` (string): Must be `"lora_loader"`
+- `input_key` (string): The input port name that holds the LoRA path (e.g., `"lora_name"`)
+
+> **Note:** LoRA stack loaders with non-standard key naming (e.g., rgthree's `lora_01`, `lora_02` pattern) are handled by heuristic fallback and do not need dictionary entries.
+
 ## Validation Rules
 
 The dictionary must pass these validation checks:
 
 1. **Version Required**: Must have a `version` field
-2. **Valid Node Types**: Each node's `type` must be `"sampler"`, `"router"`, or `"provider"`
+2. **Valid Node Types**: Each node's `type` must be one of: `"sampler"`, `"router"`, `"provider"`, `"checkpoint_loader"`, `"lora_loader"`
 3. **Type-Specific Fields**:
    - Sampler nodes must have `port_mapping`
    - Router nodes must have `passthrough_rules`
    - Provider nodes must have `value_path` or `value_paths`
+   - Checkpoint loader nodes must have `input_key`
+   - LoRA loader nodes must have `input_key`
 
 ## Complete Example
 

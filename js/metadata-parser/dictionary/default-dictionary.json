@@ -1,6 +1,26 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "nodes": {
+    "CheckpointLoaderSimple": {
+      "type": "checkpoint_loader",
+      "input_key": "ckpt_name"
+    },
+    "CheckpointLoader": {
+      "type": "checkpoint_loader",
+      "input_key": "ckpt_name"
+    },
+    "UNETLoader": {
+      "type": "checkpoint_loader",
+      "input_key": "unet_name"
+    },
+    "LoraLoader": {
+      "type": "lora_loader",
+      "input_key": "lora_name"
+    },
+    "LoraLoaderModelOnly": {
+      "type": "lora_loader",
+      "input_key": "lora_name"
+    },
     "RandomNoise": {
       "type": "provider",
       "value_path": ["inputs", "noise_seed"],
