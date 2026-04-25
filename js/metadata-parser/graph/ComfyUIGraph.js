@@ -479,18 +479,48 @@ class ComfyUIGraph {
     const nodeType = node.class_type;
     const inputs = node.inputs || {};
     const inputKeys = Object.keys(inputs);
-    
-    // Check for image processing nodes without image input
+
+    // ── Dictionary-first: check suspicious_detection field ──────────────
+    // Nodes in the dictionary with a suspicious_detection entry are checked
+    // against their required_input_patterns before falling through to heuristics.
+    if (this.dictionary && this.dictionary.hasDefinition(nodeType)) {
+      const definition = this.dictionary.getNodeDefinition(nodeType);
+
+      // Provider nodes are never suspicious (they supply values, not consume them)
+      if (definition && definition.type === 'provider') {
+        return null;
+      }
+
+      if (definition && definition.suspicious_detection) {
+        const { required_input_patterns, reason_key, suggestion_key } = definition.suspicious_detection;
+        const patterns = Array.isArray(required_input_patterns) ? required_input_patterns : [required_input_patterns];
+        const hasRequiredInput = inputKeys.some(key =>
+          patterns.some(pattern => key.toLowerCase().includes(pattern))
+        );
+        if (!hasRequiredInput) {
+          return {
+            reasonKey: reason_key || 'suspiciousNode.reason.missingInput',
+            reasonParams: { nodeType },
+            suggestionKey: suggestion_key || 'suspiciousNode.suggestion.disconnected',
+            isExecutable: false
+          };
+        }
+        return null; // has required input → not suspicious
+      }
+    }
+
+    // ── Heuristic fallbacks for nodes NOT in the dictionary ──────────────
+
+    // Image processing nodes without image input
     const imageProcessingNodes = [
-      'ImageUpscaleWithModel', 'ImageScaleBy', 'ImageScale', 
+      'ImageUpscaleWithModel', 'ImageScaleBy', 'ImageScale',
       'ImageResize', 'ImageCrop', 'ImageBlur'
     ];
-    
-    if (imageProcessingNodes.some(type => nodeType.includes(type))) {
-      const hasImageInput = inputKeys.some(key => 
+    if (!this.dictionary?.hasDefinition(nodeType) &&
+        imageProcessingNodes.some(type => nodeType.includes(type))) {
+      const hasImageInput = inputKeys.some(key =>
         key.toLowerCase().includes('image') || key.toLowerCase().includes('pixels')
       );
-      
       if (!hasImageInput) {
         return {
           reasonKey: 'suspiciousNode.reason.imageProcessingNoInput',
@@ -500,43 +530,43 @@ class ComfyUIGraph {
         };
       }
     }
-    
-    // Check for VAE nodes without proper inputs
-    if (nodeType.includes('VAEEncode')) {
-      const hasPixelsInput = inputKeys.some(key => key.toLowerCase().includes('pixels') || key.toLowerCase().includes('image'));
-      if (!hasPixelsInput) {
-        return {
-          reasonKey: 'suspiciousNode.reason.vaeEncodeNoInput',
-          suggestionKey: 'suspiciousNode.suggestion.vaeEncodeRequired',
-          isExecutable: false
-        };
+
+    // VAE nodes without proper inputs
+    if (!this.dictionary?.hasDefinition(nodeType)) {
+      if (nodeType.includes('VAEEncode')) {
+        const hasPixelsInput = inputKeys.some(key => key.toLowerCase().includes('pixels') || key.toLowerCase().includes('image'));
+        if (!hasPixelsInput) {
+          return {
+            reasonKey: 'suspiciousNode.reason.vaeEncodeNoInput',
+            suggestionKey: 'suspiciousNode.suggestion.vaeEncodeRequired',
+            isExecutable: false
+          };
+        }
+      }
+
+      if (nodeType.includes('VAEDecode')) {
+        const hasSamplesInput = inputKeys.some(key => key.toLowerCase().includes('samples') || key.toLowerCase().includes('latent'));
+        if (!hasSamplesInput) {
+          return {
+            reasonKey: 'suspiciousNode.reason.vaeDecodeNoInput',
+            suggestionKey: 'suspiciousNode.suggestion.vaeDecodeRequired',
+            isExecutable: false
+          };
+        }
       }
     }
-    
-    if (nodeType.includes('VAEDecode')) {
-      const hasSamplesInput = inputKeys.some(key => key.toLowerCase().includes('samples') || key.toLowerCase().includes('latent'));
-      if (!hasSamplesInput) {
-        return {
-          reasonKey: 'suspiciousNode.reason.vaeDecodeNoInput',
-          suggestionKey: 'suspiciousNode.suggestion.vaeDecodeRequired',
-          isExecutable: false
-        };
-      }
-    }
-    
-    // Check for sampler nodes without latent input
-    // Use dictionary to distinguish between sampler nodes and provider nodes
+
+    // Sampler nodes without latent input
     const samplerNodes = ['KSampler', 'SamplerCustom', 'SamplerCustomAdvanced'];
     if (samplerNodes.some(type => nodeType.includes(type))) {
-      // Check if this is actually a provider node (defined in dictionary)
+      // Skip if dictionary classifies this as a provider (e.g. KSamplerSelect)
       if (this.dictionary && this.dictionary.hasDefinition(nodeType)) {
         const definition = this.dictionary.getNodeDefinition(nodeType);
         if (definition && definition.type === 'provider') {
-          // This is a provider node (e.g., KSamplerSelect), not a sampler node
           return null;
         }
       }
-      
+
       const hasLatentInput = inputKeys.some(key => key.toLowerCase().includes('latent'));
       if (!hasLatentInput) {
         return {
@@ -547,7 +577,7 @@ class ComfyUIGraph {
         };
       }
     }
-    
+
     return null;
   }
   
