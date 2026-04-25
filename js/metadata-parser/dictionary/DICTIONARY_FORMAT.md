@@ -152,18 +152,62 @@ LoRA loader nodes apply LoRA weights to a model.
 
 > **Note:** LoRA stack loaders with non-standard key naming (e.g., rgthree's `lora_01`, `lora_02` pattern) are handled by heuristic fallback and do not need dictionary entries.
 
+### 6. Image Processor Nodes
+
+Image processing nodes that transform images (upscale, resize, crop, etc.). They support optional `suspicious_detection` to warn when the required image input is disconnected.
+
+```json
+{
+  "ImageUpscaleWithModel": {
+    "type": "image_processor",
+    "suspicious_detection": {
+      "required_input_patterns": ["image", "pixels"],
+      "reason_key": "suspiciousNode.reason.imageProcessingNoInput",
+      "suggestion_key": "suspiciousNode.suggestion.disconnected"
+    }
+  }
+}
+```
+
+### 7. VAE Nodes
+
+VAE encode/decode nodes. They support optional `suspicious_detection` to warn when the required latent/image input is disconnected.
+
+```json
+{
+  "VAEEncode": {
+    "type": "vae",
+    "suspicious_detection": {
+      "required_input_patterns": ["image", "pixels"],
+      "reason_key": "suspiciousNode.reason.vaeEncodeNoInput",
+      "suggestion_key": "suspiciousNode.suggestion.vaeEncodeRequired"
+    }
+  }
+}
+```
+
+### suspicious_detection Field
+
+The optional `suspicious_detection` field can be added to `image_processor` and `vae` nodes to enable dictionary-driven suspicious node detection.
+
+**Fields:**
+- `required_input_patterns` (array of strings): If none of the node's input keys contain any of these substrings, the node is flagged as suspicious.
+- `reason_key` (string): i18n key for the reason message shown to the user.
+- `suggestion_key` (string): i18n key for the suggestion message shown to the user.
+
 ## Validation Rules
 
 The dictionary must pass these validation checks:
 
 1. **Version Required**: Must have a `version` field
-2. **Valid Node Types**: Each node's `type` must be one of: `"sampler"`, `"router"`, `"provider"`, `"checkpoint_loader"`, `"lora_loader"`
+2. **Valid Node Types**: Each node's `type` must be one of: `"sampler"`, `"router"`, `"provider"`, `"checkpoint_loader"`, `"lora_loader"`, `"image_processor"`, `"vae"`
 3. **Type-Specific Fields**:
    - Sampler nodes must have `port_mapping`
    - Router nodes must have `passthrough_rules`
    - Provider nodes must have `value_path` or `value_paths`
    - Checkpoint loader nodes must have `input_key`
    - LoRA loader nodes must have `input_key`
+   - `image_processor` and `vae` nodes may have an optional `suspicious_detection` field
 
 ## Complete Example
 
