@@ -114,15 +114,8 @@ class AnnotationBuilder {
   static _buildStepContent(step, metadata, settings, t) {
     const stepContent = [];
     
-    // Add checkpoint for this step if different from global or if it's the only step
     if (settings.checkpoint && step.checkpoint) {
-      const stepCheckpoint = this.getBaseName(step.checkpoint);
-      const globalCheckpoint = metadata.checkpoint ? this.getBaseName(metadata.checkpoint) : null;
-      
-      // Show checkpoint if: 1) it's different from global, 2) there's only one step, or 3) no global checkpoint
-      if (!globalCheckpoint || stepCheckpoint !== globalCheckpoint || metadata.generationSteps.length === 1) {
-        stepContent.push(`${t('ui.option.checkpoint')}: ${stepCheckpoint}`);
-      }
+      stepContent.push(`${t('ui.option.checkpoint')}: ${this.getBaseName(step.checkpoint)}`);
     }
     
     // Add parameters for this step

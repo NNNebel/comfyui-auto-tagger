@@ -62,15 +62,57 @@ describe('TagGenerator', () => {
   });
 
   describe('generate', () => {
-    it('should generate checkpoint tags', () => {
+    it('should generate checkpoint tags (fallback: no generationSteps)', () => {
       const metadata = {
         checkpoint: 'models/checkpoint.safetensors'
       };
       const settings = { checkpoint: true };
       const result = TagGenerator.generate(metadata, settings);
-      
+
       expect(result.tags.has('checkpoint')).toBe(true);
       expect(result.cats.cp.has('checkpoint')).toBe(true);
+    });
+
+    it('should collect checkpoint from each generationStep', () => {
+      const metadata = {
+        generationSteps: [
+          { checkpoint: 'models/modelA.safetensors', seed: 1 },
+          { checkpoint: 'models/modelB.safetensors', seed: 2 },
+        ]
+      };
+      const result = TagGenerator.generate(metadata, { checkpoint: true });
+      expect(result.cats.cp.has('modela')).toBe(true);
+      expect(result.cats.cp.has('modelb')).toBe(true);
+    });
+
+    it('should deduplicate checkpoint tags across generationSteps', () => {
+      const metadata = {
+        generationSteps: [
+          { checkpoint: 'models/sameModel.safetensors', seed: 1 },
+          { checkpoint: 'models/sameModel.safetensors', seed: 2 },
+        ]
+      };
+      const result = TagGenerator.generate(metadata, { checkpoint: true });
+      expect(result.cats.cp.size).toBe(1);
+      expect(result.cats.cp.has('samemodel')).toBe(true);
+    });
+
+    it('should produce no checkpoint tags when generationSteps have no checkpoint', () => {
+      const metadata = {
+        generationSteps: [{ seed: 1 }, { seed: 2 }]
+      };
+      const result = TagGenerator.generate(metadata, { checkpoint: true });
+      expect(result.cats.cp.size).toBe(0);
+    });
+
+    it('should ignore metadata.checkpoint when generationSteps is present', () => {
+      const metadata = {
+        checkpoint: 'models/global.safetensors',
+        generationSteps: [{ checkpoint: 'models/stepModel.safetensors', seed: 1 }]
+      };
+      const result = TagGenerator.generate(metadata, { checkpoint: true });
+      expect(result.cats.cp.has('stepmodel')).toBe(true);
+      expect(result.cats.cp.has('global')).toBe(false);
     });
 
     it('should generate LoRA tags', () => {

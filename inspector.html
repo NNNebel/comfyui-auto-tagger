@@ -201,6 +201,7 @@
     </style>
 </head>
 <body>
+    <div id="filename" style="display:none"></div>
     <div id="content" style="display:none"></div>
     <div id="empty-state">READING METADATA...</div>
 
@@ -209,6 +210,7 @@
     <script src="js/metadata-parser/utils/BinaryUtils.js"></script>
     <script src="js/metadata-parser/utils/ErrorHandler.js"></script>
     <script src="js/metadata-parser/utils/Validators.js"></script>
+    <script src="js/metadata-parser/utils/MetadataCacheService.js"></script>
     <script src="js/metadata-parser/dictionary/NodeDefinitionDictionary.js"></script>
     <script src="js/metadata-parser/reporter/MetadataExtractionReporter.js"></script>
     <script src="js/metadata-parser/errors/ParseError.js"></script>
@@ -365,20 +367,62 @@
         async function loadSelected() {
             const params = new URLSearchParams(window.location.search);
             const filePath = params.get('path');
+            const itemId = params.get('id');
             if (!filePath) return;
+
             try {
+                const filenameEl = document.getElementById('filename');
+                if (filenameEl) filenameEl.textContent = path.basename(filePath);
+                
+                // Try cache first
+                const libPath = window.MetadataCacheService.resolveLibraryPath(filePath);
+                let metadata = null;
+                let cacheService = null;
+
+                if (libPath && itemId) {
+                    cacheService = new window.MetadataCacheService(libPath);
+                    metadata = await cacheService.get(itemId);
+                }
+
+                if (metadata) {
+                    console.log('[Inspector] Loaded from cache:', itemId);
+                    renderMetadata(metadata);
+                    return;
+                }
+
+                // Cache miss - parse from file
                 const buf = await fsp.readFile(filePath);
                 const ext = path.extname(filePath).toLowerCase().replace('.', '');
                 const mimeMap = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+                
                 const service = new window.MetadataService();
-                const metadata = service.extractPreferredMetadata(buf, mimeMap[ext] || 'image/png');
-                if (metadata) renderMetadata(metadata);
-                else document.getElementById('empty-state').textContent = 'NO METADATA';
-            } catch (e) { document.getElementById('empty-state').textContent = 'ERROR'; }
+                metadata = service.extractPreferredMetadata(buf, mimeMap[ext] || 'image/png');
+                
+                if (metadata) {
+                    renderMetadata(metadata);
+                    // Save to cache for next time
+                    if (cacheService && itemId) {
+                        await cacheService.set(itemId, metadata);
+                    }
+                } else {
+                    document.getElementById('empty-state').textContent = 'NO METADATA';
+                }
+            } catch (e) {
+                console.error('[Inspector] Error loading metadata:', e);
+                document.getElementById('empty-state').textContent = 'ERROR';
+            }
         }
 
         if (typeof eagle !== 'undefined') {
-            eagle.onPluginCreate(async () => {
+            eagle.onPluginCreate(async (plugin) => {
+                // Load dictionary using plugin.path to avoid Electron __dirname issues
+                try {
+                    const dictPath = require('path').join(plugin.path, 'js/metadata-parser/dictionary/default-dictionary.json');
+                    const dictData = JSON.parse(require('fs').readFileSync(dictPath, 'utf8'));
+                    window.globalDictionary = new window.NodeDefinitionDictionary(dictData);
+                } catch (e) {
+                    console.warn('[Inspector] Dictionary load failed:', e.message);
+                }
                 await applyTheme();
                 eagle.onThemeChanged(applyTheme);
                 loadSelected();
