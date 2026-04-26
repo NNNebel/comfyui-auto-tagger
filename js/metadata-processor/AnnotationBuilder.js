@@ -191,10 +191,10 @@ class AnnotationBuilder {
     }
     
     const baseParams = [];
-    if (settings.steps && metadata.steps) {
+    if (settings.steps && metadata.steps !== undefined) {
       baseParams.push(`${t('ui.option.steps')}: ${metadata.steps}`);
     }
-    if (settings.cfg && metadata.cfg) {
+    if (settings.cfg && metadata.cfg !== undefined) {
       baseParams.push(`CFG: ${Number(metadata.cfg).toFixed(1)}`);
     }
     if (settings.sampler && metadata.sampler) {
