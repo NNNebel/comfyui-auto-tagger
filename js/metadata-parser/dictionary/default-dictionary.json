@@ -21,6 +21,70 @@
       "type": "lora_loader",
       "input_key": "lora_name"
     },
+    "VAEEncode": {
+      "type": "vae",
+      "suspicious_detection": {
+        "required_input_patterns": ["image", "pixels"],
+        "reason_key": "suspiciousNode.reason.vaeEncodeNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.vaeEncodeRequired"
+      }
+    },
+    "VAEDecode": {
+      "type": "vae",
+      "suspicious_detection": {
+        "required_input_patterns": ["samples", "latent"],
+        "reason_key": "suspiciousNode.reason.vaeDecodeNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.vaeDecodeRequired"
+      }
+    },
+    "ImageUpscaleWithModel": {
+      "type": "image_processor",
+      "suspicious_detection": {
+        "required_input_patterns": ["image", "pixels"],
+        "reason_key": "suspiciousNode.reason.imageProcessingNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.disconnected"
+      }
+    },
+    "ImageScaleBy": {
+      "type": "image_processor",
+      "suspicious_detection": {
+        "required_input_patterns": ["image", "pixels"],
+        "reason_key": "suspiciousNode.reason.imageProcessingNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.disconnected"
+      }
+    },
+    "ImageScale": {
+      "type": "image_processor",
+      "suspicious_detection": {
+        "required_input_patterns": ["image", "pixels"],
+        "reason_key": "suspiciousNode.reason.imageProcessingNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.disconnected"
+      }
+    },
+    "ImageResize": {
+      "type": "image_processor",
+      "suspicious_detection": {
+        "required_input_patterns": ["image", "pixels"],
+        "reason_key": "suspiciousNode.reason.imageProcessingNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.disconnected"
+      }
+    },
+    "ImageCrop": {
+      "type": "image_processor",
+      "suspicious_detection": {
+        "required_input_patterns": ["image", "pixels"],
+        "reason_key": "suspiciousNode.reason.imageProcessingNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.disconnected"
+      }
+    },
+    "ImageBlur": {
+      "type": "image_processor",
+      "suspicious_detection": {
+        "required_input_patterns": ["image", "pixels"],
+        "reason_key": "suspiciousNode.reason.imageProcessingNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.disconnected"
+      }
+    },
     "RandomNoise": {
       "type": "provider",
       "value_path": ["inputs", "noise_seed"],
