@@ -69,24 +69,28 @@ class AnnotationBuilder {
     
     // Use new generationSteps format if available
     if (metadata.generationSteps && metadata.generationSteps.length > 0) {
-      if (lines.length > 1) {
-        lines.push(''); // Empty line before steps
-      }
-      
+      // Build all step blocks first; only emit separator if something will appear
+      const stepBlocks = [];
       metadata.generationSteps.forEach((step, index) => {
         const stepContent = this._buildStepContent(step, metadata, settings, t);
-        
         if (stepContent.length > 0) {
           const stepLabel = this._buildStepLabel(step, index);
-          lines.push(`[${stepLabel}]`);
-          lines.push(...stepContent);
-          
-          // Add empty line between steps (except after last step)
-          if (index < metadata.generationSteps.length - 1) {
-            lines.push('');
-          }
+          stepBlocks.push([`[${stepLabel}]`, ...stepContent]);
         }
       });
+
+      if (stepBlocks.length > 0) {
+        if (lines.length > 1) {
+          lines.push(''); // Empty line before steps (only when header has content)
+        }
+        stepBlocks.forEach((block, i) => {
+          lines.push(...block);
+          // Add empty line between steps (except after last step)
+          if (i < stepBlocks.length - 1) {
+            lines.push('');
+          }
+        });
+      }
     } else {
       // Fallback to old format
       const fallbackLines = this._buildFallbackContent(metadata, settings, t);
