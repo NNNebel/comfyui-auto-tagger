@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI Inspector</title>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --surface: #2a2a2a;
+            --border: #3a3a3a;
+            --text: #e0e0e0;
+            --text-muted: #888;
+            --accent: #4da6ff;
+            --accent-dim: rgba(77, 166, 255, 0.15);
+            --copy-bg: #333;
+            --copy-hover: #4da6ff;
+        }
+
+        [data-theme="light"] {
+            --bg: #f0f0f0;
+            --surface: #ffffff;
+            --border: #ddd;
+            --text: #1a1a1a;
+            --text-muted: #888;
+            --accent: #0066cc;
+            --accent-dim: rgba(0, 102, 204, 0.08);
+            --copy-bg: #e8e8e8;
+            --copy-hover: #0066cc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 12px;
+            padding: 10px 12px 16px;
+        }
+
+        /* ── File name ── */
+        #filename {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Section ── */
+        .section {
+            margin-bottom: 14px;
+        }
+
+        /* ── Field label row ── */
+        .field-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .field-label-text {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--accent);
+        }
+
+        /* ── Prompt field ── */
+        .prompt-value {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 4px 4px 0;
+            padding: 7px 10px;
+            line-height: 1.55;
+            font-size: 12px;
+            max-height: 100px;
+            overflow-y: auto;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* ── Param row (inline label + value + copy) ── */
+        .param-row {
+            display: flex;
+            align-items: baseline;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .param-row:last-child {
+            border-bottom: none;
+        }
+
+        .param-name {
+            font-size: 11px;
+            color: var(--text-muted);
+            flex: 0 0 80px;
+        }
+
+        .param-value {
+            flex: 1;
+            font-size: 12px;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Copy button ── */
+        .copy-btn {
+            flex-shrink: 0;
+            background: var(--copy-bg);
+            border: none;
+            color: var(--text-muted);
+            border-radius: 3px;
+            padding: 2px 7px;
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.15s, color 0.15s, background 0.15s;
+            margin-left: 8px;
+        }
+
+        .field-label:hover .copy-btn,
+        .param-row:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            color: var(--copy-hover);
+        }
+
+        .copy-btn.copied {
+            opacity: 1;
+            color: #4caf50;
+        }
+
+        /* ── Params block ── */
+        .params-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0 10px;
+        }
+
+        /* ── Empty / status ── */
+        #empty-state {
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 16px 0;
+            text-align: center;
+        }
+
+        /* ── Tabs ── */
+        .tab-bar {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tab-bar::-webkit-scrollbar { display: none; }
+
+        .tab {
+            flex-shrink: 0;
+            padding: 5px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            white-space: nowrap;
+            user-select: none;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        #content { display: none; }
+    </style>
+</head>
+<body>
+    <div id="filename"></div>
+    <div id="empty-state">画像を選択してください</div>
+    <div id="content"></div>
+
+    <!-- Parser modules -->
+    <script src="js/metadata-parser/utils/ParsingUtils.js"></script>
+    <script src="js/metadata-parser/utils/BinaryUtils.js"></script>
+    <script src="js/metadata-parser/utils/ErrorHandler.js"></script>
+    <script src="js/metadata-parser/utils/Validators.js"></script>
+    <script src="js/metadata-parser/dictionary/NodeDefinitionDictionary.js"></script>
+    <script src="js/metadata-parser/reporter/MetadataExtractionReporter.js"></script>
+    <script src="js/metadata-parser/errors/ParseError.js"></script>
+    <script src="js/metadata-parser/binary-extraction/ImageMetadataReader.js"></script>
+    <script src="js/metadata-parser/binary-extraction/FormatDetector.js"></script>
+    <script src="js/metadata-parser/graph/ComfyUIGraph.js"></script>
+    <script src="js/metadata-parser/graph/ComfyUISamplerAnalyzer.js"></script>
+    <script src="js/metadata-parser/parameters/ParameterHandler.js"></script>
+    <script src="js/metadata-parser/parameters/StandardParameterHandler.js"></script>
+    <script src="js/metadata-parser/parameters/LoraHashHandler.js"></script>
+    <script src="js/metadata-parser/parameters/ADetailerHandler.js"></script>
+    <script src="js/metadata-parser/parameters/ParameterParser.js"></script>
+    <script src="js/metadata-parser/prompt/PromptToken.js"></script>
+    <script src="js/metadata-parser/prompt/PromptTokenizer.js"></script>
+    <script src="js/metadata-parser/parsers/MetadataParser.js"></script>
+    <script src="js/metadata-parser/parsers/ParserRegistry.js"></script>
+    <script src="js/metadata-parser/parsers/ComfyUIParser.js"></script>
+    <script src="js/metadata-parser/parsers/A1111Parser.js"></script>
+    <script src="js/metadata-parser/integration/MetadataService.js"></script>
+
+    <script>
+        const fsp = require('fs').promises;
+        const path = require('path');
+
+        const filenameEl = document.getElementById('filename');
+        const contentEl  = document.getElementById('content');
+        const emptyEl    = document.getElementById('empty-state');
+
+        /* ── Theme ── */
+        function applyTheme() {
+            if (typeof eagle === 'undefined') return;
+            const t = eagle.app.theme;
+            document.documentElement.setAttribute('data-theme', t);
+            document.body.setAttribute('data-theme', t);
+        }
+
+        /* ── Helpers ── */
+        function getBaseName(p) {
+            return p ? p.split(/[/\\]/).pop().replace(/\.[^/\\.]+$/, '') : '';
+        }
+
+        function copyText(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = '✓';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = 'Copy';
+                    btn.classList.remove('copied');
+                }, 1500);
+            });
+        }
+
+        function makeCopyBtn(text) {
+            const btn = document.createElement('button');
+            btn.className = 'copy-btn';
+            btn.textContent = 'Copy';
+            btn.onclick = () => copyText(text, btn);
+            return btn;
+        }
+
+        /* ── Prompt field (label above, scrollable text below) ── */
+        function makePromptField(label, value) {
+            if (!value) return null;
+
+            const section = document.createElement('div');
+            section.className = 'section';
+
+            const labelRow = document.createElement('div');
+            labelRow.className = 'field-label';
+
+            const labelText = document.createElement('span');
+            labelText.className = 'field-label-text';
+            labelText.textContent = label;
+
+            labelRow.appendChild(labelText);
+            labelRow.appendChild(makeCopyBtn(value));
+
+            const val = document.createElement('div');
+            val.className = 'prompt-value';
+            val.textContent = value;
+
+            section.appendChild(labelRow);
+            section.appendChild(val);
+            return section;
+        }
+
+        /* ── Param row (name · · · value  Copy) ── */
+        function makeParamRow(name, value) {
+            if (value === null || value === undefined || value === '') return null;
+            const str = String(value);
+
+            const row = document.createElement('div');
+            row.className = 'param-row';
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'param-name';
+            nameEl.textContent = name;
+
+            const valEl = document.createElement('span');
+            valEl.className = 'param-value';
+            valEl.textContent = str;
+
+            row.appendChild(nameEl);
+            row.appendChild(valEl);
+            row.appendChild(makeCopyBtn(str));
+            return row;
+        }
+
+        /* ── Params block (label above, rows inside card) ── */
+        function makeParamsBlock(label, rows) {
+            const validRows = rows.filter(Boolean);
+            if (validRows.length === 0) return null;
+
+            const section = document.createElement('div');
+            section.className = 'section';
+
+            const labelRow = document.createElement('div');
+            labelRow.className = 'field-label';
+            const labelText = document.createElement('span');
+            labelText.className = 'field-label-text';
+            labelText.textContent = label;
+            labelRow.appendChild(labelText);
+
+            const block = document.createElement('div');
+            block.className = 'params-block';
+            validRows.forEach(r => block.appendChild(r));
+
+            section.appendChild(labelRow);
+            section.appendChild(block);
+            return section;
+        }
+
+        /* ── Tab label for a step ── */
+        function buildTabLabel(step, index) {
+            if (step.isBase) return 'Base';
+            if (step.nodeTitle) return step.nodeTitle;
+            return `Step ${index + 1}`;
+        }
+
+        /* ── Build panel content for one step ── */
+        function buildStepPanel(step, metadata, isOnly) {
+            const panel = document.createElement('div');
+            panel.className = 'tab-panel';
+
+            const append = (el) => { if (el) panel.appendChild(el); };
+
+            const stepCkpt  = step.checkpoint ? getBaseName(step.checkpoint) : null;
+            const globalCkpt = metadata.checkpoint ? getBaseName(metadata.checkpoint) : null;
+            const loras = metadata.loras && metadata.loras.length > 0
+                ? metadata.loras.map(getBaseName).join(', ') : null;
+
+            // Checkpoint: show per-step when it differs from global, or on single-step
+            const ckptToShow = stepCkpt && (!globalCkpt || stepCkpt !== globalCkpt || isOnly)
+                ? stepCkpt : null;
+
+            append(makePromptField('Positive Prompt', step.positive));
+            append(makePromptField('Negative Prompt', step.negative));
+            append(makeParamsBlock('Model', [
+                makeParamRow('Checkpoint', ckptToShow || (isOnly ? globalCkpt : null)),
+                makeParamRow('LoRA', isOnly ? loras : null),
+            ]));
+            append(makeParamsBlock('Parameters', [
+                makeParamRow('Seed',      step.seed !== undefined ? step.seed : null),
+                makeParamRow('Steps',     step.steps !== undefined ? step.steps : null),
+                makeParamRow('CFG',       step.cfg !== undefined ? Number(step.cfg).toFixed(1) : null),
+                makeParamRow('Sampler',   step.sampler),
+                makeParamRow('Scheduler', step.scheduler),
+            ]));
+
+            return panel;
+        }
+
+        /* ── Render ── */
+        function renderMetadata(metadata) {
+            contentEl.innerHTML = '';
+
+            const globalCkpt = metadata.checkpoint ? getBaseName(metadata.checkpoint) : null;
+            const loras = metadata.loras && metadata.loras.length > 0
+                ? metadata.loras.map(getBaseName).join(', ') : null;
+
+            const steps = metadata.generationSteps && metadata.generationSteps.length > 0
+                ? metadata.generationSteps : null;
+
+            if (steps && steps.length > 1) {
+                // ── Multi-step: tab bar + panels ──
+                // Global model row above tabs
+                const globalModel = makeParamsBlock('Model', [
+                    makeParamRow('Checkpoint', globalCkpt),
+                    makeParamRow('LoRA', loras),
+                ]);
+                if (globalModel) contentEl.appendChild(globalModel);
+
+                const tabBar = document.createElement('div');
+                tabBar.className = 'tab-bar';
+
+                const panels = steps.map((step, i) => buildStepPanel(step, metadata, false));
+
+                steps.forEach((step, i) => {
+                    const tab = document.createElement('div');
+                    tab.className = 'tab' + (i === 0 ? ' active' : '');
+                    tab.textContent = buildTabLabel(step, i);
+                    tab.onclick = () => {
+                        tabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        panels.forEach(p => p.classList.remove('active'));
+                        tab.classList.add('active');
+                        panels[i].classList.add('active');
+                    };
+                    tabBar.appendChild(tab);
+                });
+
+                panels[0].classList.add('active');
+                contentEl.appendChild(tabBar);
+                panels.forEach(p => contentEl.appendChild(p));
+
+            } else {
+                // ── Single step or fallback ──
+                const append = (el) => { if (el) contentEl.appendChild(el); };
+                const step = steps ? steps[0] : null;
+
+                if (step) {
+                    const panel = buildStepPanel(step, metadata, true);
+                    // unwrap panel children directly into contentEl
+                    while (panel.firstChild) contentEl.appendChild(panel.firstChild);
+                } else {
+                    // A1111 / plain metadata
+                    append(makePromptField('Positive Prompt', metadata.positive));
+                    append(makePromptField('Negative Prompt', metadata.negative));
+                    append(makeParamsBlock('Model', [
+                        makeParamRow('Checkpoint', globalCkpt),
+                        makeParamRow('LoRA', loras),
+                    ]));
+                    append(makeParamsBlock('Parameters', [
+                        makeParamRow('Seed',      metadata.seed !== undefined ? metadata.seed : null),
+                        makeParamRow('Steps',     metadata.steps !== undefined ? metadata.steps : null),
+                        makeParamRow('CFG',       metadata.cfg !== undefined ? Number(metadata.cfg).toFixed(1) : null),
+                        makeParamRow('Sampler',   metadata.sampler),
+                        makeParamRow('Scheduler', metadata.scheduler),
+                    ]));
+                }
+            }
+
+            const hasContent = contentEl.children.length > 0;
+            contentEl.style.display = hasContent ? 'block' : 'none';
+            emptyEl.textContent = 'メタデータなし';
+            emptyEl.style.display = hasContent ? 'none' : 'block';
+        }
+
+        /* ── Load ── */
+        async function loadSelected() {
+            contentEl.style.display = 'none';
+            emptyEl.style.display = 'none';
+            filenameEl.textContent = '';
+
+            try {
+                const items = await eagle.item.getSelected();
+                if (!items || items.length === 0) {
+                    emptyEl.textContent = '画像を選択してください';
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+
+                const item = items[0];
+                filenameEl.textContent = item.name;
+
+                const ext = (item.ext || '').toLowerCase();
+                const mimeMap = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+                const mimeType = mimeMap[ext];
+                if (!mimeType) {
+                    emptyEl.textContent = '非対応フォーマット: ' + ext;
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+
+                const buf = await fsp.readFile(item.filePath);
+                const service = new window.MetadataService();
+                const metadata = service.extractPreferredMetadata(buf, mimeType);
+
+                if (!metadata) {
+                    emptyEl.textContent = 'メタデータなし';
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+
+                renderMetadata(metadata);
+            } catch (e) {
+                emptyEl.textContent = 'エラー: ' + e.message;
+                emptyEl.style.display = 'block';
+                console.error('[Inspector]', e);
+            }
+        }
+
+        /* ── Eagle lifecycle ── */
+        if (typeof eagle !== 'undefined') {
+            eagle.onPluginCreate(async (plugin) => {
+                applyTheme();
+                eagle.onThemeChanged((theme) => {
+                    document.documentElement.setAttribute('data-theme', theme);
+                    document.body.setAttribute('data-theme', theme);
+                });
+
+                try {
+                    const dictPath = path.join(plugin.path, 'js', 'metadata-parser', 'dictionary', 'default-dictionary.json');
+                    const dictData = JSON.parse(await fsp.readFile(dictPath, 'utf8'));
+                    window.globalDictionary = new window.NodeDefinitionDictionary(dictData);
+                } catch (e) {
+                    console.warn('[Inspector] Dictionary load failed:', e);
+                }
+
+                await loadSelected();
+            });
+        }
+    </script>
+</body>
+</html>

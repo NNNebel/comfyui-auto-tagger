@@ -14,6 +14,15 @@
         "width": 640,
         "height": 520
     },
+    "preview": {
+        "jpg,jpeg,png,webp": {
+            "inspector": {
+                "path": "inspector.html",
+                "height": 400,
+                "multiSelect": false
+            }
+        }
+    },
     "app": {
         "desktop": {
             "contextMenu": [
