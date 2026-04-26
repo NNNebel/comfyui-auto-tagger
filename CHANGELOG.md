@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.7] - 2026-04-27
+
+### 🇬🇧 English
+#### 🎉 New Features
+- **Generation Info Inspector**: Selecting an image in Eagle now opens a side panel that displays prompts, seed, sampler parameters, checkpoint, and LoRAs — each with a copy button. Multi-sampler workflows are shown as tabs (Base / Step 2, …).
+
+#### ✨ Improvements
+- **Per-step checkpoint tags**: When a workflow uses different models for different sampler steps, each model is now tagged independently. Tags are collected from each step's connected checkpoint loader instead of a single global value.
+- **Annotation always shows Checkpoint per step**: The `Checkpoint:` line now appears inside every sampler step block regardless of whether the model is the same across steps, making the output consistent and unambiguous.
+
+### 🇯🇵 日本語
+#### 🎉 新機能
+- **生成情報インスペクター**: Eagle で画像を選択するとサイドパネルが開き、プロンプト・Seed・サンプラーパラメータ・チェックポイント・LoRA をコピーボタン付きで表示。マルチサンプラーワークフローはタブ（Base / Step 2、…）で切り替え表示。
+
+#### ✨ 改善
+- **ステップごとのチェックポイントタグ**: サンプラーステップごとに異なるモデルを使用するワークフローで、各モデルを独立してタグ付けするようになった。単一のグローバル値ではなく、各ステップのチェックポイントローダーから個別に収集する。
+- **アノテーションで各ステップに Checkpoint を表示**: モデルが同一かどうかに関わらず、すべてのサンプラーステップブロックに `Checkpoint:` 行を表示するようになった。出力が一貫していてわかりやすい。
+
+---
+
 ## [1.3.6] - 2026-04-26
 
 ### 🇬🇧 English
