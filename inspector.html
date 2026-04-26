@@ -6,197 +6,205 @@
     <title>ComfyUI Inspector</title>
     <style>
         :root {
-            --bg: #1e1e1e;
-            --surface: #2a2a2a;
-            --border: #3a3a3a;
-            --text: #e0e0e0;
-            --text-muted: #888;
-            --accent: #4da6ff;
-            --accent-dim: rgba(77, 166, 255, 0.15);
-            --copy-bg: #333;
-            --copy-hover: #4da6ff;
+            --accent: #007aff;
+            --success: #34c759;
+            --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
         }
 
-        [data-theme="light"] {
-            --bg: #f0f0f0;
-            --surface: #ffffff;
-            --border: #ddd;
+        /* LIGHT テーマ */
+        body[theme="LIGHT"], body[theme="LIGHTGRAY"] {
+            --bg: #f9f9f9;
+            --card-bg: #ffffff;
+            --card-hover: #fcfcfc;
+            --border: rgba(0, 0, 0, 0.08);
+            --divider: rgba(0, 0, 0, 0.04);
             --text: #1a1a1a;
-            --text-muted: #888;
-            --accent: #0066cc;
-            --accent-dim: rgba(0, 102, 204, 0.08);
-            --copy-bg: #e8e8e8;
-            --copy-hover: #0066cc;
+            --text-muted: #8e8e93;
+            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
+
+        /* DARK 系テーマ */
+        body[theme="GRAY"], body[theme="BLUE"], body[theme="PURPLE"], body[theme="DARK"] {
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-hover: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.1);
+            --divider: rgba(255, 255, 255, 0.05);
+            --text: #efefef;
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --card-shadow: none;
+        }
+        body[theme="DARK"] { --bg: #1e1e1e; }
+        body[theme="GRAY"] { --bg: #262626; }
+        body[theme="BLUE"] { --bg: #1a202c; }
+        body[theme="PURPLE"] { --bg: #231932; }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            font-family: var(--font-main);
             background: var(--bg);
             color: var(--text);
-            font-size: 12px;
-            padding: 10px 12px 16px;
+            font-size: 13px;
+            padding: 10px 0; /* 左右パディング0 */
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+            transition: background 0.3s ease;
         }
 
-        /* ── File name ── */
-        #filename {
+        body[theme="LIGHT"], body[theme="LIGHTGRAY"] { background-color: var(--bg) !important; }
+        body[theme="GRAY"] { background-color: #262626 !important; }
+        body[theme="DARK"] { background-color: #1e1e1e !important; }
+        body[theme="BLUE"] { background-color: #1a202c !important; }
+        body[theme="PURPLE"] { background-color: #231932 !important; }
+
+        /* ── Section Header ── */
+        .section-title {
             font-size: 11px;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* ── Section ── */
-        .section {
-            margin-bottom: 14px;
-        }
-
-        /* ── Field label row ── */
-        .field-label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-
-        .field-label-text {
-            font-size: 10px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-            color: var(--accent);
+            color: var(--text-muted);
+            margin: 14px 0 5px 12px; /* 左端から12pxに合わせる */
+            letter-spacing: 0.02em;
         }
+        .section-title:first-child { margin-top: 0; }
 
-        /* ── Prompt field ── */
-        .prompt-value {
-            background: var(--surface);
+        /* ── Unified Card ── */
+        .card {
+            background: var(--card-bg);
             border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 0 4px 4px 0;
-            padding: 7px 10px;
-            line-height: 1.55;
-            font-size: 12px;
-            max-height: 100px;
-            overflow-y: auto;
-            color: var(--text);
-            white-space: pre-wrap;
-            word-break: break-word;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            margin: 0 4px; /* サイドバーの境界まで攻める (4px) */
         }
 
-        /* ── Param row (inline label + value + copy) ── */
-        .param-row {
+        /* ── List Item (Row) ── */
+        .row {
+            position: relative;
             display: flex;
-            align-items: baseline;
-            padding: 5px 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .param-row:last-child {
-            border-bottom: none;
-        }
-
-        .param-name {
-            font-size: 11px;
-            color: var(--text-muted);
-            flex: 0 0 80px;
-        }
-
-        .param-value {
-            flex: 1;
-            font-size: 12px;
-            color: var(--text);
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* ── Copy button ── */
-        .copy-btn {
-            flex-shrink: 0;
-            background: var(--copy-bg);
-            border: none;
-            color: var(--text-muted);
-            border-radius: 3px;
-            padding: 2px 7px;
+            flex-direction: column;
+            padding: 8px 10px; /* 内部パディング8px、カードマージン4pxと合わせて12px */
             cursor: pointer;
-            font-size: 10px;
-            opacity: 0;
-            transition: opacity 0.15s, color 0.15s, background 0.15s;
-            margin-left: 8px;
+            transition: all 0.15s ease;
+            border-bottom: 1px solid var(--divider);
+        }
+        .row:last-child { border-bottom: none; }
+        .row:hover {
+            background: var(--card-hover);
         }
 
-        .field-label:hover .copy-btn,
-        .param-row:hover .copy-btn {
-            opacity: 1;
-        }
-
-        .copy-btn:hover {
-            color: var(--copy-hover);
-        }
-
-        .copy-btn.copied {
-            opacity: 1;
-            color: #4caf50;
-        }
-
-        /* ── Params block ── */
-        .params-block {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 0 10px;
-        }
-
-        /* ── Empty / status ── */
-        #empty-state {
-            color: var(--text-muted);
+        .row-label {
             font-size: 11px;
-            padding: 16px 0;
-            text-align: center;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 1px;
+            opacity: 0.8;
         }
 
-        /* ── Tabs ── */
+        .row-value {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            word-break: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .row-value.mono {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            letter-spacing: -0.01em;
+        }
+
+        /* ── Parameters Grid (NO vertical borders) ── */
+        .grid-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            border-bottom: 1px solid var(--divider);
+        }
+        .grid-row .row { border-bottom: none; border-right: none; } /* 縦線を削除 */
+
+        /* ── Copy Feedback ── */
+        .copy-icon {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 12px;
+            height: 12px;
+            color: var(--accent);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .row:hover .copy-icon { opacity: 0.5; }
+
+        .copied-label {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--success);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+        .row.is-copied .copied-label { opacity: 1; transform: translateX(-4px); }
+        .row.is-copied .row-value { color: var(--success); opacity: 0.8; }
+        .row.is-copied .copy-icon { display: none; }
+
+        /* ── Tabs (Segmented Control) ── */
         .tab-bar {
             display: flex;
+            background: var(--card-bg);
+            padding: 2px;
+            border-radius: 6px;
+            margin: 0 4px 10px 4px; /* カードと同じマージン */
+            border: 1px solid var(--border);
             gap: 2px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-            overflow-x: auto;
-            scrollbar-width: none;
         }
-        .tab-bar::-webkit-scrollbar { display: none; }
-
         .tab {
-            flex-shrink: 0;
-            padding: 5px 10px;
-            font-size: 11px;
-            cursor: pointer;
+            flex: 1;
+            padding: 4px;
+            text-align: center;
+            font-size: 11.5px;
+            font-weight: 500;
             color: var(--text-muted);
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            white-space: nowrap;
-            user-select: none;
-            transition: color 0.15s, border-color 0.15s;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
         }
         .tab:hover { color: var(--text); }
         .tab.active {
+            background: var(--bg);
+            color: var(--text);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        body[theme="DARK"] .tab.active { background: #4a4a4a; }
+        body[theme="BLUE"] .tab.active { background: #3a4a6a; }
+        body[theme="PURPLE"] .tab.active { background: #4c3d6a; }
+        body[theme="GRAY"] .tab.active { background: #505050; }
+
+        body[theme="LIGHT"] .tab.active, body[theme="LIGHTGRAY"] .tab.active {
+            background: var(--bg);
             color: var(--accent);
-            border-bottom-color: var(--accent);
+            border-color: var(--border);
         }
 
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
 
-        #content { display: none; }
+        /* ── Custom Scrollbar ── */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        
+        #empty-state { padding: 60px 20px; text-align:center; color:var(--text-muted); font-size:11px; letter-spacing:0.05em; }
     </style>
 </head>
 <body>
-    <div id="filename"></div>
-    <div id="empty-state">画像を選択してください</div>
-    <div id="content"></div>
+    <div id="content" style="display:none"></div>
+    <div id="empty-state">READING METADATA...</div>
 
-    <!-- Parser modules -->
+    <!-- Scripts -->
     <script src="js/metadata-parser/utils/ParsingUtils.js"></script>
     <script src="js/metadata-parser/utils/BinaryUtils.js"></script>
     <script src="js/metadata-parser/utils/ErrorHandler.js"></script>
@@ -213,8 +221,6 @@
     <script src="js/metadata-parser/parameters/LoraHashHandler.js"></script>
     <script src="js/metadata-parser/parameters/ADetailerHandler.js"></script>
     <script src="js/metadata-parser/parameters/ParameterParser.js"></script>
-    <script src="js/metadata-parser/prompt/PromptToken.js"></script>
-    <script src="js/metadata-parser/prompt/PromptTokenizer.js"></script>
     <script src="js/metadata-parser/parsers/MetadataParser.js"></script>
     <script src="js/metadata-parser/parsers/ParserRegistry.js"></script>
     <script src="js/metadata-parser/parsers/ComfyUIParser.js"></script>
@@ -225,293 +231,159 @@
         const fsp = require('fs').promises;
         const path = require('path');
 
-        const filenameEl = document.getElementById('filename');
-        const contentEl  = document.getElementById('content');
-        const emptyEl    = document.getElementById('empty-state');
+        const COPY_SVG = `<svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 
-        /* ── Theme ── */
-        function applyTheme() {
-            if (typeof eagle === 'undefined') return;
-            const t = eagle.app.theme;
-            document.documentElement.setAttribute('data-theme', t);
-            document.body.setAttribute('data-theme', t);
+        async function applyTheme(theme) {
+            if (!theme) {
+                const params = new URLSearchParams(window.location.search);
+                theme = params.get('theme');
+                if (!theme && typeof eagle !== 'undefined') theme = await eagle.app.theme;
+            }
+            if (theme) document.body.setAttribute('theme', theme.toUpperCase());
         }
 
-        /* ── Helpers ── */
-        function getBaseName(p) {
-            return p ? p.split(/[/\\]/).pop().replace(/\.[^/\\.]+$/, '') : '';
+        applyTheme();
+
+        async function copyText(text, el) {
+            try {
+                await navigator.clipboard.writeText(text);
+                el.classList.add('is-copied');
+                setTimeout(() => el.classList.remove('is-copied'), 1000);
+            } catch (e) {}
         }
 
-        function copyText(text, btn) {
-            navigator.clipboard.writeText(text).then(() => {
-                btn.textContent = '✓';
-                btn.classList.add('copied');
-                setTimeout(() => {
-                    btn.textContent = 'Copy';
-                    btn.classList.remove('copied');
-                }, 1500);
-            });
-        }
-
-        function makeCopyBtn(text) {
-            const btn = document.createElement('button');
-            btn.className = 'copy-btn';
-            btn.textContent = 'Copy';
-            btn.onclick = () => copyText(text, btn);
-            return btn;
-        }
-
-        /* ── Prompt field (label above, scrollable text below) ── */
-        function makePromptField(label, value) {
-            if (!value) return null;
-
-            const section = document.createElement('div');
-            section.className = 'section';
-
-            const labelRow = document.createElement('div');
-            labelRow.className = 'field-label';
-
-            const labelText = document.createElement('span');
-            labelText.className = 'field-label-text';
-            labelText.textContent = label;
-
-            labelRow.appendChild(labelText);
-            labelRow.appendChild(makeCopyBtn(value));
-
-            const val = document.createElement('div');
-            val.className = 'prompt-value';
-            val.textContent = value;
-
-            section.appendChild(labelRow);
-            section.appendChild(val);
-            return section;
-        }
-
-        /* ── Param row (name · · · value  Copy) ── */
-        function makeParamRow(name, value) {
-            if (value === null || value === undefined || value === '') return null;
-            const str = String(value);
-
+        function createRow(label, value, isMono = false) {
+            if (!value && value !== 0) return null;
             const row = document.createElement('div');
-            row.className = 'param-row';
-
-            const nameEl = document.createElement('span');
-            nameEl.className = 'param-name';
-            nameEl.textContent = name;
-
-            const valEl = document.createElement('span');
-            valEl.className = 'param-value';
-            valEl.textContent = str;
-
-            row.appendChild(nameEl);
-            row.appendChild(valEl);
-            row.appendChild(makeCopyBtn(str));
+            row.className = 'row';
+            row.innerHTML = `
+                <div class="row-label">${label}</div>
+                <div class="row-value ${isMono ? 'mono' : ''}">${value}</div>
+                ${COPY_SVG}
+                <div class="copied-label">Copied</div>
+            `;
+            row.onclick = () => copyText(String(value), row);
             return row;
         }
 
-        /* ── Params block (label above, rows inside card) ── */
-        function makeParamsBlock(label, rows) {
-            const validRows = rows.filter(Boolean);
-            if (validRows.length === 0) return null;
-
-            const section = document.createElement('div');
-            section.className = 'section';
-
-            const labelRow = document.createElement('div');
-            labelRow.className = 'field-label';
-            const labelText = document.createElement('span');
-            labelText.className = 'field-label-text';
-            labelText.textContent = label;
-            labelRow.appendChild(labelText);
-
-            const block = document.createElement('div');
-            block.className = 'params-block';
-            validRows.forEach(r => block.appendChild(r));
-
-            section.appendChild(labelRow);
-            section.appendChild(block);
-            return section;
-        }
-
-        /* ── Tab label for a step ── */
-        function buildTabLabel(step, index) {
-            if (step.isBase) return 'Base';
-            if (step.nodeTitle) return step.nodeTitle;
-            return `Step ${index + 1}`;
-        }
-
-        /* ── Build panel content for one step ── */
-        function buildStepPanel(step, metadata, isOnly) {
+        function renderStep(step, metadata) {
             const panel = document.createElement('div');
-            panel.className = 'tab-panel';
+            const appendTo = (parent, el) => { if(el) parent.appendChild(el); };
 
-            const append = (el) => { if (el) panel.appendChild(el); };
+            // 1. Prompts
+            const promptTitle = document.createElement('div');
+            promptTitle.className = 'section-title';
+            promptTitle.textContent = 'Prompts';
+            panel.appendChild(promptTitle);
 
-            const stepCkpt  = step.checkpoint ? getBaseName(step.checkpoint) : null;
-            const globalCkpt = metadata.checkpoint ? getBaseName(metadata.checkpoint) : null;
-            const loras = metadata.loras && metadata.loras.length > 0
-                ? metadata.loras.map(getBaseName).join(', ') : null;
+            const promptCard = document.createElement('div');
+            promptCard.className = 'card';
+            appendTo(promptCard, createRow('Positive', step.positive));
+            appendTo(promptCard, createRow('Negative', step.negative));
+            if (promptCard.children.length > 0) panel.appendChild(promptCard);
 
-            // Checkpoint: show per-step when it differs from global, or on single-step
-            const ckptToShow = stepCkpt && (!globalCkpt || stepCkpt !== globalCkpt || isOnly)
-                ? stepCkpt : null;
+            // 2. Parameters
+            const paramTitle = document.createElement('div');
+            paramTitle.className = 'section-title';
+            paramTitle.textContent = 'Parameters';
+            panel.appendChild(paramTitle);
 
-            append(makePromptField('Positive Prompt', step.positive));
-            append(makePromptField('Negative Prompt', step.negative));
-            append(makeParamsBlock('Model', [
-                makeParamRow('Checkpoint', ckptToShow || (isOnly ? globalCkpt : null)),
-                makeParamRow('LoRA', isOnly ? loras : null),
-            ]));
-            append(makeParamsBlock('Parameters', [
-                makeParamRow('Seed',      step.seed !== undefined ? step.seed : null),
-                makeParamRow('Steps',     step.steps !== undefined ? step.steps : null),
-                makeParamRow('CFG',       step.cfg !== undefined ? Number(step.cfg).toFixed(1) : null),
-                makeParamRow('Sampler',   step.sampler),
-                makeParamRow('Scheduler', step.scheduler),
-            ]));
+            const paramCard = document.createElement('div');
+            paramCard.className = 'card';
+            appendTo(paramCard, createRow('Seed', step.seed, true));
+
+            const grid1 = document.createElement('div');
+            grid1.className = 'grid-row';
+            appendTo(grid1, createRow('Steps', step.steps, true));
+            appendTo(grid1, createRow('CFG Scale', step.cfg, true));
+            paramCard.appendChild(grid1);
+
+            const grid2 = document.createElement('div');
+            grid2.className = 'grid-row';
+            appendTo(grid2, createRow('Sampler', step.sampler));
+            appendTo(grid2, createRow('Scheduler', step.scheduler));
+            paramCard.appendChild(grid2);
+
+            panel.appendChild(paramCard);
+
+            // 3. Model
+            const loraList = (metadata.loras || []).map(l => path.basename(typeof l === 'string' ? l : (l.name || ''))).filter(Boolean);
+            const loras = loraList.length > 0 ? loraList.join(', ') : null;
+
+            if (step.checkpoint || loras) {
+                const modelTitle = document.createElement('div');
+                modelTitle.className = 'section-title';
+                modelTitle.textContent = 'Model';
+                panel.appendChild(modelTitle);
+
+                const modelCard = document.createElement('div');
+                modelCard.className = 'card';
+                if (step.checkpoint) appendTo(modelCard, createRow('Checkpoint', path.basename(step.checkpoint)));
+                if (loras) appendTo(modelCard, createRow('LoRAs', loras));
+                panel.appendChild(modelCard);
+            }
 
             return panel;
         }
 
-        /* ── Render ── */
         function renderMetadata(metadata) {
-            contentEl.innerHTML = '';
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+            content.style.display = 'block';
+            document.getElementById('empty-state').style.display = 'none';
 
-            const globalCkpt = metadata.checkpoint ? getBaseName(metadata.checkpoint) : null;
-            const loras = metadata.loras && metadata.loras.length > 0
-                ? metadata.loras.map(getBaseName).join(', ') : null;
+            const steps = metadata.generationSteps || [];
 
-            const steps = metadata.generationSteps && metadata.generationSteps.length > 0
-                ? metadata.generationSteps : null;
-
-            if (steps && steps.length > 1) {
-                // ── Multi-step: tab bar + panels ──
-                // Global model row above tabs
-                const globalModel = makeParamsBlock('Model', [
-                    makeParamRow('Checkpoint', globalCkpt),
-                    makeParamRow('LoRA', loras),
-                ]);
-                if (globalModel) contentEl.appendChild(globalModel);
-
+            if (steps.length > 1) {
                 const tabBar = document.createElement('div');
                 tabBar.className = 'tab-bar';
-
-                const panels = steps.map((step, i) => buildStepPanel(step, metadata, false));
+                const panels = [];
 
                 steps.forEach((step, i) => {
                     const tab = document.createElement('div');
-                    tab.className = 'tab' + (i === 0 ? ' active' : '');
-                    tab.textContent = buildTabLabel(step, i);
+                    tab.className = `tab ${i === 0 ? 'active' : ''}`;
+                    tab.textContent = step.isBase ? 'Base' : (step.nodeTitle || `Step ${i+1}`);
+                    const panel = renderStep(step, metadata);
+                    panel.className = `tab-panel ${i === 0 ? 'active' : ''}`;
+                    panels.push(panel);
+
                     tab.onclick = () => {
                         tabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                         panels.forEach(p => p.classList.remove('active'));
                         tab.classList.add('active');
-                        panels[i].classList.add('active');
+                        panel.classList.add('active');
                     };
                     tabBar.appendChild(tab);
                 });
-
-                panels[0].classList.add('active');
-                contentEl.appendChild(tabBar);
-                panels.forEach(p => contentEl.appendChild(p));
-
+                content.appendChild(tabBar);
+                panels.forEach(p => content.appendChild(p));
             } else {
-                // ── Single step or fallback ──
-                const append = (el) => { if (el) contentEl.appendChild(el); };
-                const step = steps ? steps[0] : null;
-
-                if (step) {
-                    const panel = buildStepPanel(step, metadata, true);
-                    // unwrap panel children directly into contentEl
-                    while (panel.firstChild) contentEl.appendChild(panel.firstChild);
-                } else {
-                    // A1111 / plain metadata
-                    append(makePromptField('Positive Prompt', metadata.positive));
-                    append(makePromptField('Negative Prompt', metadata.negative));
-                    append(makeParamsBlock('Model', [
-                        makeParamRow('Checkpoint', globalCkpt),
-                        makeParamRow('LoRA', loras),
-                    ]));
-                    append(makeParamsBlock('Parameters', [
-                        makeParamRow('Seed',      metadata.seed !== undefined ? metadata.seed : null),
-                        makeParamRow('Steps',     metadata.steps !== undefined ? metadata.steps : null),
-                        makeParamRow('CFG',       metadata.cfg !== undefined ? Number(metadata.cfg).toFixed(1) : null),
-                        makeParamRow('Sampler',   metadata.sampler),
-                        makeParamRow('Scheduler', metadata.scheduler),
-                    ]));
-                }
+                content.appendChild(renderStep(steps[0] || metadata, metadata));
             }
-
-            const hasContent = contentEl.children.length > 0;
-            contentEl.style.display = hasContent ? 'block' : 'none';
-            emptyEl.textContent = 'メタデータなし';
-            emptyEl.style.display = hasContent ? 'none' : 'block';
         }
 
-        /* ── Load ── */
         async function loadSelected() {
-            contentEl.style.display = 'none';
-            emptyEl.style.display = 'none';
-            filenameEl.textContent = '';
-
+            const params = new URLSearchParams(window.location.search);
+            const filePath = params.get('path');
+            if (!filePath) return;
             try {
-                const items = await eagle.item.getSelected();
-                if (!items || items.length === 0) {
-                    emptyEl.textContent = '画像を選択してください';
-                    emptyEl.style.display = 'block';
-                    return;
-                }
-
-                const item = items[0];
-                filenameEl.textContent = item.name;
-
-                const ext = (item.ext || '').toLowerCase();
+                const buf = await fsp.readFile(filePath);
+                const ext = path.extname(filePath).toLowerCase().replace('.', '');
                 const mimeMap = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
-                const mimeType = mimeMap[ext];
-                if (!mimeType) {
-                    emptyEl.textContent = '非対応フォーマット: ' + ext;
-                    emptyEl.style.display = 'block';
-                    return;
-                }
-
-                const buf = await fsp.readFile(item.filePath);
                 const service = new window.MetadataService();
-                const metadata = service.extractPreferredMetadata(buf, mimeType);
-
-                if (!metadata) {
-                    emptyEl.textContent = 'メタデータなし';
-                    emptyEl.style.display = 'block';
-                    return;
-                }
-
-                renderMetadata(metadata);
-            } catch (e) {
-                emptyEl.textContent = 'エラー: ' + e.message;
-                emptyEl.style.display = 'block';
-                console.error('[Inspector]', e);
-            }
+                const metadata = service.extractPreferredMetadata(buf, mimeMap[ext] || 'image/png');
+                if (metadata) renderMetadata(metadata);
+                else document.getElementById('empty-state').textContent = 'NO METADATA';
+            } catch (e) { document.getElementById('empty-state').textContent = 'ERROR'; }
         }
 
-        /* ── Eagle lifecycle ── */
         if (typeof eagle !== 'undefined') {
-            eagle.onPluginCreate(async (plugin) => {
-                applyTheme();
-                eagle.onThemeChanged((theme) => {
-                    document.documentElement.setAttribute('data-theme', theme);
-                    document.body.setAttribute('data-theme', theme);
-                });
-
-                try {
-                    const dictPath = path.join(plugin.path, 'js', 'metadata-parser', 'dictionary', 'default-dictionary.json');
-                    const dictData = JSON.parse(await fsp.readFile(dictPath, 'utf8'));
-                    window.globalDictionary = new window.NodeDefinitionDictionary(dictData);
-                } catch (e) {
-                    console.warn('[Inspector] Dictionary load failed:', e);
-                }
-
-                await loadSelected();
+            eagle.onPluginCreate(async () => {
+                await applyTheme();
+                eagle.onThemeChanged(applyTheme);
+                loadSelected();
             });
-        }
+        } else { applyTheme(); loadSelected(); }
     </script>
 </body>
 </html>
