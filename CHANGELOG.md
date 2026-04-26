@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.6] - 2026-04-26
+
+### 🇬🇧 English
+#### 🐛 Bug Fixes
+- Fixed `scheduler` tag not being generated even when enabled in settings.
+- Fixed annotation output being incorrect when all fields for a sampler step were disabled.
+- Fixed edge cases where zero values for generation parameters (seed, steps, CFG) were not included in tags and annotations.
+
+### 🇯🇵 日本語
+#### 🐛 バグ修正
+- `scheduler` タグが設定で有効にしていても生成されていなかった不具合を修正。
+- サンプラーステップのすべてのフィールドが無効の場合にアノテーション出力が不正になっていた不具合を修正。
+- seed・steps・CFG が 0 のときにタグ・アノテーションに含まれないことがあった不具合を修正。
+
+---
+
 ## [1.3.5] - 2026-04-24
 
 ### 🇬🇧 English
