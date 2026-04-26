@@ -7,7 +7,7 @@
     "languages": ["en", "ja_JP"],
     "name": "{{manifest.name}}",
     "logo": "logo.png",
-    "keywords": ["comfyui", "tag", "exif", "metadata"],
+    "keywords": ["comfyui", "tag", "exif", "metadata", "inspector", "viewer"],
     "devTools": false,
     "main": {
         "url": "index.html",
