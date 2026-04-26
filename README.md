@@ -20,7 +20,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 > - Sends the image to Eagle
 > - Attaches tags (checkpoint, LoRA, prompt tokens, seed, sampler…) and a structured annotation
 >
-> When used alongside this plugin, tag management becomes even more powerful — images arrive in Eagle already tagged, and you can re-run this plugin at any time to update, filter, or batch-process them further. The node embeds the final node index into the image (as an `eagle_bridge` signal), allowing this plugin to reliably retrieve the prompt and generation parameters by tracing the exact workflow graph instead of relying on heuristics or inference.
+> When used alongside this plugin, tag management becomes even more powerful — images arrive in Eagle already tagged, and you can re-run this plugin at any time to update, filter, or batch-process them further. The node embeds an identifier into each saved image, allowing this plugin to reliably retrieve the prompt and generation parameters by tracing the exact workflow graph instead of relying on heuristics or inference.
 
 ### ✨ Features
 
@@ -35,7 +35,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 * **Suspicious Node Detection**: Detects nodes with missing required inputs in ComfyUI workflows and allows users to decide whether to include or exclude them from metadata extraction.
 * **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
-* **No External Dependencies**: Parses PNG/WebP/JPEG chunks directly (tEXt, comf, Exif) without relying on heavy external libraries.
+* **No External Dependencies**: No additional libraries required — works out of the box after installation.
 * **Utility**: Provides a dedicated button to safely remove only the tags/notes added by this plugin.
 
 ### 📸 Screenshots
@@ -50,11 +50,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 
 #### Advanced Workflow Analysis
 
-The plugin traces complex ComfyUI workflows to identify the actual generation pipeline:
-
-* Traces through complex node connections to identify the actual generation pipeline
-* Handles multi-stage workflows with multiple samplers and refinement stages
-* Dynamically analyzes node graphs to extract parameters even from complex workflows (HiresFix, FaceDetailer, etc.)
+The plugin traces complex ComfyUI workflows to identify the actual generation pipeline, supporting multi-stage setups with multiple samplers and refinement stages (HiresFix, FaceDetailer, etc.).
 
 <p align="center">
   <img src="assets/workflow_image.png" alt="Workflow Example" width="100%">
@@ -97,7 +93,7 @@ The plugin provides several configuration options accessible via the settings di
 
 #### Dictionary Settings
 
-* **Fetch dictionary from online (Recommended)**: Fetches the latest custom node definitions from GitHub. If disabled, the bundled dictionary will be used. Changes take effect on next startup. The plugin uses a node definition dictionary to understand custom nodes' input/output requirements. The online dictionary is regularly updated with new custom nodes, ensuring better compatibility.
+* **Fetch dictionary from online (Recommended)**: Fetches the latest custom node definitions from GitHub. If disabled, the bundled dictionary will be used. Changes take effect on next startup.
 
 #### Tag Generation Settings
 
@@ -150,11 +146,11 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 > - Eagle へ画像を送信
 > - タグ（チェックポイント・LoRA・プロンプトトークン・Seed・サンプラーなど）と構造化アノテーションを付与
 >
-> 本プラグインと組み合わせることで、タグ管理がさらに便利になります。Eagle に届いた時点で既にタグが付いており、後からいつでも本プラグインで一括処理・フィルタリング・追加編集が可能です。またノードは画像に最終的なノード番号（`eagle_bridge` シグナル）を埋め込むため、本プラグインがヒューリスティックな推論に頼らず、ワークフローグラフを正確に辿ってプロンプトや各種情報を確実に取得できるようになります。
+> 本プラグインと組み合わせることで、タグ管理がさらに便利になります。Eagle に届いた時点で既にタグが付いており、後からいつでも本プラグインで一括処理・フィルタリング・追加編集が可能です。またノードは保存した画像に識別子を埋め込むため、本プラグインがヒューリスティックな推論に頼らず、ワークフローグラフを正確に辿ってプロンプトや各種情報を確実に取得できるようになります。
 
 ### ✨ 機能
 
-* **複数フォーマット対応**: ComfyUIワークフロー（複雑なマルチサンプラー対応）、A1111（Stable Diffusion WebUI）、Civitai生成画像に対応。
+* **複数フォーマット対応**: ComfyUIワークフロー、A1111（Stable Diffusion WebUI）、Civitai生成画像に対応。
 * **メタデータ抽出**: チェックポイント、LoRA、プロンプト（Positive/Negative）、生成パラメータ（Seed, Steps, CFG, Sampler）を自動検出。
 * **柔軟な出力先**:
     * **タグ**: 抽出した情報をEagleのタグとして追加（例: `#checkpoint_name`, `seed:12345`）。
@@ -167,7 +163,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 * **疑わしいノード検出**: ComfyUIのメタデータには実際の実行経路が記録されないため、プラグインは入力の欠落などから「実行されなかった未使用ノード（ノイズ）」を推測します。しかし、未知のカスタムノードを誤って除外しないよう、検知時はダイアログを表示し、抽出情報に含めるか除外するかの判断をユーザーに委ねます。
 * **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
 * **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
-* **外部依存なし**: PNG/WebP/JPEGの内部データ（tEXt, comf, Exif）を直接解析するため、重い外部ライブラリに依存せず動作。
+* **外部依存なし**: インストール後すぐ使えます。追加ライブラリは不要です。
 * **ユーティリティ**: このプラグインが生成したタグやメモのみを安全に削除する機能を提供。
 
 ### 📸 スクリーンショット
@@ -182,11 +178,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 #### 高度なワークフロー解析
 
-複雑なComfyUIワークフローを追跡して、実際の生成パイプラインを特定します：
-
-* 複雑なノード接続を追跡して実際の生成パイプラインを特定
-* 複数のサンプラーと改善ステージを持つマルチステージワークフローに対応
-* ノードグラフを動的に解析し、複雑なワークフロー（HiresFix、FaceDetailer等）からもパラメータを正確に抽出
+複雑なComfyUIワークフローを追跡して実際の生成パイプラインを特定します。複数のサンプラーや改善ステージを持つマルチステージ構成（HiresFix、FaceDetailer等）にも対応しています。
 
 <p align="center">
   <img src="assets/workflow_image.png" alt="ワークフロー例" width="100%">
@@ -229,7 +221,7 @@ ComfyUIの画像に埋め込まれるメタデータには、「実際にどの�
   * **含める**: 入力の欠落に関わらず全てのノードを含める
 #### 辞書設定
 
-* **オンラインから辞書を取得する（推奨）**: GitHubから最新のカスタムノード定義を取得します。無効にするとバンドルされた辞書を使用します。変更は次回起動時に反映されます。プラグインはノード定義辞書を使用して、カスタムノードの入出力要件を理解します。オンライン辞書は新しいカスタムノードで定期的に更新されており、より良い互換性を保証します。
+* **オンラインから辞書を取得する（推奨）**: GitHubから最新のカスタムノード定義を取得します。無効にするとバンドルされた辞書を使用します。変更は次回起動時に反映されます。
 
 #### タグ生成設定
 
@@ -264,4 +256,3 @@ ComfyUIの画像に埋め込まれるメタデータには、「実際にどの�
 ### 📄 ライセンス
 
 本プラグインは [MIT License](LICENSE) のもとで公開されています。商用・非商用を問わず、自由にご利用・改変いただけます。
-けます。

@@ -248,32 +248,38 @@ class ComfyUIParser extends MetadataParserBase {
       const node = promptData[id];
       if (!node || !node.class_type) continue;
 
-      // Fallback: If no checkpoint found from samplers, use first CheckpointLoader or UNETLoader
+      const nodeDef = dictionary.getNodeDefinition(node.class_type);
+
+      // ── Checkpoint ──────────────────────────────────────────────────────
+      // Dictionary-first: use explicit input_key from checkpoint_loader entries.
+      // Heuristic fallback: class name contains "CheckpointLoader".
       if (!metadata.checkpoint) {
-        if (node.class_type.includes("CheckpointLoader")) {
+        if (nodeDef && nodeDef.type === 'checkpoint_loader') {
+          const ckptName = graph.resolveInput(id, nodeDef.input_key);
+          if (ckptName) {
+            metadata.checkpoint = ParsingUtils.extractFilename(ckptName);
+          }
+        } else if (!nodeDef && node.class_type.includes("CheckpointLoader")) {
+          // Heuristic fallback for unknown checkpoint loader variants
           const ckptName = graph.resolveInput(id, "ckpt_name");
           if (ckptName) {
             metadata.checkpoint = ParsingUtils.extractFilename(ckptName);
           }
-        } else if (node.class_type === "UNETLoader") {
-          const unetName = graph.resolveInput(id, "unet_name");
-          if (unetName) {
-            metadata.checkpoint = ParsingUtils.extractFilename(unetName);
-          }
         }
       }
 
-      // Extract LoRA from LoraLoader nodes
-      if (node.class_type && node.class_type.toLowerCase().includes("lora")) {
-        if (node.class_type.includes("LoraLoader")) {
-          const loraName = graph.resolveInput(id, "lora_name");
-          if (loraName) {
-            loras.add(ParsingUtils.extractFilename(loraName));
-          }
-        } else if (node.inputs) {
-          // Custom LoRA loader variants (e.g. rgthree "Lora Loader Stack" uses lora_01, lora_02, etc.)
-          // Match any input key containing "lora". False positives (lora_strength etc.) are
-          // filtered out below by the .safetensors extension check.
+      // ── LoRA ────────────────────────────────────────────────────────────
+      // Dictionary-first: use explicit input_key from lora_loader entries.
+      // Heuristic fallback: class name contains "lora" (catches stack loaders etc.)
+      if (nodeDef && nodeDef.type === 'lora_loader') {
+        const loraName = graph.resolveInput(id, nodeDef.input_key);
+        if (loraName) {
+          loras.add(ParsingUtils.extractFilename(loraName));
+        }
+      } else if (!nodeDef && node.class_type && node.class_type.toLowerCase().includes("lora")) {
+        // Heuristic fallback for unknown LoRA loader variants
+        // (e.g. rgthree "Lora Loader Stack" uses lora_01, lora_02, etc.)
+        if (node.inputs) {
           for (const inputKey in node.inputs) {
             if (inputKey.toLowerCase().includes("lora")) {
               const loraValue = graph.resolveInput(id, inputKey);

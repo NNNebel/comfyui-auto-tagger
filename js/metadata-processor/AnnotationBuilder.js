@@ -36,13 +36,15 @@ class AnnotationBuilder {
     const lines = [];
     
     // Check if we have any content to display
-    const hasContent = metadata.sampler_fallback || 
-      (settings.checkpoint && metadata.checkpoint) || 
+    const hasContent = metadata.sampler_fallback ||
+      (settings.checkpoint && metadata.checkpoint) ||
       (settings.lora && metadata.loras) ||
       (metadata.generationSteps && metadata.generationSteps.length > 0) ||
       (settings.seed && metadata.seed !== undefined) ||
       (settings.steps && metadata.steps !== undefined) ||
+      (settings.cfg && metadata.cfg !== undefined) ||
       (settings.sampler && metadata.sampler) ||
+      (settings.scheduler && metadata.scheduler) ||
       (settings.positive && metadata.positive) ||
       (settings.negative && metadata.negative) ||
       (metadata.extra_samplers && metadata.extra_samplers.length > 0);
@@ -69,24 +71,28 @@ class AnnotationBuilder {
     
     // Use new generationSteps format if available
     if (metadata.generationSteps && metadata.generationSteps.length > 0) {
-      if (lines.length > 1) {
-        lines.push(''); // Empty line before steps
-      }
-      
+      // Build all step blocks first; only emit separator if something will appear
+      const stepBlocks = [];
       metadata.generationSteps.forEach((step, index) => {
         const stepContent = this._buildStepContent(step, metadata, settings, t);
-        
         if (stepContent.length > 0) {
           const stepLabel = this._buildStepLabel(step, index);
-          lines.push(`[${stepLabel}]`);
-          lines.push(...stepContent);
-          
-          // Add empty line between steps (except after last step)
-          if (index < metadata.generationSteps.length - 1) {
-            lines.push('');
-          }
+          stepBlocks.push([`[${stepLabel}]`, ...stepContent]);
         }
       });
+
+      if (stepBlocks.length > 0) {
+        if (lines.length > 1) {
+          lines.push(''); // Empty line before steps (only when header has content)
+        }
+        stepBlocks.forEach((block, i) => {
+          lines.push(...block);
+          // Add empty line between steps (except after last step)
+          if (i < stepBlocks.length - 1) {
+            lines.push('');
+          }
+        });
+      }
     } else {
       // Fallback to old format
       const fallbackLines = this._buildFallbackContent(metadata, settings, t);
@@ -187,10 +193,10 @@ class AnnotationBuilder {
     }
     
     const baseParams = [];
-    if (settings.steps && metadata.steps) {
+    if (settings.steps && metadata.steps !== undefined) {
       baseParams.push(`${t('ui.option.steps')}: ${metadata.steps}`);
     }
-    if (settings.cfg && metadata.cfg) {
+    if (settings.cfg && metadata.cfg !== undefined) {
       baseParams.push(`CFG: ${Number(metadata.cfg).toFixed(1)}`);
     }
     if (settings.sampler && metadata.sampler) {

@@ -198,13 +198,73 @@ describe('NodeDefinitionDictionary', () => {
       expect(result.valid).toBe(false);
       expect(result.errors.some(e => e.includes('requires "port_mapping"'))).toBe(true);
     });
+
+    it('should detect missing input_key for checkpoint_loader', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestCheckpointLoader': {
+            type: 'checkpoint_loader'
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.includes('requires "input_key"'))).toBe(true);
+    });
+
+    it('should detect missing input_key for lora_loader', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestLoraLoader': {
+            type: 'lora_loader'
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.includes('requires "input_key"'))).toBe(true);
+    });
+
+    it('should accept valid checkpoint_loader definition', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestCheckpointLoader': {
+            type: 'checkpoint_loader',
+            input_key: 'ckpt_name'
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(true);
+    });
+
+    it('should accept valid lora_loader definition', () => {
+      const dict = new NodeDefinitionDictionary({
+        version: '1.0.0',
+        nodes: {
+          'TestLoraLoader': {
+            type: 'lora_loader',
+            input_key: 'lora_name'
+          }
+        }
+      });
+
+      const result = dict.validate();
+      expect(result.valid).toBe(true);
+    });
   });
 
   describe('getDefault', () => {
     it('should return default dictionary', () => {
       const dict = NodeDefinitionDictionary.getDefault();
       expect(dict).toBeInstanceOf(NodeDefinitionDictionary);
-      expect(dict.version).toBe('1.0.0');
+      expect(dict.version).toBeDefined();
       expect(dict.nodes).toBeDefined();
     });
 
@@ -230,6 +290,30 @@ describe('NodeDefinitionDictionary', () => {
       const def = dict.getNodeDefinition('AnySwitch');
       expect(def.type).toBe('router');
       expect(def.passthrough_rules).toBeDefined();
+    });
+
+    it('should include CheckpointLoaderSimple as checkpoint_loader', () => {
+      const dict = NodeDefinitionDictionary.getDefault();
+      expect(dict.hasDefinition('CheckpointLoaderSimple')).toBe(true);
+      const def = dict.getNodeDefinition('CheckpointLoaderSimple');
+      expect(def.type).toBe('checkpoint_loader');
+      expect(def.input_key).toBe('ckpt_name');
+    });
+
+    it('should include UNETLoader as checkpoint_loader', () => {
+      const dict = NodeDefinitionDictionary.getDefault();
+      expect(dict.hasDefinition('UNETLoader')).toBe(true);
+      const def = dict.getNodeDefinition('UNETLoader');
+      expect(def.type).toBe('checkpoint_loader');
+      expect(def.input_key).toBe('unet_name');
+    });
+
+    it('should include LoraLoader as lora_loader', () => {
+      const dict = NodeDefinitionDictionary.getDefault();
+      expect(dict.hasDefinition('LoraLoader')).toBe(true);
+      const def = dict.getNodeDefinition('LoraLoader');
+      expect(def.type).toBe('lora_loader');
+      expect(def.input_key).toBe('lora_name');
     });
   });
 

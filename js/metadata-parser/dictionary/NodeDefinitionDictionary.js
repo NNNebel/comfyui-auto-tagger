@@ -64,7 +64,7 @@
           continue;
         }
 
-        const validTypes = ['sampler', 'router', 'provider'];
+        const validTypes = ['sampler', 'router', 'provider', 'checkpoint_loader', 'lora_loader', 'image_processor', 'vae'];
         if (!validTypes.includes(definition.type)) {
           errors.push(`Node "${classType}": Invalid type "${definition.type}". Must be one of: ${validTypes.join(', ')}`);
         }
@@ -85,6 +85,12 @@
         if (definition.type === 'sampler') {
           if (!definition.port_mapping) {
             errors.push(`Node "${classType}": Sampler type requires "port_mapping" field`);
+          }
+        }
+
+        if (definition.type === 'checkpoint_loader' || definition.type === 'lora_loader') {
+          if (!definition.input_key) {
+            errors.push(`Node "${classType}": ${definition.type} type requires "input_key" field`);
           }
         }
       }

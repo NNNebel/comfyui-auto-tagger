@@ -121,11 +121,19 @@ describe('TagGenerator', () => {
       };
       const settings = { seed: true, steps: true, cfg: true, sampler: true };
       const result = TagGenerator.generate(metadata, settings);
-      
+
       expect(result.tags.has('seed:12345')).toBe(true);
       expect(result.tags.has('steps:20')).toBe(true);
       expect(result.tags.has('cfg:7.50')).toBe(true);
       expect(result.tags.has('sampler:euler')).toBe(true);
+    });
+
+    it('should generate seed:0 tag when seed is 0', () => {
+      const metadata = {
+        generationSteps: [{ seed: 0, steps: 20, cfg: 7.0, sampler: 'euler' }]
+      };
+      const result = TagGenerator.generate(metadata, { seed: true });
+      expect(result.tags.has('seed:0')).toBe(true);
     });
 
     it('should filter tags based on settings', () => {
@@ -266,10 +274,47 @@ describe('TagGenerator', () => {
       const metadata = {};
       const settings = { checkpoint: true, positive: true };
       const result = TagGenerator.generate(metadata, settings);
-      
+
       expect(result.tags.size).toBe(0);
       expect(result.cats.cp.size).toBe(0);
       expect(result.cats.pos.size).toBe(0);
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Settings coverage: every settings key must produce output when enabled.
+  // If a new key is added to ALL_SETTINGS but TagGenerator doesn't implement
+  // it, one of these tests will fail immediately.
+  // ---------------------------------------------------------------------------
+  describe('settings coverage — each key produces output when ON', () => {
+    const cases = [
+      { key: 'checkpoint', meta: { checkpoint: 'models/myModel.safetensors' }, tag: 'mymodel' },
+      { key: 'lora',       meta: { loras: ['loras/myLora.safetensors'] },       tag: 'mylora' },
+      { key: 'positive',   meta: { positive: 'masterpiece' },                   tag: 'masterpiece' },
+      { key: 'negative',   meta: { negative: 'bad quality' },                   tag: 'neg:bad quality' },
+      { key: 'seed',    meta: { generationSteps: [{ seed: 42 }] },              tag: 'seed:42' },
+      { key: 'steps',   meta: { generationSteps: [{ steps: 20 }] },             tag: 'steps:20' },
+      { key: 'cfg',     meta: { generationSteps: [{ cfg: 7.0 }] },              tag: 'cfg:7.00' },
+      { key: 'sampler', meta: { generationSteps: [{ sampler: 'euler' }] },      tag: 'sampler:euler' },
+      { key: 'scheduler', meta: { generationSteps: [{ scheduler: 'normal' }] }, tag: 'scheduler:normal' },
+    ];
+
+    it.each(cases)(
+      'setting "$key" ON → "$tag" appears in tags',
+      ({ key, meta, tag }) => {
+        const settings = { [key]: true };
+        const result = TagGenerator.generate(meta, settings);
+        expect([...result.tags].some(t => t === tag || t.includes(tag))).toBe(true);
+      }
+    );
+
+    it.each(cases)(
+      'setting "$key" OFF → "$tag" absent from tags',
+      ({ key, meta, tag }) => {
+        const settings = { [key]: false };
+        const result = TagGenerator.generate(meta, settings);
+        expect([...result.tags].some(t => t === tag || t.includes(tag))).toBe(false);
+      }
+    );
   });
 });

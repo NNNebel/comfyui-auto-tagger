@@ -182,6 +182,9 @@ class TagGenerator {
         if (step.sampler) {
           cats.param.add(`sampler:${String(step.sampler).toLowerCase()}`);
         }
+        if (step.scheduler) {
+          cats.param.add(`scheduler:${String(step.scheduler).toLowerCase()}`);
+        }
       });
     } else {
       // Fallback to base sampler for simple workflows
@@ -197,6 +200,9 @@ class TagGenerator {
       if (metadata.sampler) {
         cats.param.add(`sampler:${String(metadata.sampler).toLowerCase()}`);
       }
+      if (metadata.scheduler) {
+        cats.param.add(`scheduler:${String(metadata.scheduler).toLowerCase()}`);
+      }
     }
 
     // Filter tags based on settings
@@ -211,6 +217,7 @@ class TagGenerator {
       if (t.startsWith('steps:') && settings.steps) allTags.add(t);
       if (t.startsWith('cfg:') && settings.cfg) allTags.add(t);
       if (t.startsWith('sampler:') && settings.sampler) allTags.add(t);
+      if (t.startsWith('scheduler:') && settings.scheduler) allTags.add(t);
     });
 
     return { tags: allTags, cats };

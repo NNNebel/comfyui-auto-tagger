@@ -213,4 +213,116 @@ describe('AnnotationBuilder', () => {
       expect(result).toContain('[Base Sampler - Group A (ID: 1)]');
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Fallback format: positive/negative section structure
+  // ---------------------------------------------------------------------------
+  describe('fallback positive/negative format', () => {
+    it('should format positive as blank + [Positive Prompt] + text', () => {
+      const metadata = { seed: 1, positive: 'masterpiece' };
+      const settings = { seed: true, positive: true };
+      const lines = AnnotationBuilder.build(metadata, settings, t).split('\n');
+      const posIdx = lines.indexOf('[Positive Prompt]');
+      expect(posIdx).toBeGreaterThan(0);
+      expect(lines[posIdx - 1]).toBe('');   // blank line before section
+      expect(lines[posIdx + 1]).toBe('masterpiece');
+    });
+
+    it('should format negative as blank + [Negative Prompt] + text', () => {
+      const metadata = { seed: 1, negative: 'bad quality' };
+      const settings = { seed: true, negative: true };
+      const lines = AnnotationBuilder.build(metadata, settings, t).split('\n');
+      const negIdx = lines.indexOf('[Negative Prompt]');
+      expect(negIdx).toBeGreaterThan(0);
+      expect(lines[negIdx - 1]).toBe('');
+      expect(lines[negIdx + 1]).toBe('bad quality');
+    });
+
+    it('should not emit [Positive Prompt] when positive setting is off', () => {
+      const metadata = { seed: 1, positive: 'masterpiece' };
+      const settings = { seed: true, positive: false };
+      const result = AnnotationBuilder.build(metadata, settings, t);
+      expect(result).not.toContain('[Positive Prompt]');
+      expect(result).not.toContain('masterpiece');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Boundary values
+  // ---------------------------------------------------------------------------
+  describe('boundary values', () => {
+    describe('fallback path: zero values', () => {
+      it('should include seed when seed is 0', () => {
+        const metadata = { seed: 0, steps: 20, sampler: 'euler' };
+        const settings = { seed: true, steps: true, sampler: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).toContain('Seed: 0');
+      });
+
+      it('should include steps when steps is 0', () => {
+        const metadata = { seed: 1, steps: 0, cfg: 7.0, sampler: 'euler' };
+        const settings = { seed: true, steps: true, cfg: true, sampler: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).toContain('Steps: 0');
+      });
+
+      it('should include cfg when cfg is 0', () => {
+        const metadata = { seed: 1, steps: 20, cfg: 0, sampler: 'euler' };
+        const settings = { seed: true, steps: true, cfg: true, sampler: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).toContain('CFG: 0.0');
+      });
+    });
+
+    describe('loras null vs empty array', () => {
+      it('should show empty LoRA line when loras is []', () => {
+        const metadata = { loras: [] };
+        const settings = { lora: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).toContain('LoRA: ');
+      });
+
+      it('should not show LoRA line when loras is null', () => {
+        const metadata = { seed: 1, loras: null };
+        const settings = { lora: true, seed: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).not.toContain('LoRA:');
+      });
+    });
+
+    describe('blank line before first step', () => {
+      it('should not insert blank line when header has no content', () => {
+        // checkpoint=false, lora not present → header is only [Generation Info]
+        const metadata = {
+          generationSteps: [{ nodeId: '1', nodeType: 'KSampler', seed: 42, isBase: true }]
+        };
+        const settings = { checkpoint: false, seed: true };
+        const lines = AnnotationBuilder.build(metadata, settings, t).split('\n');
+        expect(lines[0]).toBe('[Generation Info]');
+        expect(lines[1]).not.toBe('');
+      });
+
+      it('should insert blank line when header has content', () => {
+        const metadata = {
+          checkpoint: 'models/cp.safetensors',
+          generationSteps: [{ nodeId: '1', nodeType: 'KSampler', seed: 42, isBase: true }]
+        };
+        const settings = { checkpoint: true, seed: true };
+        const lines = AnnotationBuilder.build(metadata, settings, t).split('\n');
+        expect(lines[0]).toBe('[Generation Info]');
+        expect(lines[1]).toBe('Checkpoint: cp');
+        expect(lines[2]).toBe('');
+      });
+    });
+
+    describe('checkpoint path stripping', () => {
+      it('should strip directory path from checkpoint name', () => {
+        const metadata = { checkpoint: 'models/sd/myModel.safetensors' };
+        const settings = { checkpoint: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).toContain('Checkpoint: myModel');
+        expect(result).not.toContain('models/');
+      });
+    });
+  });
 });
