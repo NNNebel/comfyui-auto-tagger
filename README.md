@@ -24,6 +24,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 
 ### ✨ Features
 
+* **Generation Info Inspector**: When you select an image in Eagle, a panel automatically appears showing the generation metadata — prompts, seed, sampler, model, and LoRA — with a copy button for each field. Multi-sampler workflows display as tabs (Base / Step 2, etc.).
 * **Multi-Format Support**: Supports ComfyUI workflows (including complex multi-sampler), A1111 (Stable Diffusion WebUI) parameters, and Civitai generation metadata.
 * **Metadata Extraction**: Automatically detects Checkpoint, LoRA, Prompts (Positive/Negative), and Generation Parameters (Seed, Steps, CFG, Sampler).
 * **Flexible Output**:
@@ -47,6 +48,14 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 | Output Result | Main UI |
 | :---: | :---: |
 | <img src="assets/preview-result.png" width="400" alt="Result Overview"> | <img src="assets/preview-settings.png" width="400" alt="Main Window"> |
+
+#### Generation Info Inspector
+
+Select any AI-generated image in Eagle and the inspector panel appears automatically, showing prompts, parameters, and model info — each with a copy button. Multi-sampler workflows are split into tabs.
+
+<p align="center">
+  <img src="assets/inspector.png" alt="Generation Info Inspector" width="514">
+</p>
 
 #### Advanced Workflow Analysis
 
@@ -150,6 +159,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 ### ✨ 機能
 
+* **生成情報インスペクター**: Eagleで画像を選択すると、プロンプト・Seed・サンプラー・モデル・LoRAなどの生成情報がパネルに自動表示されます。各フィールドにコピーボタン付き。マルチサンプラーワークフローはタブ（Base / Step 2 など）で切り替え表示。
 * **複数フォーマット対応**: ComfyUIワークフロー、A1111（Stable Diffusion WebUI）、Civitai生成画像に対応。
 * **メタデータ抽出**: チェックポイント、LoRA、プロンプト（Positive/Negative）、生成パラメータ（Seed, Steps, CFG, Sampler）を自動検出。
 * **柔軟な出力先**:
@@ -175,6 +185,14 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 | 出力結果 | メイン画面 |
 | :---: | :---: |
 | <img src="assets/preview-result.png" width="400" alt="結果概要"> | <img src="assets/preview-settings.png" width="400" alt="メインウィンドウ"> |
+
+#### 生成情報インスペクター
+
+Eagleで画像を選択するとインスペクターパネルが自動表示され、プロンプト・パラメータ・モデル情報を確認できます。各フィールドにはコピーボタンが付いており、マルチサンプラーワークフローはタブで切り替えられます。
+
+<p align="center">
+  <img src="assets/inspector.png" alt="生成情報インスペクター" width="514">
+</p>
 
 #### 高度なワークフロー解析
 
