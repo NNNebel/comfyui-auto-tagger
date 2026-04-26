@@ -60,7 +60,7 @@ const TEST_CASES = [
     expectedTags: [
       '1girl', 'casual blouse', 'cfg:8.00', 'masterpiece',
       'neg:worst quality', 'novaanimexl_ilv150',
-      'sampler:dpmpp_2m', 'seed:1111111', 'steps:30',
+      'sampler:dpmpp_2m', 'scheduler:simple', 'seed:1111111', 'steps:30',
     ],
     expectedAnnotation: [
       '[Generation Info]',
@@ -86,7 +86,7 @@ const TEST_CASES = [
     expectedTags: [
       '1girl', 'basque beret', 'cfg:8.00', 'masterpiece',
       'neg:bad hands', 'neg:worst quality', 'novaanimexl_ilv140',
-      'sampler:euler_ancestral', 'seed:1111111', 'steps:30', 'ultra-detailed',
+      'sampler:euler_ancestral', 'scheduler:simple', 'seed:1111111', 'steps:30', 'ultra-detailed',
     ],
     expectedAnnotation: [
       '[Generation Info]',
@@ -117,7 +117,7 @@ const TEST_CASES = [
     expectedTags: [
       '1girl', 'cfg:8.00', 'masterpiece',
       'neg:bad hands', 'neg:bad quality', 'neg:extra limbs', 'neg:worst quality',
-      'novaanimexl_ilv140', 'sampler:dpmpp_2m', 'seed:1111111', 'steps:30',
+      'novaanimexl_ilv140', 'sampler:dpmpp_2m', 'scheduler:simple', 'seed:1111111', 'steps:30',
       'stick pants', 'tailored jacket',
     ],
     expectedAnnotation: [
@@ -145,7 +145,7 @@ const TEST_CASES = [
       '1girl', 'basque beret', 'cfg:8.00', 'hime cut_xl_illustrious_v1.0',
       'himecut', 'masterpiece', 'neg:bad hands', 'neg:worst quality',
       'novaanimexl_ilv140', 'pink hair color',
-      'sampler:euler_ancestral', 'seed:1111111', 'steps:30', 'ultra-detailed',
+      'sampler:euler_ancestral', 'scheduler:simple', 'seed:1111111', 'steps:30', 'ultra-detailed',
     ],
     expectedAnnotation: [
       '[Generation Info]',
@@ -177,7 +177,7 @@ const TEST_CASES = [
       '1girl', 'basque beret', 'brown hair color', 'cfg:8.00',
       'half twintail_illustrious_v1.0', 'masterpiece',
       'neg:bad hands', 'neg:worst quality', 'novaanimexl_ilv140',
-      'sampler:euler_ancestral', 'seed:1111111', 'steps:30', 'twintail', 'ultra-detailed',
+      'sampler:euler_ancestral', 'scheduler:simple', 'seed:1111111', 'steps:30', 'twintail', 'ultra-detailed',
     ],
     expectedAnnotation: [
       '[Generation Info]',
@@ -207,7 +207,7 @@ const TEST_CASES = [
     ],
     expectedTags: [
       'cfg:8.00', 'masterpiece', 'neg:worst quality', 'novaanimexl_ilv150',
-      'red color casual blouse', 'sampler:dpmpp_2m', 'seed:1111111',
+      'red color casual blouse', 'sampler:dpmpp_2m', 'scheduler:simple', 'seed:1111111',
       'silver color hair', 'steps:20',
     ],
     expectedAnnotation: [
