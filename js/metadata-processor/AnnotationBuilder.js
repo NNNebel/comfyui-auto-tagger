@@ -36,13 +36,15 @@ class AnnotationBuilder {
     const lines = [];
     
     // Check if we have any content to display
-    const hasContent = metadata.sampler_fallback || 
-      (settings.checkpoint && metadata.checkpoint) || 
+    const hasContent = metadata.sampler_fallback ||
+      (settings.checkpoint && metadata.checkpoint) ||
       (settings.lora && metadata.loras) ||
       (metadata.generationSteps && metadata.generationSteps.length > 0) ||
       (settings.seed && metadata.seed !== undefined) ||
       (settings.steps && metadata.steps !== undefined) ||
+      (settings.cfg && metadata.cfg !== undefined) ||
       (settings.sampler && metadata.sampler) ||
+      (settings.scheduler && metadata.scheduler) ||
       (settings.positive && metadata.positive) ||
       (settings.negative && metadata.negative) ||
       (metadata.extra_samplers && metadata.extra_samplers.length > 0);
