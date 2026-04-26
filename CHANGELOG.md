@@ -5,12 +5,18 @@ All notable changes to this project will be documented in this file.
 ## [1.3.6] - 2026-04-26
 
 ### 🇬🇧 English
+#### ✨ Improvements
+- Extended the node dictionary with `image_processor` (ImageUpscaleWithModel, ImageScale, ImageScaleBy, ImageResize, ImageCrop, ImageBlur) and `vae` (VAEEncode, VAEDecode) node types for improved suspicious node detection.
+
 #### 🐛 Bug Fixes
 - Fixed `scheduler` tag not being generated even when enabled in settings.
 - Fixed annotation output being incorrect when all fields for a sampler step were disabled.
 - Fixed edge cases where zero values for generation parameters (seed, steps, CFG) were not included in tags and annotations.
 
 ### 🇯🇵 日本語
+#### ✨ 改善
+- ノード辞書に `image_processor`（ImageUpscaleWithModel・ImageScale・ImageScaleBy・ImageResize・ImageCrop・ImageBlur）と `vae`（VAEEncode・VAEDecode）タイプを追加し、疑わしいノード検出の精度を向上。
+
 #### 🐛 バグ修正
 - `scheduler` タグが設定で有効にしていても生成されていなかった不具合を修正。
 - サンプラーステップのすべてのフィールドが無効の場合にアノテーション出力が不正になっていた不具合を修正。
