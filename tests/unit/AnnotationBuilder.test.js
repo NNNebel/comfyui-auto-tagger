@@ -252,6 +252,13 @@ describe('AnnotationBuilder', () => {
   // ---------------------------------------------------------------------------
   describe('boundary values', () => {
     describe('fallback path: zero values', () => {
+      it('should include seed when seed is 0', () => {
+        const metadata = { seed: 0, steps: 20, sampler: 'euler' };
+        const settings = { seed: true, steps: true, sampler: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).toContain('Seed: 0');
+      });
+
       it('should include steps when steps is 0', () => {
         const metadata = { seed: 1, steps: 0, cfg: 7.0, sampler: 'euler' };
         const settings = { seed: true, steps: true, cfg: true, sampler: true };
@@ -264,6 +271,22 @@ describe('AnnotationBuilder', () => {
         const settings = { seed: true, steps: true, cfg: true, sampler: true };
         const result = AnnotationBuilder.build(metadata, settings, t);
         expect(result).toContain('CFG: 0.0');
+      });
+    });
+
+    describe('loras null vs empty array', () => {
+      it('should show empty LoRA line when loras is []', () => {
+        const metadata = { loras: [] };
+        const settings = { lora: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).toContain('LoRA: ');
+      });
+
+      it('should not show LoRA line when loras is null', () => {
+        const metadata = { seed: 1, loras: null };
+        const settings = { lora: true, seed: true };
+        const result = AnnotationBuilder.build(metadata, settings, t);
+        expect(result).not.toContain('LoRA:');
       });
     });
 

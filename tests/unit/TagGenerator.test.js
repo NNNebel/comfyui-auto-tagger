@@ -121,11 +121,19 @@ describe('TagGenerator', () => {
       };
       const settings = { seed: true, steps: true, cfg: true, sampler: true };
       const result = TagGenerator.generate(metadata, settings);
-      
+
       expect(result.tags.has('seed:12345')).toBe(true);
       expect(result.tags.has('steps:20')).toBe(true);
       expect(result.tags.has('cfg:7.50')).toBe(true);
       expect(result.tags.has('sampler:euler')).toBe(true);
+    });
+
+    it('should generate seed:0 tag when seed is 0', () => {
+      const metadata = {
+        generationSteps: [{ seed: 0, steps: 20, cfg: 7.0, sampler: 'euler' }]
+      };
+      const result = TagGenerator.generate(metadata, { seed: true });
+      expect(result.tags.has('seed:0')).toBe(true);
     });
 
     it('should filter tags based on settings', () => {
