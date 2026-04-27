@@ -75,7 +75,8 @@ describe('i18n Usage Validation', () => {
     // plugin.js と index.html から使用されているキーを抽出
     const pluginKeys = extractUsedKeys(path.join(__dirname, '../js/plugin.js'));
     const indexKeys = extractUsedKeys(path.join(__dirname, '../index.html'));
-    const allUsedKeys = new Set([...pluginKeys, ...indexKeys]);
+    const inspectorKeys = extractUsedKeys(path.join(__dirname, '../inspector.html'));
+    const allUsedKeys = new Set([...pluginKeys, ...indexKeys, ...inspectorKeys]);
 
     it('should have all translation keys used in plugin.js defined in locale files', () => {
         const missingKeys = [];
@@ -113,6 +114,63 @@ describe('i18n Usage Validation', () => {
 
         if (missingKeys.length > 0) {
             expect.fail(`Missing translation keys in ja_JP.json: ${missingKeys.join(', ')}`);
+        }
+    });
+
+    // Detect hardcoded Japanese text in HTML files (outside of <script>, <style>, and comments)
+    it('should not have hardcoded Japanese text in index.html (except icons)', () => {
+        const indexContent = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+
+        // Remove script, style tags and HTML comments
+        let cleaned = indexContent.replace(/<script[\s\S]*?<\/script>/g, '');
+        cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/g, '');
+        cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+
+        const japanesePattern = /[぀-ゟ゠-ヿ一-鿿가-힯]/g;
+        const lines = cleaned.split('\n');
+        const hardcodedLines = [];
+
+        lines.forEach((line, idx) => {
+            // Skip lines that contain t() calls (already translated)
+            if (line.includes("t('") || line.includes('t("')) return;
+
+            const match = line.match(japanesePattern);
+            if (match && match.length > 0) {
+                hardcodedLines.push({ line: idx + 1, content: line.trim() });
+            }
+        });
+
+        if (hardcodedLines.length > 0) {
+            const details = hardcodedLines.map(h => `Line ${h.line}: ${h.content}`).join('\n');
+            expect.fail(`Found hardcoded Japanese text in index.html that should be translated:\n${details}`);
+        }
+    });
+
+    it('should not have hardcoded Japanese text in inspector.html (except icons)', () => {
+        const inspectorContent = fs.readFileSync(path.join(__dirname, '../inspector.html'), 'utf8');
+
+        // Remove script, style tags and HTML comments
+        let cleaned = inspectorContent.replace(/<script[\s\S]*?<\/script>/g, '');
+        cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/g, '');
+        cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+
+        const japanesePattern = /[぀-ゟ゠-ヿ一-鿿가-힯]/g;
+        const lines = cleaned.split('\n');
+        const hardcodedLines = [];
+
+        lines.forEach((line, idx) => {
+            // Skip lines that contain t() calls (already translated)
+            if (line.includes("t('") || line.includes('t("')) return;
+
+            const match = line.match(japanesePattern);
+            if (match && match.length > 0) {
+                hardcodedLines.push({ line: idx + 1, content: line.trim() });
+            }
+        });
+
+        if (hardcodedLines.length > 0) {
+            const details = hardcodedLines.map(h => `Line ${h.line}: ${h.content}`).join('\n');
+            expect.fail(`Found hardcoded Japanese text in inspector.html that should be translated:\n${details}`);
         }
     });
 });
