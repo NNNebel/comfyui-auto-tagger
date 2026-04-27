@@ -50,7 +50,18 @@
         "button": {
             "start": "タグ付け開始",
             "deleteInfo": "情報を削除",
-            "cancel": "キャンセル"
+            "cancel": "キャンセル",
+            "close": "閉じる",
+            "details": "詳細を表示",
+            "includeAll": "すべてのノードを含める",
+            "copyInfo": "情報をコピー",
+            "reportError": "エラーを報告"
+        },
+        "warning": {
+            "title": "ワークフローに問題が検出されました"
+        },
+        "error": {
+            "title": "メタデータ抽出エラー"
         },
         "dialog": {
             "title": "⚠️ 疑わしいノードが検出されました",

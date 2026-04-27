@@ -50,7 +50,18 @@
         "button": {
             "start": "Start Tagging",
             "deleteInfo": "Delete Info",
-            "cancel": "Cancel"
+            "cancel": "Cancel",
+            "close": "Close",
+            "details": "Show Details",
+            "includeAll": "Include All Nodes",
+            "copyInfo": "Copy Info",
+            "reportError": "Report Error"
+        },
+        "warning": {
+            "title": "Workflow Issue Detected"
+        },
+        "error": {
+            "title": "Metadata Extraction Error"
         },
         "dialog": {
             "title": "⚠️ Suspicious Node Detected",

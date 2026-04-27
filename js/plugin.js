@@ -54,10 +54,60 @@ Promise.all([
             if (label) label.textContent = t(key);
         }
 
+        // Main UI section labels
+        const chkAddTagsLabel = document.querySelector('label[for="chk-add-tags"]');
+        if (chkAddTagsLabel) chkAddTagsLabel.textContent = t('ui.option.addTags');
+
+        const chkWriteNotesLabel = document.querySelector('label[for="chk-write-notes"]');
+        if (chkWriteNotesLabel) chkWriteNotesLabel.textContent = t('ui.option.writeNotes');
+
         // Settings button translation
         const settingsButton = document.getElementById('settings-button');
         if (settingsButton) settingsButton.textContent = '⚙️ ' + t('ui.settings.title');
-        
+
+        // Main control buttons
+        const startButton = document.getElementById('startButton');
+        if (startButton) startButton.textContent = t('ui.button.start');
+
+        const deleteInfoButton = document.getElementById('deleteInfoButton');
+        if (deleteInfoButton) deleteInfoButton.textContent = t('ui.button.deleteInfo');
+
+        const cancelButton = document.getElementById('cancelButton');
+        if (cancelButton) cancelButton.textContent = t('ui.button.cancel');
+
+        // Select options for suspicious node handling (main UI)
+        const suspiciousNodeSelect = document.getElementById('suspicious-node-handling');
+        if (suspiciousNodeSelect) {
+            const mainUiOptions = suspiciousNodeSelect.querySelectorAll('option');
+            if (mainUiOptions[0]) mainUiOptions[0].textContent = t('ui.option.exclude');
+            if (mainUiOptions[1]) mainUiOptions[1].textContent = t('ui.option.ask');
+            if (mainUiOptions[2]) mainUiOptions[2].textContent = t('ui.option.include');
+        }
+
+        // Warning section texts
+        const warningTitle = document.querySelector('.warning-section span');
+        if (warningTitle) warningTitle.textContent = t('ui.warning.title');
+
+        const warningDismissButton = document.querySelector('.warning-dismiss');
+        if (warningDismissButton) warningDismissButton.title = t('ui.button.close');
+
+        const warningButtons = document.querySelectorAll('.warning-button');
+        if (warningButtons.length >= 3) {
+            if (warningButtons[0]) warningButtons[0].textContent = t('ui.button.includeAll');
+            if (warningButtons[1]) warningButtons[1].textContent = t('ui.button.details');
+            if (warningButtons[2]) warningButtons[2].textContent = t('ui.button.copyInfo');
+        }
+
+        // Error section texts
+        const hardWarningTitle = document.querySelector('#hard-error-section span');
+        if (hardWarningTitle) hardWarningTitle.textContent = t('ui.error.title');
+
+        const hardWarningButtons = document.querySelectorAll('.hard-warning-button');
+        if (hardWarningButtons.length >= 2) {
+            if (hardWarningButtons[0]) hardWarningButtons[0].textContent = t('ui.button.reportError');
+            if (hardWarningButtons[1]) hardWarningButtons[1].textContent = t('ui.button.close');
+        }
+
         const sectionTitles = document.querySelectorAll('.section-title');
         if(sectionTitles[0]) sectionTitles[0].textContent = t('ui.outputSettings');
         if(sectionTitles[1]) sectionTitles[1].textContent = t('ui.suspiciousNodeHandling');
