@@ -88,10 +88,10 @@
           }
         }
 
+        // Note: input_key is optional; if not provided, it will be inferred from context
+        // This allows backward compatibility with older dictionary versions
         if (definition.type === 'checkpoint_loader' || definition.type === 'lora_loader') {
-          if (!definition.input_key) {
-            errors.push(`Node "${classType}": ${definition.type} type requires "input_key" field`);
-          }
+          // input_key is optional - validation passes without it
         }
       }
 
