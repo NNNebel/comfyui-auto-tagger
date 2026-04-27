@@ -31,7 +31,10 @@ Promise.all([
                 interpolation: { escapeValue: false }
             });
             updateUILabels();
-            
+
+            // Set plugin path for dictionary loading
+            window.pluginPath = plugin.path;
+
             // Initialize dictionary after i18n is ready
             if (window.initializeDictionary) {
                 await window.initializeDictionary();
