@@ -53,6 +53,10 @@ Promise.all([
             const label = document.querySelector(`label[for="${id}"]`);
             if (label) label.textContent = t(key);
         }
+
+        // Settings button translation
+        const settingsButton = document.getElementById('settings-button');
+        if (settingsButton) settingsButton.textContent = '⚙️ ' + t('ui.settings.title');
         
         const sectionTitles = document.querySelectorAll('.section-title');
         if(sectionTitles[0]) sectionTitles[0].textContent = t('ui.outputSettings');
