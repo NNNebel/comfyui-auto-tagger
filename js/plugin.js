@@ -75,15 +75,6 @@ Promise.all([
         const cancelButton = document.getElementById('cancelButton');
         if (cancelButton) cancelButton.textContent = t('ui.button.cancel');
 
-        // Select options for suspicious node handling (main UI)
-        const suspiciousNodeSelect = document.getElementById('suspicious-node-handling');
-        if (suspiciousNodeSelect) {
-            const mainUiOptions = suspiciousNodeSelect.querySelectorAll('option');
-            if (mainUiOptions[0]) mainUiOptions[0].textContent = t('ui.option.exclude');
-            if (mainUiOptions[1]) mainUiOptions[1].textContent = t('ui.option.ask');
-            if (mainUiOptions[2]) mainUiOptions[2].textContent = t('ui.option.include');
-        }
-
         // Warning section texts
         const warningTitle = document.querySelector('.warning-section span');
         if (warningTitle) warningTitle.textContent = t('ui.warning.title');
