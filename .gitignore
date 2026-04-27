@@ -39,6 +39,7 @@ out/
 AGENTS.md
 CLAUDE.md
 .claude/
+.ai_docs/
 docs/
 
 # Test fixture files - developers should generate their own
