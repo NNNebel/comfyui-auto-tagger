@@ -57,9 +57,32 @@ describe('Plugin.js E2E Tests - Processing Flow', () => {
       'comfyui_multi.webp',
       'comfyui_simple.png',
       'comfyui_simple.webp',
+      'comfyui_simple.jpeg',
       'comfyui_suspicious_node.webp',
       'comfyui_suspicious_node2.webp',
-      'gemini-generate.png'
+      'gemini-generate.png',
+      // bridge-* fixtures - all formats (JPEG, PNG, WebP)
+      'bridge-simple.jpg',
+      'bridge-simple.png',
+      'bridge-simple.webp',
+      'bridge-multi.jpg',
+      'bridge-multi.png',
+      'bridge-multi.webp',
+      'bridge-lora-simple.jpg',
+      'bridge-lora-simple.png',
+      'bridge-lora-simple.webp',
+      'bridge-lora-stack.jpg',
+      'bridge-lora-stack.png',
+      'bridge-lora-stack.webp',
+      'bridge-i2i.jpg',
+      'bridge-i2i.png',
+      'bridge-i2i.webp',
+      'bridge-conditioning-combine.jpg',
+      'bridge-conditioning-combine.png',
+      'bridge-conditioning-combine.webp',
+      'bridge-various-model.jpg',
+      'bridge-various-model.png',
+      'bridge-various-model.webp'
     ];
 
     fixtureFiles.forEach(filename => {
@@ -75,7 +98,13 @@ describe('Plugin.js E2E Tests - Processing Flow', () => {
         const buffer = fs.readFileSync(fixturePath);
         const item = { name: filename, filePath: fixturePath };
         const ext = path.extname(filename).toLowerCase();
-        const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
+        const mimeTypeMap = {
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.webp': 'image/webp'
+        };
+        const mimeType = mimeTypeMap[ext] || 'image/webp';
 
         let error = null;
         try {

@@ -50,6 +50,7 @@
             line-height: 1.4;
             -webkit-font-smoothing: antialiased;
             transition: background 0.3s ease;
+            overflow-y: auto;
         }
 
         body[theme="LIGHT"], body[theme="LIGHTGRAY"] { background-color: var(--bg) !important; }
@@ -85,7 +86,7 @@
             flex-direction: column;
             padding: 8px 10px; /* 内部パディング8px、カードマージン4pxと合わせて12px */
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: background-color 0.15s ease;
             border-bottom: 1px solid var(--divider);
         }
         .row:last-child { border-bottom: none; }
@@ -261,12 +262,24 @@
             if (!value && value !== 0) return null;
             const row = document.createElement('div');
             row.className = 'row';
-            row.innerHTML = `
-                <div class="row-label">${label}</div>
-                <div class="row-value ${isMono ? 'mono' : ''}">${value}</div>
-                ${COPY_SVG}
-                <div class="copied-label">Copied</div>
-            `;
+
+            const labelEl = document.createElement('div');
+            labelEl.className = 'row-label';
+            labelEl.textContent = String(label);
+
+            const valueEl = document.createElement('div');
+            valueEl.className = `row-value${isMono ? ' mono' : ''}`;
+            valueEl.textContent = String(value);
+
+            row.appendChild(labelEl);
+            row.appendChild(valueEl);
+            row.insertAdjacentHTML('beforeend', COPY_SVG);
+
+            const copiedLabel = document.createElement('div');
+            copiedLabel.className = 'copied-label';
+            copiedLabel.textContent = 'Copied';
+            row.appendChild(copiedLabel);
+
             row.onclick = () => copyText(String(value), row);
             return row;
         }
@@ -333,7 +346,9 @@
 
         function renderMetadata(metadata) {
             const content = document.getElementById('content');
-            content.innerHTML = '';
+            while (content.firstChild) {
+                content.removeChild(content.firstChild);
+            }
             content.style.display = 'block';
             document.getElementById('empty-state').style.display = 'none';
 
@@ -351,7 +366,15 @@
                     const nodeType = step.nodeName || step.nodeType || '';
 
                     if (nodeType) {
-                        tab.innerHTML = `${tabLabel}<br><span style="font-size:9px; opacity:0.6; text-transform:none;">${nodeType} (ID: ${step.nodeId})</span>`;
+                        tab.textContent = tabLabel;
+                        const br = document.createElement('br');
+                        tab.appendChild(br);
+                        const subtitle = document.createElement('span');
+                        subtitle.style.fontSize = '9px';
+                        subtitle.style.opacity = '0.6';
+                        subtitle.style.textTransform = 'none';
+                        subtitle.textContent = `${nodeType} (ID: ${step.nodeId})`;
+                        tab.appendChild(subtitle);
                     } else {
                         tab.textContent = tabLabel;
                     }

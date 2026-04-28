@@ -35,6 +35,7 @@
             "negative": "Negative Prompt",
             "seed": "Seed",
             "sampler": "Sampler",
+            "scheduler": "Scheduler",
             "steps": "Steps",
             "cfg": "CFG",
             "addTags": "Add to Tags",

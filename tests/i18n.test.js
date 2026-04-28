@@ -117,60 +117,83 @@ describe('i18n Usage Validation', () => {
         }
     });
 
-    // Detect hardcoded Japanese text in HTML files (outside of <script>, <style>, and comments)
-    it('should not have hardcoded Japanese text in index.html (except icons)', () => {
+    // Detect hardcoded text (both Japanese and English) that should be translated
+    it('should use i18n for all UI text in index.html', () => {
         const indexContent = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
 
         // Remove script, style tags and HTML comments
         let cleaned = indexContent.replace(/<script[\s\S]*?<\/script>/g, '');
         cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/g, '');
         cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+        // Remove img alt text and title attributes (not part of visible UI)
+        cleaned = cleaned.replace(/\s(?:alt|title|placeholder)="[^"]*"/g, '');
 
-        const japanesePattern = /[぀-ゟ゠-ヿ一-鿿가-힯]/g;
         const lines = cleaned.split('\n');
-        const hardcodedLines = [];
+        const suspiciousLines = [];
 
         lines.forEach((line, idx) => {
-            // Skip lines that contain t() calls (already translated)
+            // Skip lines that contain t() calls or are just HTML tags
             if (line.includes("t('") || line.includes('t("')) return;
+            if (line.trim().match(/^<[^>]*>$|^<\/[^>]*>$/)) return;
 
-            const match = line.match(japanesePattern);
-            if (match && match.length > 0) {
-                hardcodedLines.push({ line: idx + 1, content: line.trim() });
+            // Detect Japanese text
+            const japanesePattern = /[ぁ-ゟ゠-ヿァ-ヴー一-鿿々〆〤]/;
+            // Detect suspicious English UI text (capitalized words that look like labels)
+            // But skip common HTML attributes and technical terms
+            const englishPattern = />\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*</;
+
+            if (japanesePattern.test(line)) {
+                suspiciousLines.push({ line: idx + 1, content: line.trim(), reason: 'Japanese text' });
+            } else {
+                const match = line.match(englishPattern);
+                if (match && !['DOCTYPE', 'HTML', 'Head', 'Body', 'Meta', 'Link', 'Div', 'Span', 'Input', 'Label', 'Button'].includes(match[1])) {
+                    suspiciousLines.push({ line: idx + 1, content: line.trim(), reason: `Possible hardcoded UI text: "${match[1]}"` });
+                }
             }
         });
 
-        if (hardcodedLines.length > 0) {
-            const details = hardcodedLines.map(h => `Line ${h.line}: ${h.content}`).join('\n');
-            expect.fail(`Found hardcoded Japanese text in index.html that should be translated:\n${details}`);
+        if (suspiciousLines.length > 0) {
+            const details = suspiciousLines.map(h => `Line ${h.line} [${h.reason}]: ${h.content}`).join('\n');
+            expect.fail(`Found text that should be translated in index.html:\n${details}`);
         }
     });
 
-    it('should not have hardcoded Japanese text in inspector.html (except icons)', () => {
+    it('should use i18n for all UI text in inspector.html', () => {
         const inspectorContent = fs.readFileSync(path.join(__dirname, '../inspector.html'), 'utf8');
 
         // Remove script, style tags and HTML comments
         let cleaned = inspectorContent.replace(/<script[\s\S]*?<\/script>/g, '');
         cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/g, '');
         cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+        // Remove attributes
+        cleaned = cleaned.replace(/\s(?:alt|title|placeholder|href|src)="[^"]*"/g, '');
 
-        const japanesePattern = /[぀-ゟ゠-ヿ一-鿿가-힯]/g;
         const lines = cleaned.split('\n');
-        const hardcodedLines = [];
+        const suspiciousLines = [];
 
         lines.forEach((line, idx) => {
-            // Skip lines that contain t() calls (already translated)
-            if (line.includes("t('") || line.includes('t("')) return;
+            // Skip lines with t() calls or just HTML tags
+            if (line.includes("t('") || line.includes('t("') || line.includes('textContent') || line.includes('appendChild')) return;
+            if (line.trim().match(/^<[^>]*>$|^<\/[^>]*>$/)) return;
 
-            const match = line.match(japanesePattern);
-            if (match && match.length > 0) {
-                hardcodedLines.push({ line: idx + 1, content: line.trim() });
+            // Detect Japanese text
+            const japanesePattern = /[ぁ-ゟ゠-ヿァ-ヴー一-鿿々〆〤]/;
+            // Detect suspicious English UI text
+            const englishPattern = />\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*</;
+
+            if (japanesePattern.test(line)) {
+                suspiciousLines.push({ line: idx + 1, content: line.trim(), reason: 'Japanese text' });
+            } else {
+                const match = line.match(englishPattern);
+                if (match && !['Div', 'Span', 'P', 'Br', 'Copy', 'Copied'].includes(match[1])) {
+                    suspiciousLines.push({ line: idx + 1, content: line.trim(), reason: `Possible hardcoded UI text: "${match[1]}"` });
+                }
             }
         });
 
-        if (hardcodedLines.length > 0) {
-            const details = hardcodedLines.map(h => `Line ${h.line}: ${h.content}`).join('\n');
-            expect.fail(`Found hardcoded Japanese text in inspector.html that should be translated:\n${details}`);
+        if (suspiciousLines.length > 0) {
+            const details = suspiciousLines.map(h => `Line ${h.line} [${h.reason}]: ${h.content}`).join('\n');
+            expect.fail(`Found text that should be translated in inspector.html:\n${details}`);
         }
     });
 });

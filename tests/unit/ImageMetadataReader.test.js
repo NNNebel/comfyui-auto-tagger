@@ -5,7 +5,7 @@ import ImageMetadataReader from '../../js/metadata-parser/binary-extraction/Imag
 
 describe('ImageMetadataReader', () => {
   describe('extractRawMetadata', () => {
-    it('should return empty object for unsupported MIME type', () => {
+    it('should handle invalid JPEG buffer gracefully', () => {
       const buffer = new Uint8Array([0, 1, 2, 3]);
       const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/jpeg');
       expect(result).toEqual({});
@@ -292,6 +292,28 @@ describe('ImageMetadataReader', () => {
     });
   });
 
+  describe('extractJpegChunks', () => {
+    it('should return empty object for invalid JPEG signature', () => {
+      const buffer = new Uint8Array([0, 1, 2, 3]);
+      const result = ImageMetadataReader.extractJpegChunks(buffer);
+      expect(result).toEqual({});
+    });
+
+    it('should recognize valid JPEG signature (FFD8)', () => {
+      const buffer = new Uint8Array([0xFF, 0xD8]);
+      const result = ImageMetadataReader.extractJpegChunks(buffer);
+      expect(result).toBeDefined();
+      expect(typeof result).toBe('object');
+    });
+
+    it('should delegate to extractRawMetadata for image/jpeg MIME type', () => {
+      const buffer = new Uint8Array([0xFF, 0xD8, 0xFF]);
+      const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/jpeg');
+      expect(result).toBeDefined();
+      expect(typeof result).toBe('object');
+    });
+  });
+
   describe('extractWebpChunks - EXIF/XMP', () => {
     it('should extract workflow from EXIF chunk', () => {
       const webpHeader = new Uint8Array([
@@ -470,19 +492,19 @@ describe('ImageMetadataReader', () => {
   describe('Real sample file tests', () => {
     it('should extract metadata from real PNG sample if available', () => {
       const samplePath = join(process.cwd(), 'tests', 'fixtures', 'comfyui_simple.png');
-      
+
       if (existsSync(samplePath)) {
         const buffer = new Uint8Array(readFileSync(samplePath));
         const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
-        
+
         // The result should be an object (may be empty or contain metadata)
         expect(result).toBeDefined();
         expect(typeof result).toBe('object');
-        
+
         // If it has metadata, verify structure
         if (Object.keys(result).length > 0) {
           console.log('Sample PNG metadata keys:', Object.keys(result));
-          
+
           // Check for common metadata fields
           if (result.workflow) {
             expect(typeof result.workflow).toBe('object');
@@ -496,6 +518,68 @@ describe('ImageMetadataReader', () => {
         }
       } else {
         console.log('Sample PNG file not found, skipping real file test');
+      }
+    });
+
+    it('should extract metadata from real JPEG sample if available', () => {
+      const samplePath = join(process.cwd(), 'tests', 'fixtures', 'comfyui_simple.jpeg');
+
+      if (existsSync(samplePath)) {
+        const buffer = new Uint8Array(readFileSync(samplePath));
+        const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/jpeg');
+
+        // The result should be an object (may be empty or contain metadata)
+        expect(result).toBeDefined();
+        expect(typeof result).toBe('object');
+
+        // If it has metadata, verify structure
+        if (Object.keys(result).length > 0) {
+          console.log('Sample JPEG metadata keys:', Object.keys(result));
+
+          // Check for common metadata fields
+          if (result.workflow) {
+            expect(typeof result.workflow).toBe('object');
+          }
+          if (result.prompt) {
+            expect(typeof result.prompt).toBe('object');
+          }
+          if (result.parameters) {
+            expect(typeof result.parameters).toBe('string');
+          }
+        }
+      } else {
+        console.log('Sample JPEG file not found, skipping real file test');
+      }
+    });
+
+    it('should extract metadata from real WebP sample if available', () => {
+      const samplePath = join(process.cwd(), 'tests', 'fixtures', 'comfyui_simple.webp');
+
+      if (existsSync(samplePath)) {
+        const buffer = new Uint8Array(readFileSync(samplePath));
+        const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/webp');
+
+        // The result should be an object (may be empty or contain metadata)
+        expect(result).toBeDefined();
+        expect(typeof result).toBe('object');
+
+        // If it has metadata, verify structure
+        if (Object.keys(result).length > 0) {
+          console.log('Sample WebP metadata keys:', Object.keys(result));
+
+          // Check for common metadata fields
+          if (result.workflow) {
+            expect(typeof result.workflow).toBe('object');
+          }
+          if (result.prompt) {
+            expect(typeof result.prompt).toBe('object');
+          }
+          if (result.parameters) {
+            expect(typeof result.parameters).toBe('string');
+          }
+        }
+      } else {
+        console.log('Sample WebP file not found, skipping real file test');
       }
     });
   });

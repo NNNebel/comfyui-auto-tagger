@@ -18,7 +18,7 @@
         "jpg,jpeg,png,webp": {
             "inspector": {
                 "path": "inspector.html",
-                "height": 400,
+                "height": 700,
                 "multiSelect": false
             }
         }

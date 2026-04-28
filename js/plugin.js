@@ -47,6 +47,7 @@ Promise.all([
             'chk-checkpoint': 'ui.option.checkpoint', 'chk-lora': 'ui.option.lora',
             'chk-positive': 'ui.option.positive', 'chk-negative': 'ui.option.negative',
             'chk-seed': 'ui.option.seed', 'chk-sampler': 'ui.option.sampler',
+            'chk-scheduler': 'ui.option.scheduler',
             'chk-steps': 'ui.option.steps', 'chk-cfg': 'ui.option.cfg',
             'chk-add-tags': 'ui.option.addTags', 'chk-write-notes': 'ui.option.writeNotes',
             'chk-debug-log': 'ui.option.debugMode'
@@ -435,7 +436,13 @@ Promise.all([
                 log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
                 const buffer = await fsp.readFile(item.filePath);
-                const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
+                const mimeTypeMap = {
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.webp': 'image/webp'
+                };
+                const mimeType = mimeTypeMap[ext] || 'image/webp';
                 
                 await debugLog('File info: ext=' + ext + ', size=' + buffer.length + ' bytes, mimeType=' + mimeType, item);
                 
@@ -652,7 +659,7 @@ Promise.all([
         // 全ての設定をONにして、生成されうる全タグを取得対象とする
         const allSettingsOn = {
             checkpoint: true, lora: true, positive: true, negative: true,
-            seed: true, sampler: true, steps: true, cfg: true,
+            seed: true, sampler: true, scheduler: true, steps: true, cfg: true,
             addTags: true, writeNotes: true,
             includeAllSamplers: true  // Include all samplers to ensure all tags are removed
         };
@@ -682,7 +689,13 @@ Promise.all([
                     // --- Normal Mode ---
                     const ext = path.extname(item.filePath).toLowerCase();
                     const buffer = await fsp.readFile(item.filePath);
-                    const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
+                    const mimeTypeMap = {
+                        '.png': 'image/png',
+                        '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg',
+                        '.webp': 'image/webp'
+                    };
+                    const mimeType = mimeTypeMap[ext] || 'image/webp';
                     
                     // Use new MetadataService
                     const metadataService = new MetadataService();
