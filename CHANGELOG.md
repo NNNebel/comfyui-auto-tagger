@@ -2,33 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.8] - 2026-04-29
-
-### 🇬🇧 English
-#### 🐛 Bug Fixes
-- **JPEG support**: Fixed metadata extraction failure for JPEG images by adding proper MIME type mapping (.jpg/.jpeg → image/jpeg).
-- **UI hardcoding**: Removed hardcoded English labels from index.html checkboxes to ensure proper i18n support. All labels are now set via JavaScript translation function.
-- **XSS vulnerability**: Fixed DOM-based XSS vulnerability in inspector.html by replacing unsafe innerHTML with textContent and safe DOM construction.
-
-#### ✨ Improvements
-- Expanded E2E test coverage to include all 35 bridge fixtures (PNG/WebP/JPEG all formats).
-- Added comprehensive MIME type unit tests for format detection edge cases.
-- Improved i18n test detection and validation logic.
-
-### 🇯🇵 日本語
-#### 🐛 バグ修正
-- **JPEG 対応**: MIME タイプマッピング追加により JPEG 画像のメタデータ抽出失敗を修正。
-- **UI のハードコード削除**: index.html チェックボックスのハードコードされた英語ラベルを削除し、i18n に対応。すべてのラベルを JavaScript 翻訳関数で設定するように修正。
-- **XSS 脆弱性修正**: inspector.html の DOM ベース XSS 脆弱性を修正（innerHTML → textContent・安全な DOM 構築）。
-
-#### ✨ 改善
-- E2E テストカバレッジを 35 個すべての bridge フィクスチャに拡張（PNG/WebP/JPEG 全形式対応）。
-- MIME タイプ検出のエッジケース対応した包括的なユニットテストを追加。
-- i18n テスト検出・検証ロジックを改善。
-
----
-
-## [1.3.7] - 2026-04-27
+## [1.3.7] - 2026-04-29
 
 ### 🇬🇧 English
 #### 🎉 New Features
@@ -37,6 +11,14 @@ All notable changes to this project will be documented in this file.
 #### ✨ Improvements
 - **Per-step checkpoint tags**: When a workflow uses different models for different sampler steps, each model is now tagged independently. Tags are collected from each step's connected checkpoint loader instead of a single global value.
 - **Annotation always shows Checkpoint per step**: The `Checkpoint:` line now appears inside every sampler step block regardless of whether the model is the same across steps, making the output consistent and unambiguous.
+- Expanded E2E test coverage to include all 35 bridge fixtures (PNG/WebP/JPEG all formats).
+- Added comprehensive MIME type unit tests for format detection edge cases.
+- Improved i18n test detection and validation logic.
+
+#### 🐛 Bug Fixes
+- **JPEG support**: Fixed metadata extraction failure for JPEG images by adding proper MIME type mapping (.jpg/.jpeg → image/jpeg).
+- **UI hardcoding**: Removed hardcoded English labels from index.html checkboxes to ensure proper i18n support. All labels are now set via JavaScript translation function.
+- **XSS vulnerability**: Fixed DOM-based XSS vulnerability in inspector.html by replacing unsafe innerHTML with textContent and safe DOM construction.
 
 ### 🇯🇵 日本語
 #### 🎉 新機能
@@ -45,6 +27,14 @@ All notable changes to this project will be documented in this file.
 #### ✨ 改善
 - **ステップごとのチェックポイントタグ**: サンプラーステップごとに異なるモデルを使用するワークフローで、各モデルを独立してタグ付けするようになった。単一のグローバル値ではなく、各ステップのチェックポイントローダーから個別に収集する。
 - **アノテーションで各ステップに Checkpoint を表示**: モデルが同一かどうかに関わらず、すべてのサンプラーステップブロックに `Checkpoint:` 行を表示するようになった。出力が一貫していてわかりやすい。
+- E2E テストカバレッジを 35 個すべての bridge フィクスチャに拡張（PNG/WebP/JPEG 全形式対応）。
+- MIME タイプ検出のエッジケース対応した包括的なユニットテストを追加。
+- i18n テスト検出・検証ロジックを改善。
+
+#### 🐛 バグ修正
+- **JPEG 対応**: MIME タイプマッピング追加により JPEG 画像のメタデータ抽出失敗を修正。
+- **UI のハードコード削除**: index.html チェックボックスのハードコードされた英語ラベルを削除し、i18n に対応。すべてのラベルを JavaScript 翻訳関数で設定するように修正。
+- **XSS 脆弱性修正**: inspector.html の DOM ベース XSS 脆弱性を修正（innerHTML → textContent・安全な DOM 構築）。
 
 ---
 
