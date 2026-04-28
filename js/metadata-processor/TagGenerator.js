@@ -123,8 +123,20 @@ class TagGenerator {
       param: new Set()
     };
 
-    // Extract checkpoint and LoRA tags
-    if (metadata.checkpoint) {
+    // Extract checkpoint tags from each step independently
+    if (metadata.generationSteps && metadata.generationSteps.length > 0) {
+      const seen = new Set();
+      metadata.generationSteps.forEach(step => {
+        if (step.checkpoint) {
+          const ckpt = this.getBaseName(step.checkpoint).toLowerCase();
+          if (!seen.has(ckpt)) {
+            cats.cp.add(ckpt);
+            seen.add(ckpt);
+            debugLog(`Added step checkpoint: ${step.checkpoint}`);
+          }
+        }
+      });
+    } else if (metadata.checkpoint) {
       cats.cp.add(this.getBaseName(metadata.checkpoint).toLowerCase());
       debugLog(`Added checkpoint: ${metadata.checkpoint}`);
     }

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI Inspector</title>
+    <style>
+        :root {
+            --accent: #007aff;
+            --success: #34c759;
+            --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        }
+
+        /* LIGHT テーマ */
+        body[theme="LIGHT"], body[theme="LIGHTGRAY"] {
+            --bg: #f9f9f9;
+            --card-bg: #ffffff;
+            --card-hover: #fcfcfc;
+            --border: rgba(0, 0, 0, 0.08);
+            --divider: rgba(0, 0, 0, 0.04);
+            --text: #1a1a1a;
+            --text-muted: #8e8e93;
+            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* DARK 系テーマ */
+        body[theme="GRAY"], body[theme="BLUE"], body[theme="PURPLE"], body[theme="DARK"] {
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-hover: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.1);
+            --divider: rgba(255, 255, 255, 0.05);
+            --text: #efefef;
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --card-shadow: none;
+        }
+        body[theme="DARK"] { --bg: #1e1e1e; }
+        body[theme="GRAY"] { --bg: #262626; }
+        body[theme="BLUE"] { --bg: #1a202c; }
+        body[theme="PURPLE"] { --bg: #231932; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-main);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 13px;
+            padding: 10px 0; /* 左右パディング0 */
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+            transition: background 0.3s ease;
+            overflow-y: auto;
+        }
+
+        body[theme="LIGHT"], body[theme="LIGHTGRAY"] { background-color: var(--bg) !important; }
+        body[theme="GRAY"] { background-color: #262626 !important; }
+        body[theme="DARK"] { background-color: #1e1e1e !important; }
+        body[theme="BLUE"] { background-color: #1a202c !important; }
+        body[theme="PURPLE"] { background-color: #231932 !important; }
+
+        /* ── Section Header ── */
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin: 14px 0 5px 12px; /* 左端から12pxに合わせる */
+            letter-spacing: 0.02em;
+        }
+        .section-title:first-child { margin-top: 0; }
+
+        /* ── Unified Card ── */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            margin: 0 4px; /* サイドバーの境界まで攻める (4px) */
+        }
+
+        /* ── List Item (Row) ── */
+        .row {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 10px; /* 内部パディング8px、カードマージン4pxと合わせて12px */
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            border-bottom: 1px solid var(--divider);
+        }
+        .row:last-child { border-bottom: none; }
+        .row:hover {
+            background: var(--card-hover);
+        }
+
+        .row-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 1px;
+            opacity: 0.8;
+        }
+
+        .row-value {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            word-break: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .row-value.mono {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            letter-spacing: -0.01em;
+        }
+
+        /* ── Parameters Grid (NO vertical borders) ── */
+        .grid-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            border-bottom: 1px solid var(--divider);
+        }
+        .grid-row .row { border-bottom: none; border-right: none; } /* 縦線を削除 */
+
+        /* ── Copy Feedback ── */
+        .copy-icon {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 12px;
+            height: 12px;
+            color: var(--accent);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .row:hover .copy-icon { opacity: 0.5; }
+
+        .copied-label {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--success);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+        .row.is-copied .copied-label { opacity: 1; transform: translateX(-4px); }
+        .row.is-copied .row-value { color: var(--success); opacity: 0.8; }
+        .row.is-copied .copy-icon { display: none; }
+
+        /* ── Tabs (Segmented Control) ── */
+        .tab-bar {
+            display: flex;
+            background: var(--card-bg);
+            padding: 2px;
+            border-radius: 6px;
+            margin: 0 4px 10px 4px; /* カードと同じマージン */
+            border: 1px solid var(--border);
+            gap: 2px;
+        }
+        .tab {
+            flex: 1;
+            padding: 2px 4px;
+            text-align: center;
+            font-size: 11.5px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active {
+            background: var(--bg);
+            color: var(--text);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        body[theme="DARK"] .tab.active { background: #4a4a4a; }
+        body[theme="BLUE"] .tab.active { background: #3a4a6a; }
+        body[theme="PURPLE"] .tab.active { background: #4c3d6a; }
+        body[theme="GRAY"] .tab.active { background: #505050; }
+
+        body[theme="LIGHT"] .tab.active, body[theme="LIGHTGRAY"] .tab.active {
+            background: var(--bg);
+            color: var(--accent);
+            border-color: var(--border);
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── Custom Scrollbar ── */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        
+        #empty-state { padding: 60px 20px; text-align:center; color:var(--text-muted); font-size:11px; letter-spacing:0.05em; }
+    </style>
+</head>
+<body>
+    <div id="filename" style="display:none"></div>
+    <div id="content" style="display:none"></div>
+    <div id="empty-state">READING METADATA...</div>
+
+    <!-- Scripts -->
+    <script src="js/metadata-parser/utils/ParsingUtils.js"></script>
+    <script src="js/metadata-parser/utils/BinaryUtils.js"></script>
+    <script src="js/metadata-parser/utils/ErrorHandler.js"></script>
+    <script src="js/metadata-parser/utils/Validators.js"></script>
+    <script src="js/metadata-parser/utils/MetadataCacheService.js"></script>
+    <script src="js/metadata-parser/dictionary/NodeDefinitionDictionary.js"></script>
+    <script src="js/metadata-parser/reporter/MetadataExtractionReporter.js"></script>
+    <script src="js/metadata-parser/errors/ParseError.js"></script>
+    <script src="js/metadata-parser/binary-extraction/ImageMetadataReader.js"></script>
+    <script src="js/metadata-parser/binary-extraction/FormatDetector.js"></script>
+    <script src="js/metadata-parser/graph/ComfyUIGraph.js"></script>
+    <script src="js/metadata-parser/graph/ComfyUISamplerAnalyzer.js"></script>
+    <script src="js/metadata-parser/parameters/ParameterHandler.js"></script>
+    <script src="js/metadata-parser/parameters/StandardParameterHandler.js"></script>
+    <script src="js/metadata-parser/parameters/LoraHashHandler.js"></script>
+    <script src="js/metadata-parser/parameters/ADetailerHandler.js"></script>
+    <script src="js/metadata-parser/parameters/ParameterParser.js"></script>
+    <script src="js/metadata-parser/parsers/MetadataParser.js"></script>
+    <script src="js/metadata-parser/parsers/ParserRegistry.js"></script>
+    <script src="js/metadata-parser/parsers/ComfyUIParser.js"></script>
+    <script src="js/metadata-parser/parsers/A1111Parser.js"></script>
+    <script src="js/metadata-parser/integration/MetadataService.js"></script>
+
+    <script>
+        const fsp = require('fs').promises;
+        const path = require('path');
+
+        const COPY_SVG = `<svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+
+        async function applyTheme(theme) {
+            if (!theme) {
+                const params = new URLSearchParams(window.location.search);
+                theme = params.get('theme');
+                if (!theme && typeof eagle !== 'undefined') theme = await eagle.app.theme;
+            }
+            if (theme) document.body.setAttribute('theme', theme.toUpperCase());
+        }
+
+        applyTheme();
+
+        async function copyText(text, el) {
+            try {
+                await navigator.clipboard.writeText(text);
+                el.classList.add('is-copied');
+                setTimeout(() => el.classList.remove('is-copied'), 1000);
+            } catch (e) {}
+        }
+
+        function createRow(label, value, isMono = false) {
+            if (!value && value !== 0) return null;
+            const row = document.createElement('div');
+            row.className = 'row';
+
+            const labelEl = document.createElement('div');
+            labelEl.className = 'row-label';
+            labelEl.textContent = String(label);
+
+            const valueEl = document.createElement('div');
+            valueEl.className = `row-value${isMono ? ' mono' : ''}`;
+            valueEl.textContent = String(value);
+
+            row.appendChild(labelEl);
+            row.appendChild(valueEl);
+            row.insertAdjacentHTML('beforeend', COPY_SVG);
+
+            const copiedLabel = document.createElement('div');
+            copiedLabel.className = 'copied-label';
+            copiedLabel.textContent = 'Copied';
+            row.appendChild(copiedLabel);
+
+            row.onclick = () => copyText(String(value), row);
+            return row;
+        }
+
+        function renderStep(step, metadata) {
+            const panel = document.createElement('div');
+            const appendTo = (parent, el) => { if(el) parent.appendChild(el); };
+
+            // 1. Prompts
+            const promptTitle = document.createElement('div');
+            promptTitle.className = 'section-title';
+            promptTitle.textContent = 'Prompts';
+            panel.appendChild(promptTitle);
+
+            const promptCard = document.createElement('div');
+            promptCard.className = 'card';
+            appendTo(promptCard, createRow('Positive', step.positive));
+            appendTo(promptCard, createRow('Negative', step.negative));
+            if (promptCard.children.length > 0) panel.appendChild(promptCard);
+
+            // 2. Parameters
+            const paramTitle = document.createElement('div');
+            paramTitle.className = 'section-title';
+            paramTitle.textContent = 'Parameters';
+            panel.appendChild(paramTitle);
+
+            const paramCard = document.createElement('div');
+            paramCard.className = 'card';
+            appendTo(paramCard, createRow('Seed', step.seed, true));
+
+            const grid1 = document.createElement('div');
+            grid1.className = 'grid-row';
+            appendTo(grid1, createRow('Steps', step.steps, true));
+            appendTo(grid1, createRow('CFG Scale', step.cfg, true));
+            paramCard.appendChild(grid1);
+
+            const grid2 = document.createElement('div');
+            grid2.className = 'grid-row';
+            appendTo(grid2, createRow('Sampler', step.sampler));
+            appendTo(grid2, createRow('Scheduler', step.scheduler));
+            paramCard.appendChild(grid2);
+
+            panel.appendChild(paramCard);
+
+            // 3. Model
+            const loraList = (metadata.loras || []).map(l => path.basename(typeof l === 'string' ? l : (l.name || ''))).filter(Boolean);
+            const loras = loraList.length > 0 ? loraList.join(', ') : null;
+
+            if (step.checkpoint || loras) {
+                const modelTitle = document.createElement('div');
+                modelTitle.className = 'section-title';
+                modelTitle.textContent = 'Model';
+                panel.appendChild(modelTitle);
+
+                const modelCard = document.createElement('div');
+                modelCard.className = 'card';
+                if (step.checkpoint) appendTo(modelCard, createRow('Checkpoint', path.basename(step.checkpoint)));
+                if (loras) appendTo(modelCard, createRow('LoRAs', loras));
+                panel.appendChild(modelCard);
+            }
+
+            return panel;
+        }
+
+        function renderMetadata(metadata) {
+            const content = document.getElementById('content');
+            while (content.firstChild) {
+                content.removeChild(content.firstChild);
+            }
+            content.style.display = 'block';
+            document.getElementById('empty-state').style.display = 'none';
+
+            const steps = metadata.generationSteps || [];
+
+            if (steps.length >= 1) {
+                const tabBar = document.createElement('div');
+                tabBar.className = 'tab-bar';
+                const panels = [];
+
+                steps.forEach((step, i) => {
+                    const tab = document.createElement('div');
+                    tab.className = `tab ${i === 0 ? 'active' : ''}`;
+                    const tabLabel = step.isBase ? 'Base' : (step.nodeTitle || `Step ${i+1}`);
+                    const nodeType = step.nodeName || step.nodeType || '';
+
+                    if (nodeType) {
+                        tab.textContent = tabLabel;
+                        const br = document.createElement('br');
+                        tab.appendChild(br);
+                        const subtitle = document.createElement('span');
+                        subtitle.style.fontSize = '9px';
+                        subtitle.style.opacity = '0.6';
+                        subtitle.style.textTransform = 'none';
+                        subtitle.textContent = `${nodeType} (ID: ${step.nodeId})`;
+                        tab.appendChild(subtitle);
+                    } else {
+                        tab.textContent = tabLabel;
+                    }
+
+                    const panel = renderStep(step, metadata);
+                    panel.className = `tab-panel ${i === 0 ? 'active' : ''}`;
+                    panels.push(panel);
+
+                    tab.onclick = () => {
+                        tabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        panels.forEach(p => p.classList.remove('active'));
+                        tab.classList.add('active');
+                        panel.classList.add('active');
+                    };
+                    tabBar.appendChild(tab);
+                });
+                content.appendChild(tabBar);
+                panels.forEach(p => content.appendChild(p));
+            } else {
+                content.appendChild(renderStep(steps[0] || metadata, metadata));
+            }
+        }
+
+        async function loadSelected() {
+            const params = new URLSearchParams(window.location.search);
+            const filePath = params.get('path');
+            const itemId = params.get('id');
+            if (!filePath) return;
+
+            try {
+                const filenameEl = document.getElementById('filename');
+                if (filenameEl) filenameEl.textContent = path.basename(filePath);
+                
+                // Try cache first
+                const libPath = window.MetadataCacheService.resolveLibraryPath(filePath);
+                let metadata = null;
+                let cacheService = null;
+
+                if (libPath && itemId) {
+                    cacheService = new window.MetadataCacheService(libPath);
+                    metadata = await cacheService.get(itemId);
+                }
+
+                if (metadata) {
+                    console.log('[Inspector] Loaded from cache:', itemId);
+                    renderMetadata(metadata);
+                    return;
+                }
+
+                // Cache miss - parse from file
+                const buf = await fsp.readFile(filePath);
+                const ext = path.extname(filePath).toLowerCase().replace('.', '');
+                const mimeMap = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+                
+                const service = new window.MetadataService();
+                metadata = service.extractPreferredMetadata(buf, mimeMap[ext] || 'image/png');
+                
+                if (metadata) {
+                    renderMetadata(metadata);
+                    // Save to cache for next time
+                    if (cacheService && itemId) {
+                        await cacheService.set(itemId, metadata);
+                    }
+                } else {
+                    document.getElementById('empty-state').textContent = 'NO METADATA';
+                }
+            } catch (e) {
+                console.error('[Inspector] Error loading metadata:', e);
+                document.getElementById('empty-state').textContent = 'ERROR';
+            }
+        }
+
+        if (typeof eagle !== 'undefined') {
+            eagle.onPluginCreate(async (plugin) => {
+                // Load dictionary using plugin.path to avoid Electron __dirname issues
+                try {
+                    const dictPath = require('path').join(plugin.path, 'js/metadata-parser/dictionary/default-dictionary.json');
+                    const dictData = JSON.parse(require('fs').readFileSync(dictPath, 'utf8'));
+                    window.globalDictionary = new window.NodeDefinitionDictionary(dictData);
+                } catch (e) {
+                    console.warn('[Inspector] Dictionary load failed:', e.message);
+                }
+                await applyTheme();
+                eagle.onThemeChanged(applyTheme);
+                loadSelected();
+            });
+        } else { applyTheme(); loadSelected(); }
+    </script>
+</body>
+</html>

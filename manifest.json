@@ -1,18 +1,27 @@
 {
     "id": "f4831c52-fee6-40b8-a48a-e4ec3a4c128a",
-    "version": "1.3.6",
+    "version": "1.3.7",
     "platform": "all",
     "arch": "all",
     "fallbackLanguage": "en",
     "languages": ["en", "ja_JP"],
     "name": "{{manifest.name}}",
     "logo": "logo.png",
-    "keywords": ["comfyui", "tag", "exif", "metadata"],
+    "keywords": ["comfyui", "tag", "exif", "metadata", "inspector", "viewer"],
     "devTools": false,
     "main": {
         "url": "index.html",
         "width": 640,
         "height": 520
+    },
+    "preview": {
+        "jpg,jpeg,png,webp": {
+            "inspector": {
+                "path": "inspector.html",
+                "height": 700,
+                "multiSelect": false
+            }
+        }
     },
     "app": {
         "desktop": {

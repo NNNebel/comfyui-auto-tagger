@@ -117,6 +117,7 @@ class MetadataProcessor {
       tags: tagResult.tags,
       cats: tagResult.cats,
       annotation,
+      metadata: meta, // Include full metadata for caching
       sampler_fallback: meta.sampler_fallback,
       stepCount
     };

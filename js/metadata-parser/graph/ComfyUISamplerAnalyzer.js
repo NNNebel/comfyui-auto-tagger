@@ -530,14 +530,23 @@ class ComfyUISamplerAnalyzer {
       // Fallback: Try to find UNETLoader for Flux workflows
       return this._findUNETLoader(samplerId);
     }
-    
+
     // Use closest checkpoint loader (minimum depth)
     const closest = result.nodes.sort((a, b) => a.depth - b.depth)[0];
-    const ckptPath = this.graph.resolveInput(closest.id, 'ckpt_name');
-    
+
+    // Use dictionary input_key when available, fall back to 'ckpt_name'
+    let inputKey = 'ckpt_name';
+    if (this.dictionary) {
+      const node = this.graph.getNode(closest.id);
+      if (node && this.dictionary.hasDefinition(node.class_type)) {
+        const def = this.dictionary.getNodeDefinition(node.class_type);
+        if (def.input_key) inputKey = def.input_key;
+      }
+    }
+
+    const ckptPath = this.graph.resolveInput(closest.id, inputKey);
     if (!ckptPath || typeof ckptPath !== 'string') return null;
-    
-    // Extract filename from path
+
     return ParsingUtils.extractFilename(ckptPath);
   }
   

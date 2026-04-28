@@ -31,7 +31,10 @@ Promise.all([
                 interpolation: { escapeValue: false }
             });
             updateUILabels();
-            
+
+            // Set plugin path for dictionary loading
+            window.pluginPath = plugin.path;
+
             // Initialize dictionary after i18n is ready
             if (window.initializeDictionary) {
                 await window.initializeDictionary();
@@ -44,6 +47,7 @@ Promise.all([
             'chk-checkpoint': 'ui.option.checkpoint', 'chk-lora': 'ui.option.lora',
             'chk-positive': 'ui.option.positive', 'chk-negative': 'ui.option.negative',
             'chk-seed': 'ui.option.seed', 'chk-sampler': 'ui.option.sampler',
+            'chk-scheduler': 'ui.option.scheduler',
             'chk-steps': 'ui.option.steps', 'chk-cfg': 'ui.option.cfg',
             'chk-add-tags': 'ui.option.addTags', 'chk-write-notes': 'ui.option.writeNotes',
             'chk-debug-log': 'ui.option.debugMode'
@@ -53,7 +57,52 @@ Promise.all([
             const label = document.querySelector(`label[for="${id}"]`);
             if (label) label.textContent = t(key);
         }
-        
+
+        // Main UI section labels
+        const chkAddTagsLabel = document.querySelector('label[for="chk-add-tags"]');
+        if (chkAddTagsLabel) chkAddTagsLabel.textContent = t('ui.option.addTags');
+
+        const chkWriteNotesLabel = document.querySelector('label[for="chk-write-notes"]');
+        if (chkWriteNotesLabel) chkWriteNotesLabel.textContent = t('ui.option.writeNotes');
+
+        // Settings button translation
+        const settingsButton = document.getElementById('settings-button');
+        if (settingsButton) settingsButton.textContent = '⚙️ ' + t('ui.settings.title');
+
+        // Main control buttons
+        const startButton = document.getElementById('startButton');
+        if (startButton) startButton.textContent = t('ui.button.start');
+
+        const deleteInfoButton = document.getElementById('deleteInfoButton');
+        if (deleteInfoButton) deleteInfoButton.textContent = t('ui.button.deleteInfo');
+
+        const cancelButton = document.getElementById('cancelButton');
+        if (cancelButton) cancelButton.textContent = t('ui.button.cancel');
+
+        // Warning section texts
+        const warningTitle = document.querySelector('.warning-section span');
+        if (warningTitle) warningTitle.textContent = t('ui.warning.title');
+
+        const warningDismissButton = document.querySelector('.warning-dismiss');
+        if (warningDismissButton) warningDismissButton.title = t('ui.button.close');
+
+        const warningButtons = document.querySelectorAll('.warning-button');
+        if (warningButtons.length >= 3) {
+            if (warningButtons[0]) warningButtons[0].textContent = t('ui.button.includeAll');
+            if (warningButtons[1]) warningButtons[1].textContent = t('ui.button.details');
+            if (warningButtons[2]) warningButtons[2].textContent = t('ui.button.copyInfo');
+        }
+
+        // Error section texts
+        const hardWarningTitle = document.querySelector('#hard-error-section span');
+        if (hardWarningTitle) hardWarningTitle.textContent = t('ui.error.title');
+
+        const hardWarningButtons = document.querySelectorAll('.hard-warning-button');
+        if (hardWarningButtons.length >= 2) {
+            if (hardWarningButtons[0]) hardWarningButtons[0].textContent = t('ui.button.reportError');
+            if (hardWarningButtons[1]) hardWarningButtons[1].textContent = t('ui.button.close');
+        }
+
         const sectionTitles = document.querySelectorAll('.section-title');
         if(sectionTitles[0]) sectionTitles[0].textContent = t('ui.outputSettings');
         if(sectionTitles[1]) sectionTitles[1].textContent = t('ui.suspiciousNodeHandling');
@@ -387,7 +436,13 @@ Promise.all([
                 log('log.processingItem', {name: item.name});
                 const ext = path.extname(item.filePath).toLowerCase();
                 const buffer = await fsp.readFile(item.filePath);
-                const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
+                const mimeTypeMap = {
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.webp': 'image/webp'
+                };
+                const mimeType = mimeTypeMap[ext] || 'image/webp';
                 
                 await debugLog('File info: ext=' + ext + ', size=' + buffer.length + ' bytes, mimeType=' + mimeType, item);
                 
@@ -604,7 +659,7 @@ Promise.all([
         // 全ての設定をONにして、生成されうる全タグを取得対象とする
         const allSettingsOn = {
             checkpoint: true, lora: true, positive: true, negative: true,
-            seed: true, sampler: true, steps: true, cfg: true,
+            seed: true, sampler: true, scheduler: true, steps: true, cfg: true,
             addTags: true, writeNotes: true,
             includeAllSamplers: true  // Include all samplers to ensure all tags are removed
         };
@@ -634,7 +689,13 @@ Promise.all([
                     // --- Normal Mode ---
                     const ext = path.extname(item.filePath).toLowerCase();
                     const buffer = await fsp.readFile(item.filePath);
-                    const mimeType = ext === '.png' ? 'image/png' : 'image/webp';
+                    const mimeTypeMap = {
+                        '.png': 'image/png',
+                        '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg',
+                        '.webp': 'image/webp'
+                    };
+                    const mimeType = mimeTypeMap[ext] || 'image/webp';
                     
                     // Use new MetadataService
                     const metadataService = new MetadataService();

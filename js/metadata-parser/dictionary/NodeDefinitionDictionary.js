@@ -89,9 +89,7 @@
         }
 
         if (definition.type === 'checkpoint_loader' || definition.type === 'lora_loader') {
-          if (!definition.input_key) {
-            errors.push(`Node "${classType}": ${definition.type} type requires "input_key" field`);
-          }
+          // input_key is optional; if not provided, it will be inferred from context
         }
       }
 
@@ -191,7 +189,18 @@
         try {
           const path = require('path');
           const fs = require('fs');
-          const jsonPath = path.join(__dirname, 'default-dictionary.json');
+
+          // Try primary location: relative to this file
+          let jsonPath = path.join(__dirname, 'default-dictionary.json');
+
+          // Try fallback: from plugin path if available (Eagle environment)
+          if (typeof window !== 'undefined' && window.pluginPath) {
+            const fallbackPath = path.join(window.pluginPath, 'js', 'metadata-parser', 'dictionary', 'default-dictionary.json');
+            if (fs.existsSync(fallbackPath)) {
+              jsonPath = fallbackPath;
+            }
+          }
+
           const defaultData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
           return new NodeDefinitionDictionary(defaultData);
         } catch (e) {

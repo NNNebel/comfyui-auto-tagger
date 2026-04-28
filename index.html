@@ -547,55 +547,55 @@
     </style>
 </head>
 <body>
-    <button class="settings-button" id="settings-button">⚙️ 設定</button>
+    <button class="settings-button" id="settings-button">⚙️</button>
 
     <h1>ComfyUI Auto Tagger</h1>
 
-    <div class="section-title">出力設定</div>
+    <div class="section-title"></div>
     <div style="display: flex; gap: 20px; margin-bottom: 10px;">
         <div class="option-group">
             <input type="checkbox" id="chk-add-tags" checked>
-            <label for="chk-add-tags">タグに追加</label>
+            <label for="chk-add-tags"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-write-notes" checked>
-            <label for="chk-write-notes">メモに追加</label>
+            <label for="chk-write-notes"></label>
         </div>
     </div>
 
-    <div class="section-title" data-i18n="ui.extractionTarget">取得対象</div>
+    <div class="section-title"></div>
     <div class="option-grid">
         <div class="option-group">
             <input type="checkbox" id="chk-checkpoint" checked>
-            <label for="chk-checkpoint">Checkpoint</label>
+            <label for="chk-checkpoint"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-lora" checked>
-            <label for="chk-lora">LoRA</label>
+            <label for="chk-lora"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-positive" checked>
-            <label for="chk-positive">Positive</label>
+            <label for="chk-positive"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-negative">
-            <label for="chk-negative">Negative</label>
+            <label for="chk-negative"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-seed">
-            <label for="chk-seed">Seed</label>
+            <label for="chk-seed"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-sampler">
-            <label for="chk-sampler">Sampler</label>
+            <label for="chk-sampler"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-scheduler">
-            <label for="chk-scheduler">Scheduler</label>
+            <label for="chk-scheduler"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-steps">
-            <label for="chk-steps">Steps</label>
+            <label for="chk-steps"></label>
         </div>
         <div class="option-group">
             <input type="checkbox" id="chk-cfg">
@@ -604,17 +604,17 @@
     </div>
 
     <div id="controls">
-        <button id="startButton">タグ付け開始</button>
-        <button id="deleteInfoButton">情報を削除</button>
-        <button id="cancelButton" style="display:none;">キャンセル</button>
+        <button id="startButton"></button>
+        <button id="deleteInfoButton"></button>
+        <button id="cancelButton" style="display:none;"></button>
     </div>
     
     <!-- Hidden settings (synced with settings dialog) -->
     <input type="hidden" id="chunk-size" value="5">
     <select id="suspicious-node-handling" style="display:none;">
-        <option value="exclude">除外する</option>
-        <option value="ask">確認する</option>
-        <option value="include">含める</option>
+        <option value="exclude"></option>
+        <option value="ask"></option>
+        <option value="include"></option>
     </select>
     <input type="hidden" id="chk-fetch-dictionary">
     <input type="hidden" id="chk-debug-log">
@@ -629,15 +629,15 @@
     <div id="warning-section">
         <div class="warning-header">
             <span class="warning-icon">⚠️</span>
-            <span>ワークフローに問題が検出されました</span>
-            <button class="warning-dismiss" onclick="dismissWarning()" title="閉じる">×</button>
+            <span></span>
+            <button class="warning-dismiss" onclick="dismissWarning()" title="">×</button>
         </div>
         <div class="warning-content">
             <div id="warning-message"></div>
             <div class="warning-actions">
-                <button class="warning-button primary" onclick="includeAllNodes()">すべてのノードを含める</button>
-                <button class="warning-button" onclick="showWarningDetails()">詳細を表示</button>
-                <button class="warning-button" onclick="copyWarningInfo()">情報をコピー</button>
+                <button class="warning-button primary" onclick="includeAllNodes()"></button>
+                <button class="warning-button" onclick="showWarningDetails()"></button>
+                <button class="warning-button" onclick="copyWarningInfo()"></button>
             </div>
         </div>
     </div>
@@ -771,15 +771,15 @@
         <div class="hard-warning-content">
             <div class="hard-warning-header">
                 <span>❌</span>
-                <span>メタデータ抽出エラー</span>
+                <span></span>
             </div>
             <div class="hard-warning-body">
                 <p id="hard-warning-message"></p>
                 <div class="hard-warning-details" id="hard-warning-details"></div>
             </div>
             <div class="hard-warning-actions">
-                <button class="hard-warning-button report" id="btn-report-error">エラーを報告</button>
-                <button class="hard-warning-button close" id="btn-close-hard-warning">閉じる</button>
+                <button class="hard-warning-button report" id="btn-report-error"></button>
+                <button class="hard-warning-button close" id="btn-close-hard-warning"></button>
             </div>
         </div>
     </div>
@@ -840,7 +840,7 @@
         window.globalDictionary = null;
         
         // Dictionary URL (GitHub raw content URL)
-        const DICTIONARY_URL = 'https://raw.githubusercontent.com/NNNebel/comfyui-auto-tagger/main/js/metadata-parser/dictionary/default-dictionary.json';
+        const DICTIONARY_URL = 'https://raw.githubusercontent.com/NNNebel/comfyui-auto-tagger/main/js/metadata-parser/dictionary/default-dictionary.json?v=' + new Date().getTime();
         
         // Security: Validate URL is HTTPS and from trusted domain
         function isValidDictionaryURL(url) {
