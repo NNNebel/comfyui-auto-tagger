@@ -199,7 +199,7 @@ describe('NodeDefinitionDictionary', () => {
       expect(result.errors.some(e => e.includes('requires "port_mapping"'))).toBe(true);
     });
 
-    it('should detect missing input_key for checkpoint_loader', () => {
+    it('should accept checkpoint_loader without input_key (backward compatible)', () => {
       const dict = new NodeDefinitionDictionary({
         version: '1.0.0',
         nodes: {
@@ -210,11 +210,11 @@ describe('NodeDefinitionDictionary', () => {
       });
 
       const result = dict.validate();
-      expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.includes('requires "input_key"'))).toBe(true);
+      expect(result.valid).toBe(true);
+      expect(result.errors.length).toBe(0);
     });
 
-    it('should detect missing input_key for lora_loader', () => {
+    it('should accept lora_loader without input_key (backward compatible)', () => {
       const dict = new NodeDefinitionDictionary({
         version: '1.0.0',
         nodes: {
@@ -225,8 +225,8 @@ describe('NodeDefinitionDictionary', () => {
       });
 
       const result = dict.validate();
-      expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.includes('requires "input_key"'))).toBe(true);
+      expect(result.valid).toBe(true);
+      expect(result.errors.length).toBe(0);
     });
 
     it('should accept valid checkpoint_loader definition', () => {
