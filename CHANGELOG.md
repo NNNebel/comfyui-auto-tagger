@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.8] - 2026-04-29
+
+### 🇬🇧 English
+#### 🐛 Bug Fixes
+- **JPEG support**: Fixed metadata extraction failure for JPEG images by adding proper MIME type mapping (.jpg/.jpeg → image/jpeg).
+- **UI hardcoding**: Removed hardcoded English labels from index.html checkboxes to ensure proper i18n support. All labels are now set via JavaScript translation function.
+- **XSS vulnerability**: Fixed DOM-based XSS vulnerability in inspector.html by replacing unsafe innerHTML with textContent and safe DOM construction.
+
+#### ✨ Improvements
+- Expanded E2E test coverage to include all 35 bridge fixtures (PNG/WebP/JPEG all formats).
+- Added comprehensive MIME type unit tests for format detection edge cases.
+- Improved i18n test detection and validation logic.
+
+### 🇯🇵 日本語
+#### 🐛 バグ修正
+- **JPEG 対応**: MIME タイプマッピング追加により JPEG 画像のメタデータ抽出失敗を修正。
+- **UI のハードコード削除**: index.html チェックボックスのハードコードされた英語ラベルを削除し、i18n に対応。すべてのラベルを JavaScript 翻訳関数で設定するように修正。
+- **XSS 脆弱性修正**: inspector.html の DOM ベース XSS 脆弱性を修正（innerHTML → textContent・安全な DOM 構築）。
+
+#### ✨ 改善
+- E2E テストカバレッジを 35 個すべての bridge フィクスチャに拡張（PNG/WebP/JPEG 全形式対応）。
+- MIME タイプ検出のエッジケース対応した包括的なユニットテストを追加。
+- i18n テスト検出・検証ロジックを改善。
+
+---
+
 ## [1.3.7] - 2026-04-27
 
 ### 🇬🇧 English
