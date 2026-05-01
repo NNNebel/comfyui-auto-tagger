@@ -264,6 +264,7 @@
     <script src="js/metadata-parser/utils/ErrorHandler.js"></script>
     <script src="js/metadata-parser/utils/Validators.js"></script>
     <script src="js/metadata-parser/utils/MetadataCacheService.js"></script>
+    <script src="js/inspector/SuspiciousNodeCategorizer.js"></script>
     <script src="js/metadata-parser/dictionary/NodeDefinitionDictionary.js"></script>
     <script src="js/metadata-parser/reporter/MetadataExtractionReporter.js"></script>
     <script src="js/metadata-parser/errors/ParseError.js"></script>
@@ -507,57 +508,9 @@
 
             const steps = metadata.generationSteps || [];
 
-            // Categorize suspicious nodes:
-            // - suspSamplerNodes: have stepMetadata (suspicious KSampler etc.) → shown as step tab with renderStep
-            // - stepWarningMap: affect normal generation steps → shown as warning on that step's tab
-            // - orphanNodes: no proven relation to any step → omitted from display (no false associations)
-            const stepWarningMap = {};
-            const suspSamplerNodes = [];
-            const orphanNodes = [];
-            // Excluded samplers: present in affectedSteps.stepMetadata but not in generationSteps
-            // Map: nodeId → { stepMetadata, warnings: [] }
-            const affectedExcludedMap = new Map();
-
-            if (metadata.suspiciousNodes && metadata.suspiciousNodes.length > 0) {
-                for (const suspNode of metadata.suspiciousNodes) {
-                    if (suspNode.stepMetadata) {
-                        // This suspicious node is itself a sampler — give it its own step tab
-                        suspSamplerNodes.push(suspNode);
-                        // Also register any external step it affects
-                        if (suspNode.affectedSteps) {
-                            for (const affected of suspNode.affectedSteps) {
-                                if (affected.stepMetadata) {
-                                    // Excluded sampler with full metadata
-                                    if (!affectedExcludedMap.has(affected.stepNodeId)) {
-                                        affectedExcludedMap.set(affected.stepNodeId, { stepMetadata: affected.stepMetadata, warnings: [] });
-                                    }
-                                    affectedExcludedMap.get(affected.stepNodeId).warnings.push(suspNode);
-                                } else {
-                                    if (!stepWarningMap[affected.stepNodeId]) stepWarningMap[affected.stepNodeId] = [];
-                                    stepWarningMap[affected.stepNodeId].push(suspNode);
-                                }
-                            }
-                        }
-                    } else if (suspNode.affectedSteps && suspNode.affectedSteps.length > 0) {
-                        for (const affected of suspNode.affectedSteps) {
-                            if (affected.stepMetadata) {
-                                // Sampler excluded from generationSteps — give it a tab with warning
-                                if (!affectedExcludedMap.has(affected.stepNodeId)) {
-                                    affectedExcludedMap.set(affected.stepNodeId, { stepMetadata: affected.stepMetadata, warnings: [] });
-                                }
-                                affectedExcludedMap.get(affected.stepNodeId).warnings.push(suspNode);
-                            } else {
-                                // Normal step in generationSteps — add warning
-                                if (!stepWarningMap[affected.stepNodeId]) stepWarningMap[affected.stepNodeId] = [];
-                                stepWarningMap[affected.stepNodeId].push(suspNode);
-                            }
-                        }
-                    } else {
-                        // No step relation — group with suspicious sampler tabs (not shown as standalone tab)
-                        orphanNodes.push(suspNode);
-                    }
-                }
-            }
+            // Categorize suspicious nodes using pure categorizer function
+            const categorizer = window.SuspiciousNodeCategorizer;
+            const { stepWarningMap, suspSamplerNodes, affectedExcludedMap, orphanNodes } = categorizer.categorizeNodes(metadata);
 
             if (steps.length >= 1 || (metadata.suspiciousNodes && metadata.suspiciousNodes.length > 0)) {
                 const tabBar = document.createElement('div');
