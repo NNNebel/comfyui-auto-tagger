@@ -179,27 +179,30 @@ class ComfyUIParser extends MetadataParserBase {
         
         // Extract all samplers with the suspicious node included
         const tempSamplersMetadata = tempAnalyzer.extractAllSamplersMetadata();
-        
-        // Compare with original samplers to find which steps would be affected
-        // A step is affected if it appears in tempSamplersMetadata but not in allSamplersMetadata
-        // OR if it exists in both but would have different dependencies
+
+        // If this suspicious node is itself a sampler, capture its own step metadata
+        const ownStepMetadata = tempSamplersMetadata.find(s => s.nodeId === suspNode.nodeId);
+
+        // Compare with original samplers to find which EXTERNAL steps would be affected
+        // (exclude self-referencing: if the suspicious node is the sampler itself, that's ownStepMetadata)
         tempSamplersMetadata.forEach((tempStep, index) => {
+          if (tempStep.nodeId === suspNode.nodeId) return; // self — handled via ownStepMetadata
+
           // Check if this sampler exists in the original metadata
           const originalStep = allSamplersMetadata.find(s => s.nodeId === tempStep.nodeId);
-          
+
           if (!originalStep) {
-            // This sampler only appears when suspicious node is included
-            // So it's definitely affected
+            // This sampler only appears when suspicious node is included — capture full metadata for display
             affectedSteps.push({
               stepIndex: index + 1,
               stepNodeId: tempStep.nodeId,
-              stepNodeType: tempStep.nodeType
+              stepNodeType: tempStep.nodeType,
+              stepMetadata: tempStep
             });
           } else {
             // Sampler exists in both - check if suspicious node is in its dependency chain
             const ancestors = tempGraph.getAllAncestors(tempStep.nodeId);
             if (ancestors.has(suspNode.nodeId)) {
-              // Find the step index in the original metadata
               const originalIndex = allSamplersMetadata.findIndex(s => s.nodeId === tempStep.nodeId);
               affectedSteps.push({
                 stepIndex: originalIndex + 1,
@@ -209,10 +212,11 @@ class ComfyUIParser extends MetadataParserBase {
             }
           }
         });
-        
+
         return {
           ...suspNode,
-          affectedSteps: affectedSteps.length > 0 ? affectedSteps : undefined
+          affectedSteps: affectedSteps.length > 0 ? affectedSteps : undefined,
+          stepMetadata: ownStepMetadata || undefined
         };
       });
     }

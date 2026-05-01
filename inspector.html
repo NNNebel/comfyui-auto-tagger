@@ -201,6 +201,55 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
         
+        /* ── Warning (suspicious node) ── */
+        .tab.has-warning { color: #d4860a; }
+        .tab.has-warning.active { color: #d4860a; }
+        body[theme="DARK"] .tab.has-warning,
+        body[theme="GRAY"] .tab.has-warning,
+        body[theme="BLUE"] .tab.has-warning,
+        body[theme="PURPLE"] .tab.has-warning { color: #f0a832; }
+
+        .warning-card {
+            background: rgba(240, 168, 50, 0.1);
+            border: 1px solid rgba(240, 168, 50, 0.35);
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin: 0 4px 10px 4px;
+        }
+        .warning-card-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #d4860a;
+            margin-bottom: 8px;
+            letter-spacing: 0.01em;
+        }
+        body[theme="DARK"] .warning-card-title,
+        body[theme="GRAY"] .warning-card-title,
+        body[theme="BLUE"] .warning-card-title,
+        body[theme="PURPLE"] .warning-card-title { color: #f0a832; }
+
+        .warning-node-item {
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(240, 168, 50, 0.2);
+        }
+        .warning-node-item:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
+
+        .warning-node-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .warning-node-value {
+            font-size: 12px;
+            color: var(--text);
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
         #empty-state { padding: 60px 20px; text-align:center; color:var(--text-muted); font-size:11px; letter-spacing:0.05em; }
     </style>
 </head>
@@ -236,6 +285,11 @@
     <script>
         const fsp = require('fs').promises;
         const path = require('path');
+
+        // 翻訳ユーティリティ
+        function t(key, r = {}) {
+            return window.i18next ? window.i18next.t(key, r) : (r.defaultValue || key);
+        }
 
         const COPY_SVG = `<svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 
@@ -284,9 +338,108 @@
             return row;
         }
 
-        function renderStep(step, metadata) {
+        // ── Suspicious node i18n keys (translated via t()) ──
+        const SUSPICIOUS_REASON_KEYS = {
+            'suspiciousNode.reason.imageProcessingNoInput': 'suspiciousNode.reason.imageProcessingNoInput',
+            'suspiciousNode.reason.vaeEncodeNoInput':       'suspiciousNode.reason.vaeEncodeNoInput',
+            'suspiciousNode.reason.vaeDecodeNoInput':       'suspiciousNode.reason.vaeDecodeNoInput',
+            'suspiciousNode.reason.samplerNoInput':         'suspiciousNode.reason.samplerNoInput',
+            'suspiciousNode.reason.missingInput':           'suspiciousNode.reason.missingInput',
+        };
+        const SUSPICIOUS_SUGGESTION_KEYS = {
+            'suspiciousNode.suggestion.disconnected':      'suspiciousNode.suggestion.disconnected',
+            'suspiciousNode.suggestion.vaeEncodeRequired': 'suspiciousNode.suggestion.vaeEncodeRequired',
+            'suspiciousNode.suggestion.vaeDecodeRequired': 'suspiciousNode.suggestion.vaeDecodeRequired',
+            'suspiciousNode.suggestion.samplerRequired':   'suspiciousNode.suggestion.samplerRequired',
+        };
+
+        function resolveKey(isReason, key, params = {}) {
+            const map = isReason ? SUSPICIOUS_REASON_KEYS : SUSPICIOUS_SUGGESTION_KEYS;
+            const translationKey = map[key];
+            return translationKey ? t(translationKey, params) : key;
+        }
+
+        function getSuspiciousNodeHandling(pluginPath) {
+            // inspector.html runs in a separate renderer process — localStorage is NOT shared with plugin.js.
+            // Read the shared settings file written by plugin.js instead.
+            try {
+                if (pluginPath) {
+                    const data = JSON.parse(require('fs').readFileSync(
+                        require('path').join(pluginPath, 'inspector-settings.json'), 'utf8'
+                    ));
+                    return data.suspiciousNodeHandling || 'exclude';
+                }
+            } catch (e) {}
+            return 'exclude';
+        }
+
+        function createWarningCard(suspNodes) {
+            const card = document.createElement('div');
+            card.className = 'warning-card';
+
+            const title = document.createElement('div');
+            title.className = 'warning-card-title';
+            title.textContent = t('suspiciousNode.warningCardTitle', { defaultValue: '⚠️ Potentially Unused Node(s)' });
+            card.appendChild(title);
+
+            for (const node of suspNodes) {
+                const item = document.createElement('div');
+                item.className = 'warning-node-item';
+
+                const nodeLabel = document.createElement('div');
+                nodeLabel.className = 'warning-node-label';
+                nodeLabel.textContent = t('suspiciousNode.nodeLabel', { defaultValue: 'Node' });
+                item.appendChild(nodeLabel);
+
+                const nodeVal = document.createElement('div');
+                nodeVal.className = 'warning-node-value mono';
+                nodeVal.textContent = `${node.nodeType} (ID: ${node.nodeId})`;
+                item.appendChild(nodeVal);
+
+                if (node.reasonKey) {
+                    const reasonLabel = document.createElement('div');
+                    reasonLabel.className = 'warning-node-label';
+                    reasonLabel.style.marginTop = '6px';
+                    reasonLabel.textContent = t('suspiciousNode.reasonLabel', { defaultValue: 'Reason' });
+                    item.appendChild(reasonLabel);
+
+                    const reasonVal = document.createElement('div');
+                    reasonVal.className = 'warning-node-value';
+                    reasonVal.textContent = resolveKey(true, node.reasonKey, node.reasonParams || {});
+                    item.appendChild(reasonVal);
+                }
+
+                if (node.suggestionKey) {
+                    const suggLabel = document.createElement('div');
+                    suggLabel.className = 'warning-node-label';
+                    suggLabel.style.marginTop = '6px';
+                    suggLabel.textContent = t('suspiciousNode.suggestionLabel', { defaultValue: 'Suggestion' });
+                    item.appendChild(suggLabel);
+
+                    const suggVal = document.createElement('div');
+                    suggVal.className = 'warning-node-value';
+                    suggVal.textContent = resolveKey(false, node.suggestionKey, {});
+                    item.appendChild(suggVal);
+                }
+
+                card.appendChild(item);
+            }
+
+            return card;
+        }
+
+        function renderStep(step, metadata, stepWarnings = []) {
             const panel = document.createElement('div');
             const appendTo = (parent, el) => { if(el) parent.appendChild(el); };
+
+            let warningCard = null;
+            if (stepWarnings.length > 0) {
+                warningCard = createWarningCard(stepWarnings);
+                warningCard.style.display = 'none';
+                warningCard.dataset.warningId = 'warning-' + Math.random().toString(36).slice(2, 9);
+                panel.appendChild(warningCard);
+                panel.dataset.warningId = warningCard.dataset.warningId;
+            }
 
             // 1. Prompts
             const promptTitle = document.createElement('div');
@@ -354,19 +507,75 @@
 
             const steps = metadata.generationSteps || [];
 
-            if (steps.length >= 1) {
+            // Categorize suspicious nodes:
+            // - suspSamplerNodes: have stepMetadata (suspicious KSampler etc.) → shown as step tab with renderStep
+            // - stepWarningMap: affect normal generation steps → shown as warning on that step's tab
+            // - orphanNodes: no proven relation to any step → omitted from display (no false associations)
+            const stepWarningMap = {};
+            const suspSamplerNodes = [];
+            const orphanNodes = [];
+            // Excluded samplers: present in affectedSteps.stepMetadata but not in generationSteps
+            // Map: nodeId → { stepMetadata, warnings: [] }
+            const affectedExcludedMap = new Map();
+
+            if (metadata.suspiciousNodes && metadata.suspiciousNodes.length > 0) {
+                for (const suspNode of metadata.suspiciousNodes) {
+                    if (suspNode.stepMetadata) {
+                        // This suspicious node is itself a sampler — give it its own step tab
+                        suspSamplerNodes.push(suspNode);
+                        // Also register any external step it affects
+                        if (suspNode.affectedSteps) {
+                            for (const affected of suspNode.affectedSteps) {
+                                if (affected.stepMetadata) {
+                                    // Excluded sampler with full metadata
+                                    if (!affectedExcludedMap.has(affected.stepNodeId)) {
+                                        affectedExcludedMap.set(affected.stepNodeId, { stepMetadata: affected.stepMetadata, warnings: [] });
+                                    }
+                                    affectedExcludedMap.get(affected.stepNodeId).warnings.push(suspNode);
+                                } else {
+                                    if (!stepWarningMap[affected.stepNodeId]) stepWarningMap[affected.stepNodeId] = [];
+                                    stepWarningMap[affected.stepNodeId].push(suspNode);
+                                }
+                            }
+                        }
+                    } else if (suspNode.affectedSteps && suspNode.affectedSteps.length > 0) {
+                        for (const affected of suspNode.affectedSteps) {
+                            if (affected.stepMetadata) {
+                                // Sampler excluded from generationSteps — give it a tab with warning
+                                if (!affectedExcludedMap.has(affected.stepNodeId)) {
+                                    affectedExcludedMap.set(affected.stepNodeId, { stepMetadata: affected.stepMetadata, warnings: [] });
+                                }
+                                affectedExcludedMap.get(affected.stepNodeId).warnings.push(suspNode);
+                            } else {
+                                // Normal step in generationSteps — add warning
+                                if (!stepWarningMap[affected.stepNodeId]) stepWarningMap[affected.stepNodeId] = [];
+                                stepWarningMap[affected.stepNodeId].push(suspNode);
+                            }
+                        }
+                    } else {
+                        // No step relation — group with suspicious sampler tabs (not shown as standalone tab)
+                        orphanNodes.push(suspNode);
+                    }
+                }
+            }
+
+            if (steps.length >= 1 || (metadata.suspiciousNodes && metadata.suspiciousNodes.length > 0)) {
                 const tabBar = document.createElement('div');
                 tabBar.className = 'tab-bar';
                 const panels = [];
+                let tabIndex = 0;
 
+                // Render normal generation steps
                 steps.forEach((step, i) => {
                     const tab = document.createElement('div');
-                    tab.className = `tab ${i === 0 ? 'active' : ''}`;
+                    tab.className = `tab ${tabIndex === 0 ? 'active' : ''}`;
                     const tabLabel = step.isBase ? 'Base' : (step.nodeTitle || `Step ${i+1}`);
                     const nodeType = step.nodeName || step.nodeType || '';
+                    const stepWarnings = stepWarningMap[step.nodeId] || [];
 
                     if (nodeType) {
                         tab.textContent = tabLabel;
+                        if (stepWarnings.length > 0) tab.textContent += ' ⚠️';
                         const br = document.createElement('br');
                         tab.appendChild(br);
                         const subtitle = document.createElement('span');
@@ -377,10 +586,16 @@
                         tab.appendChild(subtitle);
                     } else {
                         tab.textContent = tabLabel;
+                        if (stepWarnings.length > 0) tab.textContent += ' ⚠️';
                     }
 
-                    const panel = renderStep(step, metadata);
-                    panel.className = `tab-panel ${i === 0 ? 'active' : ''}`;
+                    if (stepWarnings.length > 0) {
+                        tab.classList.add('has-warning');
+                        tab.title = `⚠️ ${stepWarnings.length} suspicious node(s) detected`;
+                    }
+
+                    const panel = renderStep(step, metadata, stepWarnings);
+                    panel.className = `tab-panel ${tabIndex === 0 ? 'active' : ''}`;
                     panels.push(panel);
 
                     tab.onclick = () => {
@@ -388,9 +603,90 @@
                         panels.forEach(p => p.classList.remove('active'));
                         tab.classList.add('active');
                         panel.classList.add('active');
+
+                        // Toggle warning card visibility on click
+                        if (stepWarnings.length > 0 && panel.dataset.warningId) {
+                            const warningCard = panel.querySelector('[data-warning-id="' + panel.dataset.warningId + '"]');
+                            if (warningCard) {
+                                warningCard.style.display = warningCard.style.display === 'none' ? 'block' : 'none';
+                            }
+                        }
                     };
                     tabBar.appendChild(tab);
+                    tabIndex++;
                 });
+
+                // Render affected-excluded sampler tabs (samplers excluded from generationSteps due to suspicious upstream)
+                for (const [nodeId, entry] of affectedExcludedMap) {
+                    const tab = document.createElement('div');
+                    tab.className = `tab ${tabIndex === 0 ? 'active' : ''}`;
+                    tab.classList.add('has-warning');
+                    const nodeType = entry.stepMetadata.nodeName || entry.stepMetadata.nodeType || '';
+                    tab.textContent = '⚠️';
+                    const br = document.createElement('br');
+                    tab.appendChild(br);
+                    const subtitle = document.createElement('span');
+                    subtitle.style.fontSize = '9px';
+                    subtitle.style.opacity = '0.6';
+                    subtitle.style.textTransform = 'none';
+                    subtitle.textContent = `${nodeType} (ID: ${nodeId})`;
+                    tab.appendChild(subtitle);
+                    tab.title = `⚠️ Suspicious upstream node`;
+
+                    const panel = renderStep(entry.stepMetadata, metadata, entry.warnings);
+                    panel.className = `tab-panel ${tabIndex === 0 ? 'active' : ''}`;
+                    panels.push(panel);
+
+                    tab.onclick = () => {
+                        tabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        panels.forEach(p => p.classList.remove('active'));
+                        tab.classList.add('active');
+                        panel.classList.add('active');
+                        if (panel.dataset.warningId) {
+                            const warningCard = panel.querySelector('[data-warning-id="' + panel.dataset.warningId + '"]');
+                            if (warningCard) warningCard.style.display = warningCard.style.display === 'none' ? 'block' : 'none';
+                        }
+                    };
+                    tabBar.appendChild(tab);
+                    tabIndex++;
+                }
+
+                // Render suspicious sampler tabs (suspicious nodes that are themselves samplers)
+                suspSamplerNodes.forEach((suspNode, si) => {
+                    const tab = document.createElement('div');
+                    tab.className = `tab ${tabIndex === 0 ? 'active' : ''}`;
+                    tab.classList.add('has-warning');
+                    const nodeType = suspNode.stepMetadata.nodeName || suspNode.stepMetadata.nodeType || suspNode.nodeType;
+                    tab.textContent = '⚠️';
+                    const br = document.createElement('br');
+                    tab.appendChild(br);
+                    const subtitle = document.createElement('span');
+                    subtitle.style.fontSize = '9px';
+                    subtitle.style.opacity = '0.6';
+                    subtitle.style.textTransform = 'none';
+                    subtitle.textContent = `${nodeType} (ID: ${suspNode.nodeId})`;
+                    tab.appendChild(subtitle);
+                    tab.title = `⚠️ Suspicious sampler`;
+
+                    const warnings = [suspNode];
+                    const panel = renderStep(suspNode.stepMetadata, metadata, warnings);
+                    panel.className = `tab-panel ${tabIndex === 0 ? 'active' : ''}`;
+                    panels.push(panel);
+
+                    tab.onclick = () => {
+                        tabBar.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        panels.forEach(p => p.classList.remove('active'));
+                        tab.classList.add('active');
+                        panel.classList.add('active');
+                        if (panel.dataset.warningId) {
+                            const warningCard = panel.querySelector('[data-warning-id="' + panel.dataset.warningId + '"]');
+                            if (warningCard) warningCard.style.display = warningCard.style.display === 'none' ? 'block' : 'none';
+                        }
+                    };
+                    tabBar.appendChild(tab);
+                    tabIndex++;
+                });
+
                 content.appendChild(tabBar);
                 panels.forEach(p => content.appendChild(p));
             } else {
@@ -430,9 +726,29 @@
                 const mimeMap = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
                 
                 const service = new window.MetadataService();
-                metadata = service.extractPreferredMetadata(buf, mimeMap[ext] || 'image/png');
-                
+                metadata = service.extractPreferredMetadata(buf, mimeMap[ext] || 'image/png', 'comfyui', {
+                    suspiciousNodeHandling: 'exclude'
+                });
+
                 if (metadata) {
+                    // Extract and log prompt JSON for debugging
+                    const buf2 = await fsp.readFile(filePath);
+                    const ImageMetadataReader = window.ImageMetadataReader;
+                    const rawChunks = ImageMetadataReader.extractRawMetadata(buf2, mimeMap[ext] || 'image/png');
+                    if (rawChunks && rawChunks.prompt) {
+                        console.log('[Inspector] Prompt JSON structure:', JSON.stringify(rawChunks.prompt, null, 2));
+                    }
+
+                    console.log('[Inspector] Extracted metadata:', {
+                        format: metadata.format,
+                        suspiciousNodesCount: metadata.suspiciousNodes ? metadata.suspiciousNodes.length : 0,
+                        suspiciousNodes: metadata.suspiciousNodes
+                    });
+                    if (metadata.suspiciousNodes) {
+                        metadata.suspiciousNodes.forEach(node => {
+                            console.log(`[Inspector] Suspicious node ${node.nodeId}: affectedSteps=${node.affectedSteps ? node.affectedSteps.length : 0}`, node.affectedSteps);
+                        });
+                    }
                     renderMetadata(metadata);
                     // Save to cache for next time
                     if (cacheService && itemId) {

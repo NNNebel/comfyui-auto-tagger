@@ -103,10 +103,11 @@ describe('Suspicious Nodes Integration Tests', () => {
       expect(imageScaleNode.affectedSteps).toBeDefined();
 
       // Verify KSampler (ID: 389)
+      // A suspicious sampler has stepMetadata (its own step info) instead of affectedSteps
       const samplerNode = metadata.suspiciousNodes.find(n => n.nodeId === '389');
       expect(samplerNode).toBeDefined();
       expect(samplerNode.reasonKey).toBe('suspiciousNode.reason.samplerNoInput');
-      expect(samplerNode.affectedSteps).toBeDefined();
+      expect(samplerNode.stepMetadata).toBeDefined();
 
       // Verify VAEEncode (ID: 387)
       const vaeEncodeNode = metadata.suspiciousNodes.find(n => n.nodeId === '387');
