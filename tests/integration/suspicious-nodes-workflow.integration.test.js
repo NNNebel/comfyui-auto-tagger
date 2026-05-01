@@ -380,4 +380,118 @@ describe('Suspicious Nodes Integration Tests', () => {
       });
     });
   });
+
+  describe('affectedSteps.stepMetadata for excluded samplers', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should include full metadata for excluded samplers', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
+      const buffer = fs.readFileSync(fixturePath);
+
+      const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
+        suspiciousNodeHandling: 'exclude'
+      });
+
+      // Collect all affectedSteps with stepMetadata (excluded samplers)
+      const excludedSamplers = [];
+      if (metadata.suspiciousNodes) {
+        metadata.suspiciousNodes.forEach(suspNode => {
+          if (suspNode.affectedSteps) {
+            suspNode.affectedSteps.forEach(affected => {
+              if (affected.stepMetadata) {
+                excludedSamplers.push({
+                  suspNodeId: suspNode.nodeId,
+                  excludedNodeId: affected.stepNodeId,
+                  stepMetadata: affected.stepMetadata
+                });
+              }
+            });
+          }
+        });
+      }
+
+      // Should have at least one excluded sampler (e.g., #32, #378, #388)
+      expect(excludedSamplers.length).toBeGreaterThan(0);
+
+      // Each excluded sampler should have full metadata
+      excludedSamplers.forEach(excluded => {
+        expect(excluded.stepMetadata.nodeId).toBe(excluded.excludedNodeId);
+        expect(excluded.stepMetadata).toHaveProperty('seed');
+        expect(excluded.stepMetadata).toHaveProperty('steps');
+        expect(excluded.stepMetadata).toHaveProperty('cfg');
+        expect(excluded.stepMetadata).toHaveProperty('sampler');
+        expect(excluded.stepMetadata).toHaveProperty('scheduler');
+      });
+    });
+
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should NOT include stepMetadata for samplers in generationSteps', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
+      const buffer = fs.readFileSync(fixturePath);
+
+      const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
+        suspiciousNodeHandling: 'exclude'
+      });
+
+      // For each suspicious node, check affectedSteps
+      if (metadata.suspiciousNodes) {
+        metadata.suspiciousNodes.forEach(suspNode => {
+          if (suspNode.affectedSteps) {
+            suspNode.affectedSteps.forEach(affected => {
+              // If affected step is in generationSteps, it should NOT have stepMetadata
+              const isInGenerationSteps = metadata.generationSteps?.some(g => g.nodeId === affected.stepNodeId);
+              if (isInGenerationSteps) {
+                expect(affected.stepMetadata).toBeUndefined();
+              }
+            });
+          }
+        });
+      }
+    });
+
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should not mix orphan nodes into unrelated warning cards', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
+      const buffer = fs.readFileSync(fixturePath);
+
+      const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
+        suspiciousNodeHandling: 'exclude'
+      });
+
+      // Build a map of which suspicious nodes affect which samplers
+      const suspiciousAffectMap = new Map(); // nodeId → Set of affected stepNodeIds
+      if (metadata.suspiciousNodes) {
+        metadata.suspiciousNodes.forEach(suspNode => {
+          const affected = new Set();
+          if (suspNode.affectedSteps) {
+            suspNode.affectedSteps.forEach(s => affected.add(s.stepNodeId));
+          }
+          if (suspNode.stepMetadata) {
+            affected.add(suspNode.nodeId); // self-reference for sampler nodes
+          }
+          suspiciousAffectMap.set(suspNode.nodeId, affected);
+        });
+      }
+
+      // Orphan nodes are those with no affected samplers
+      const orphanNodeIds = new Set();
+      if (metadata.suspiciousNodes) {
+        metadata.suspiciousNodes.forEach(suspNode => {
+          const affected = suspiciousAffectMap.get(suspNode.nodeId);
+          if (!affected || affected.size === 0) {
+            orphanNodeIds.add(suspNode.nodeId);
+          }
+        });
+      }
+
+      // Orphan nodes should not have relationships to specific samplers
+      orphanNodeIds.forEach(orphanId => {
+        const orphanNode = metadata.suspiciousNodes.find(n => n.nodeId === orphanId);
+        if (orphanNode) {
+          // Orphan should have no affectedSteps or empty affectedSteps
+          if (orphanNode.affectedSteps) {
+            expect(orphanNode.affectedSteps.length).toBe(0);
+          } else {
+            expect(orphanNode.affectedSteps).toBeUndefined();
+          }
+        }
+      });
+    });
+  });
 });

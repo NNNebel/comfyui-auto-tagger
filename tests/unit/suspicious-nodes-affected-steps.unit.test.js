@@ -229,4 +229,162 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
       }
     });
   });
+
+  describe('affectedSteps.stepMetadata for excluded samplers', () => {
+    it('should include stepMetadata when affected step is excluded from generationSteps', () => {
+      // Create workflow with suspicious node affecting an excluded sampler
+      const excludedSamplerWorkflow = {
+        "1": {
+          "class_type": "CheckpointLoaderSimple",
+          "inputs": { "ckpt_name": "test.safetensors" }
+        },
+        "2": {
+          "class_type": "KSampler",
+          "inputs": {
+            "seed": 123,
+            "steps": 20,
+            "cfg": 7,
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "model": ["1", 0],
+            "positive": ["3", 0],
+            "negative": ["4", 0],
+            "latent_image": ["5", 0]
+          }
+        },
+        "3": { "class_type": "CLIPTextEncode", "inputs": { "text": "test", "clip": ["1", 1] } },
+        "4": { "class_type": "CLIPTextEncode", "inputs": { "text": "bad", "clip": ["1", 1] } },
+        "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 512, "height": 512 } },
+        "6": {
+          "class_type": "KSampler",
+          "inputs": {
+            "seed": 456,
+            "steps": 30,
+            "cfg": 8,
+            "sampler_name": "dpmpp_2m",
+            "scheduler": "karras",
+            "model": ["1", 0],
+            "positive": ["3", 0],
+            "negative": ["4", 0],
+            "latent_image": ["7", 0]
+          }
+        },
+        "7": {
+          "class_type": "ImageUpscaleWithModel",
+          "inputs": { "upscale_model": ["8", 0] }
+        },
+        "8": { "class_type": "UpscaleModelLoader", "inputs": { "model_name": "test.pth" } }
+      };
+
+      const metadata = {};
+      parser.extractFromPrompt(excludedSamplerWorkflow, metadata, { suspiciousNodeHandling: 'exclude' });
+
+      // Find suspicious node (ImageUpscaleWithModel)
+      const suspiciousNode = metadata.suspiciousNodes?.find(n => n.nodeType === 'ImageUpscaleWithModel');
+      if (suspiciousNode && suspiciousNode.affectedSteps) {
+        // affectedSteps should contain excluded sampler metadata
+        const affectedWithMetadata = suspiciousNode.affectedSteps.filter(s => s.stepMetadata);
+        expect(affectedWithMetadata.length).toBeGreaterThan(0);
+
+        // Each affected step metadata should be a valid sampler
+        affectedWithMetadata.forEach(affected => {
+          expect(affected.stepMetadata).toBeDefined();
+          expect(affected.stepMetadata.nodeId).toBeDefined();
+          expect(affected.stepMetadata.nodeType).toBeDefined();
+          expect(affected.stepNodeId).toBe(affected.stepMetadata.nodeId);
+        });
+      }
+    });
+
+    it('should NOT include stepMetadata for steps in generationSteps', () => {
+      const metadata = {};
+      const workflow = {
+        "1": {
+          "class_type": "CheckpointLoaderSimple",
+          "inputs": { "ckpt_name": "test.safetensors" }
+        },
+        "2": {
+          "class_type": "KSampler",
+          "inputs": {
+            "seed": 123,
+            "steps": 20,
+            "cfg": 7,
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "model": ["1", 0],
+            "positive": ["3", 0],
+            "negative": ["4", 0],
+            "latent_image": ["5", 0]
+          }
+        },
+        "3": { "class_type": "CLIPTextEncode", "inputs": { "text": "test", "clip": ["1", 1] } },
+        "4": { "class_type": "CLIPTextEncode", "inputs": { "text": "bad", "clip": ["1", 1] } },
+        "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 512, "height": 512 } },
+        "6": {
+          "class_type": "ImageUpscaleWithModel",
+          "inputs": { "upscale_model": ["7", 0] }
+        },
+        "7": { "class_type": "UpscaleModelLoader", "inputs": { "model_name": "test.pth" } }
+      };
+
+      parser.extractFromPrompt(workflow, metadata, { suspiciousNodeHandling: 'exclude' });
+
+      // Find suspicious node
+      const suspiciousNode = metadata.suspiciousNodes?.find(n => n.nodeType === 'ImageUpscaleWithModel');
+      if (suspiciousNode && suspiciousNode.affectedSteps) {
+        // Affected steps that are in generationSteps should NOT have stepMetadata
+        suspiciousNode.affectedSteps.forEach(affected => {
+          const isInGenerationSteps = metadata.generationSteps?.some(g => g.nodeId === affected.stepNodeId);
+          if (isInGenerationSteps) {
+            expect(affected.stepMetadata).toBeUndefined();
+          }
+        });
+      }
+    });
+
+    it('should handle orphan nodes without mixing them into warnings', () => {
+      // Create workflow with an orphan suspicious node (no affected steps)
+      const orphanWorkflow = {
+        "1": {
+          "class_type": "CheckpointLoaderSimple",
+          "inputs": { "ckpt_name": "test.safetensors" }
+        },
+        "2": {
+          "class_type": "KSampler",
+          "inputs": {
+            "seed": 123,
+            "steps": 20,
+            "cfg": 7,
+            "sampler_name": "euler",
+            "scheduler": "normal",
+            "model": ["1", 0],
+            "positive": ["3", 0],
+            "negative": ["4", 0],
+            "latent_image": ["5", 0]
+          }
+        },
+        "3": { "class_type": "CLIPTextEncode", "inputs": { "text": "test", "clip": ["1", 1] } },
+        "4": { "class_type": "CLIPTextEncode", "inputs": { "text": "bad", "clip": ["1", 1] } },
+        "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 512, "height": 512 } },
+        "6": {
+          "class_type": "VAEDecode",
+          "inputs": { "vae": ["1", 2] }
+        }
+      };
+
+      const metadata = {};
+      parser.extractFromPrompt(orphanWorkflow, metadata, { suspiciousNodeHandling: 'exclude' });
+
+      // Find orphan node (VAEDecode with missing samples input)
+      const orphanNode = metadata.suspiciousNodes?.find(n => n.nodeType === 'VAEDecode');
+      if (orphanNode) {
+        // Orphan node should have no affectedSteps (or empty array)
+        if (orphanNode.affectedSteps) {
+          expect(orphanNode.affectedSteps.length).toBe(0);
+        } else {
+          expect(orphanNode.affectedSteps).toBeUndefined();
+        }
+      }
+    });
+  });
 });
