@@ -28,7 +28,7 @@
       try {
         return JSON.parse(text);
       } catch (e) {
-        console.error('JSON parse failed:', e.message);
+        // Silently fall back for non-JSON fields (e.g., A1111 parameters)
         return fallback;
       }
     }
