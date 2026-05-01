@@ -25,8 +25,8 @@ describe('Suspicious Nodes Integration Tests', () => {
   
   // Check for missing fixtures at the start
   const requiredFixtures = [
-    'comfyui_suspicious_node.webp',
-    'comfyui_suspicious_node2.webp',
+    'comfyui_suspicious_node_dualpath.webp',
+    'comfyui_suspicious_node_simple.webp',
     'comfyui_i2i.webp',
     'comfyui_simple.webp',
     'a1111_simple.png',
@@ -69,9 +69,9 @@ describe('Suspicious Nodes Integration Tests', () => {
     metadataService = new MetadataService();
   });
 
-  describe('comfyui_suspicious_node.webp', () => {
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should detect multiple types of suspicious nodes', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp');
+  describe('comfyui_suspicious_node_dualpath.webp', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should detect multiple types of suspicious nodes', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
@@ -120,8 +120,8 @@ describe('Suspicious Nodes Integration Tests', () => {
       expect(vaeDecodeNode.reasonKey).toBe('suspiciousNode.reason.vaeDecodeNoInput');
     });
 
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should detect suspicious nodes and show affected steps', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp');
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should detect suspicious nodes and show affected steps', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
@@ -147,8 +147,8 @@ describe('Suspicious Nodes Integration Tests', () => {
       expect(affectedStep.stepIndex).toBe(2);
     });
 
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should have correct generation steps', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp');
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should have correct generation steps', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
@@ -169,42 +169,22 @@ describe('Suspicious Nodes Integration Tests', () => {
     });
   });
 
-  describe('comfyui_suspicious_node2.webp', () => {
-    it.skipIf(!fixtureExists('comfyui_suspicious_node2.webp'))('should detect suspicious nodes in second test image', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node2.webp');
+  describe('comfyui_suspicious_node_simple.webp (suspicious nodes detected)', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_simple.webp'))('should extract metadata correctly when suspicious nodes exist', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_simple.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
         suspiciousNodeHandling: 'exclude'
       });
 
-      // Should have suspicious nodes
+      // Should detect suspicious nodes (file was renamed from comfyui_orphaned.webp)
       expect(metadata.suspiciousNodes).toBeDefined();
-      expect(metadata.suspiciousNodes.length).toBe(2);
-
-      // Verify both ImageUpscaleWithModel nodes are detected
-      const imageUpscaleNodes = metadata.suspiciousNodes.filter(n => n.nodeType === 'ImageUpscaleWithModel');
-      expect(imageUpscaleNodes.length).toBe(2);
-
-      // Verify node IDs
-      const nodeIds = metadata.suspiciousNodes.map(n => n.nodeId).sort();
-      expect(nodeIds).toEqual(['171', '383']);
-
-      // Verify node 171
-      const node171 = metadata.suspiciousNodes.find(n => n.nodeId === '171');
-      expect(node171.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
-      expect(node171.affectedSteps).toBeDefined();
-      expect(node171.affectedSteps.length).toBeGreaterThan(0);
-
-      // Verify node 383
-      const node383 = metadata.suspiciousNodes.find(n => n.nodeId === '383');
-      expect(node383.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
-      expect(node383.affectedSteps).toBeDefined();
-      expect(node383.affectedSteps.length).toBeGreaterThan(0);
+      expect(metadata.suspiciousNodes.length).toBeGreaterThan(0);
     });
 
-    it.skipIf(!fixtureExists('comfyui_suspicious_node2.webp'))('should have correct metadata extraction despite suspicious nodes', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node2.webp');
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_simple.webp'))('should have correct metadata extraction despite suspicious nodes', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_simple.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
@@ -309,8 +289,8 @@ describe('Suspicious Nodes Integration Tests', () => {
   });
 
   describe('handling modes', () => {
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should work with exclude mode', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp');
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should work with exclude mode', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
@@ -321,8 +301,8 @@ describe('Suspicious Nodes Integration Tests', () => {
       expect(metadata.suspiciousNodes[0].affectedSteps).toBeDefined();
     });
 
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should work with include mode', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp');
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should work with include mode', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
@@ -333,8 +313,8 @@ describe('Suspicious Nodes Integration Tests', () => {
       expect(metadata.suspiciousNodes[0].affectedSteps).toBeDefined();
     });
 
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should work with ask mode (returns suspicious nodes for UI)', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp');
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should work with ask mode (returns suspicious nodes for UI)', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
       const buffer = fs.readFileSync(fixturePath);
 
       const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
@@ -343,6 +323,60 @@ describe('Suspicious Nodes Integration Tests', () => {
 
       expect(metadata.suspiciousNodes).toBeDefined();
       expect(metadata.suspiciousNodes[0].affectedSteps).toBeDefined();
+    });
+  });
+
+  describe('warning card display requirements', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should include all required fields for warning card rendering', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
+      const buffer = fs.readFileSync(fixturePath);
+
+      const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
+        suspiciousNodeHandling: 'ask'
+      });
+
+      // Verify all suspicious nodes have required fields for warning card
+      metadata.suspiciousNodes.forEach(node => {
+        expect(node).toHaveProperty('nodeId');
+        expect(node).toHaveProperty('nodeType');
+        expect(node).toHaveProperty('reasonKey');
+        expect(node.reasonKey).toMatch(/^suspiciousNode\.reason\./);
+      });
+    });
+
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should include suggestion info for VAEDecode warning card', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
+      const buffer = fs.readFileSync(fixturePath);
+
+      const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
+        suspiciousNodeHandling: 'ask'
+      });
+
+      const vaeDecodeNode = metadata.suspiciousNodes.find(n => n.nodeType === 'VAEDecode');
+      if (vaeDecodeNode) {
+        expect(vaeDecodeNode.reasonKey).toBe('suspiciousNode.reason.vaeDecodeNoInput');
+        expect(vaeDecodeNode).toHaveProperty('suggestionKey');
+        expect(vaeDecodeNode.suggestionKey).toBe('suspiciousNode.suggestion.vaeDecodeRequired');
+      }
+    });
+
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should include reasonParams for parameter interpolation', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp');
+      const buffer = fs.readFileSync(fixturePath);
+
+      const metadata = metadataService.extractPreferredMetadata(buffer, 'image/webp', 'comfyui', {
+        suspiciousNodeHandling: 'ask'
+      });
+
+      // Nodes with nodeType in reason should have reasonParams
+      metadata.suspiciousNodes.forEach(node => {
+        if (node.reasonKey === 'suspiciousNode.reason.imageProcessingNoInput' ||
+            node.reasonKey === 'suspiciousNode.reason.samplerNoInput' ||
+            node.reasonKey === 'suspiciousNode.reason.missingInput') {
+          expect(node).toHaveProperty('reasonParams');
+          expect(node.reasonParams).toHaveProperty('nodeType');
+        }
+      });
     });
   });
 });

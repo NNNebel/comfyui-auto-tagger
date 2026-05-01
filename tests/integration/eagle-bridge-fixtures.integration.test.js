@@ -229,6 +229,40 @@ const TEST_CASES = [
       'Negative: worst quality,',
     ].join('\n'),
   },
+  {
+    name: 'bridge-various-model',
+    label: '2x KSampler, dual models',
+    fixtures: [
+      { file: 'tests/fixtures/bridge-various-model.png',  mimeType: 'image/png'  },
+      { file: 'tests/fixtures/bridge-various-model.webp', mimeType: 'image/webp' },
+      { file: 'tests/fixtures/bridge-various-model.jpg',  mimeType: 'image/jpeg' },
+    ],
+    expectedTags: [
+      '1girl', 'boleromixillustrious_v815', 'burgundy color hair', 'cfg:8.00', 'masterpiece',
+      'neg:bad hands', 'neg:worst quality', 'novaanimexl_ilv140',
+      'sampler:euler_ancestral', 'scheduler:simple', 'seed:1111111', 'simple background', 'steps:30',
+      'ultra-detailed', 'witch hat',
+    ],
+    expectedAnnotation: [
+      '[Generation Info]',
+      'Checkpoint: novaAnimeXL_ilV140',
+      'LoRA: ',
+      '',
+      '[Base Sampler - KSampler (ID: 18)]',
+      'Checkpoint: novaAnimeXL_ilV140',
+      'Seed: 1111111',
+      'Steps: 30 | CFG: 8.0 | Sampler: euler_ancestral | Scheduler: simple',
+      'Positive: masterpiece, 1girl,witch hat, burgundy color hair, simple background',
+      'Negative: worst quality,',
+      '',
+      '[Step 2 - KSampler (ID: 28)]',
+      'Checkpoint: boleromixIllustrious_v815',
+      'Seed: 222222',
+      'Steps: 20 | CFG: 7.0 | Sampler: euler_ancestral | Scheduler: normal',
+      'Positive: (ultra-detailed),',
+      'Negative: bad hands',
+    ].join('\n'),
+  },
 ];
 
 // ---------------------------------------------------------------------------

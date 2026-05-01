@@ -51,19 +51,22 @@ class ComfyUIParser extends MetadataParserBase {
       format: 'comfyui'
     };
 
+    // Parse JSON strings in rawChunks if needed (backward compatibility)
+    const parsedChunks = this._parseJsonFields(rawChunks);
+
     // Merge eagle_bridge signals into options before graph construction
     const effectiveOptions = { ...options };
-    if (rawChunks.eagle_bridge && rawChunks.eagle_bridge.final_node_id) {
-      const nodeId = String(rawChunks.eagle_bridge.final_node_id);
+    if (parsedChunks.eagle_bridge && parsedChunks.eagle_bridge.final_node_id) {
+      const nodeId = String(parsedChunks.eagle_bridge.final_node_id);
       effectiveOptions.forcedOutputNodeIds = [nodeId];
       metadata.eagle_bridge = { final_node_id: nodeId };
       console.log(`[EagleMetadataBridge] eagle_bridge detected: node ${nodeId} forced as output`);
     }
 
     // Extract from prompt JSON (contains generation parameters)
-    if (rawChunks.prompt) {
+    if (parsedChunks.prompt) {
       ErrorHandler.safeExecute(
-        () => this.extractFromPrompt(rawChunks.prompt, metadata, effectiveOptions),
+        () => this.extractFromPrompt(parsedChunks.prompt, metadata, effectiveOptions),
         null,
         'ComfyUIParser',
         { source: 'prompt' }
@@ -71,9 +74,9 @@ class ComfyUIParser extends MetadataParserBase {
     }
 
     // Extract from workflow JSON (contains UI state and additional info)
-    if (rawChunks.workflow) {
+    if (parsedChunks.workflow) {
       ErrorHandler.safeExecute(
-        () => this.extractFromWorkflow(rawChunks.workflow, metadata),
+        () => this.extractFromWorkflow(parsedChunks.workflow, metadata),
         null,
         'ComfyUIParser',
         { source: 'workflow' }
@@ -81,6 +84,49 @@ class ComfyUIParser extends MetadataParserBase {
     }
 
     return metadata;
+  }
+
+  /**
+   * Parse JSON fields in rawChunks if they are strings.
+   * Handles both object (already parsed) and string (raw JSON) formats.
+   * @private
+   * @param {Object} rawChunks - Raw metadata chunks
+   * @returns {Object} Chunks with JSON fields parsed
+   */
+  _parseJsonFields(rawChunks) {
+    const parsed = { ...rawChunks };
+
+    // Parse workflow if it's a string
+    if (typeof parsed.workflow === 'string') {
+      try {
+        parsed.workflow = JSON.parse(parsed.workflow);
+      } catch (e) {
+        ErrorHandler.logWarning('ComfyUIParser', `Failed to parse workflow JSON: ${e.message}`);
+        parsed.workflow = undefined;
+      }
+    }
+
+    // Parse prompt if it's a string
+    if (typeof parsed.prompt === 'string') {
+      try {
+        parsed.prompt = JSON.parse(parsed.prompt);
+      } catch (e) {
+        ErrorHandler.logWarning('ComfyUIParser', `Failed to parse prompt JSON: ${e.message}`);
+        parsed.prompt = undefined;
+      }
+    }
+
+    // Parse eagle_bridge if it's a string
+    if (typeof parsed.eagle_bridge === 'string') {
+      try {
+        parsed.eagle_bridge = JSON.parse(parsed.eagle_bridge);
+      } catch (e) {
+        ErrorHandler.logWarning('ComfyUIParser', `Failed to parse eagle_bridge JSON: ${e.message}`);
+        parsed.eagle_bridge = undefined;
+      }
+    }
+
+    return parsed;
   }
 
   /**

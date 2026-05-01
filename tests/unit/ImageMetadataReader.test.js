@@ -83,7 +83,7 @@ describe('ImageMetadataReader', () => {
       expect(result.parameters).toBe(text);
     });
 
-    it('should parse JSON for workflow and prompt keywords', () => {
+    it('should return raw text (JSON string) for workflow keyword', () => {
       const pngSignature = new Uint8Array([
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
       ]);
@@ -106,7 +106,7 @@ describe('ImageMetadataReader', () => {
       buffer.set(chunk, pngSignature.length);
       
       const result = ImageMetadataReader.extractPngChunks(buffer);
-      expect(result.workflow).toEqual({ nodes: [] });
+      expect(result.workflow).toBe('{"nodes":[]}');
     });
   });
 
@@ -217,7 +217,7 @@ describe('ImageMetadataReader', () => {
       buffer.set(chunk, pngSignature.length);
       
       const result = ImageMetadataReader.extractPngChunks(buffer);
-      expect(result.workflow).toEqual({ nodes: [{ id: 1 }] });
+      expect(result.workflow).toBe('{"nodes":[{"id":1}]}');
     });
 
     it('should handle comf chunks with non-JSON text', () => {
@@ -339,7 +339,7 @@ describe('ImageMetadataReader', () => {
       buffer.set(exifChunk, webpHeader.length);
       
       const result = ImageMetadataReader.extractWebpChunks(buffer);
-      expect(result.workflow).toEqual({ nodes: [] });
+      expect(result.workflow).toBe('{"nodes":[]}');
     });
 
     it('should extract prompt from XMP chunk', () => {
@@ -366,7 +366,7 @@ describe('ImageMetadataReader', () => {
       buffer.set(xmpChunk, webpHeader.length);
       
       const result = ImageMetadataReader.extractWebpChunks(buffer);
-      expect(result.prompt).toEqual({ text: 'test' });
+      expect(result.prompt).toBe('{"text":"test"}');
     });
 
     it('should handle WebP with odd-sized chunks (padding)', () => {
@@ -414,7 +414,7 @@ describe('ImageMetadataReader', () => {
       const result = {};
       
       ImageMetadataReader._extractFromBinary(binaryData, result);
-      expect(result.workflow).toEqual({ nodes: [] });
+      expect(result.workflow).toBe('{"nodes":[]}');
     });
 
     it('should extract prompt from binary data', () => {
@@ -423,7 +423,7 @@ describe('ImageMetadataReader', () => {
       const result = {};
       
       ImageMetadataReader._extractFromBinary(binaryData, result);
-      expect(result.prompt).toEqual({ text: 'hello' });
+      expect(result.prompt).toBe('{"text":"hello"}');
     });
 
     it('should handle case-insensitive keyword matching', () => {
@@ -432,7 +432,7 @@ describe('ImageMetadataReader', () => {
       const result = {};
       
       ImageMetadataReader._extractFromBinary(binaryData, result);
-      expect(result.workflow).toEqual({ key: 'value' });
+      expect(result.workflow).toBe('{"key":"value"}');
     });
 
     it('should handle binary data without JSON', () => {
@@ -507,10 +507,10 @@ describe('ImageMetadataReader', () => {
 
           // Check for common metadata fields
           if (result.workflow) {
-            expect(typeof result.workflow).toBe('object');
+            expect(typeof result.workflow).toBe('string');
           }
           if (result.prompt) {
-            expect(typeof result.prompt).toBe('object');
+            expect(typeof result.prompt).toBe('string');
           }
           if (result.parameters) {
             expect(typeof result.parameters).toBe('string');
@@ -538,10 +538,10 @@ describe('ImageMetadataReader', () => {
 
           // Check for common metadata fields
           if (result.workflow) {
-            expect(typeof result.workflow).toBe('object');
+            expect(typeof result.workflow).toBe('string');
           }
           if (result.prompt) {
-            expect(typeof result.prompt).toBe('object');
+            expect(typeof result.prompt).toBe('string');
           }
           if (result.parameters) {
             expect(typeof result.parameters).toBe('string');
@@ -569,10 +569,10 @@ describe('ImageMetadataReader', () => {
 
           // Check for common metadata fields
           if (result.workflow) {
-            expect(typeof result.workflow).toBe('object');
+            expect(typeof result.workflow).toBe('string');
           }
           if (result.prompt) {
-            expect(typeof result.prompt).toBe('object');
+            expect(typeof result.prompt).toBe('string');
           }
           if (result.parameters) {
             expect(typeof result.parameters).toBe('string');

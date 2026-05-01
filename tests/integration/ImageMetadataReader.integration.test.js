@@ -28,8 +28,8 @@ describe('ImageMetadataReader Integration', () => {
       buffer.set(chunk, pngSignature.length);
       
       const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
-      
-      expect(result.workflow).toEqual({ nodes: [{ id: 1, type: 'test' }] });
+
+      expect(result.workflow).toBe('{"nodes":[{"id":1,"type":"test"}]}');
     });
 
     it('should extract WebP data correctly', () => {
@@ -81,9 +81,9 @@ describe('ImageMetadataReader Integration', () => {
       buffer.set(chunk3, pngSignature.length + chunk1.length + chunk2.length);
       
       const result = ImageMetadataReader.extractRawMetadata(buffer, 'image/png');
-      
-      expect(result.workflow).toEqual({ nodes: [] });
-      expect(result.prompt).toEqual({ "1": { class_type: "test" } });
+
+      expect(result.workflow).toBe('{"nodes":[]}');
+      expect(result.prompt).toBe('{"1":{"class_type":"test"}}');
       expect(result.parameters).toBe('test parameters');
     });
 

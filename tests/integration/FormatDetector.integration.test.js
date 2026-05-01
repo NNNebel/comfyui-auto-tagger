@@ -53,17 +53,23 @@ describe('FormatDetector Integration Tests', () => {
         const formats = FormatDetector.detectFormats(rawChunks);
         
         if (formats.includes('comfyui')) {
-          // Verify ComfyUI metadata structure
-          const hasWorkflow = rawChunks.workflow && typeof rawChunks.workflow === 'object';
-          const hasPrompt = rawChunks.prompt && typeof rawChunks.prompt === 'object';
-          
+          // Verify ComfyUI metadata structure (strings or objects both valid after Phase 2)
+          const hasWorkflow = rawChunks.workflow && (
+            typeof rawChunks.workflow === 'object' ||
+            (typeof rawChunks.workflow === 'string' && rawChunks.workflow.trim().startsWith('{'))
+          );
+          const hasPrompt = rawChunks.prompt && (
+            typeof rawChunks.prompt === 'object' ||
+            (typeof rawChunks.prompt === 'string' && rawChunks.prompt.trim().startsWith('{'))
+          );
+
           expect(hasWorkflow || hasPrompt).toBe(true);
-          
+
           if (hasWorkflow) {
-            console.log('Workflow structure:', Object.keys(rawChunks.workflow));
+            console.log('Workflow type:', typeof rawChunks.workflow);
           }
           if (hasPrompt) {
-            console.log('Prompt structure:', Object.keys(rawChunks.prompt));
+            console.log('Prompt type:', typeof rawChunks.prompt);
           }
         }
       } else {

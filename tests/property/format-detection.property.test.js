@@ -82,12 +82,12 @@ describe('FormatDetector - Property Tests', () => {
       );
     });
 
-    it('should never detect ComfyUI format when workflow and prompt are not objects', () => {
+    it('should never detect ComfyUI format when workflow and prompt are not objects or JSON strings', () => {
       fc.assert(
         fc.property(
-          // Generate non-object values (strings, numbers, null, undefined, etc.)
+          // Generate non-object, non-JSON-string values
           fc.oneof(
-            fc.string(),
+            fc.string().filter(s => !s.trim().startsWith('{')),
             fc.integer(),
             fc.float(),
             fc.boolean(),
@@ -95,7 +95,7 @@ describe('FormatDetector - Property Tests', () => {
             fc.constant(undefined)
           ),
           fc.oneof(
-            fc.string(),
+            fc.string().filter(s => !s.trim().startsWith('{')),
             fc.integer(),
             fc.float(),
             fc.boolean(),
@@ -105,8 +105,9 @@ describe('FormatDetector - Property Tests', () => {
           (workflow, prompt) => {
             const rawChunks = { workflow, prompt };
             const formats = FormatDetector.detectFormats(rawChunks);
-            
-            // Property: ComfyUI format should never be detected when neither workflow nor prompt are objects
+
+            // Property: ComfyUI format should never be detected when neither workflow nor prompt
+            // are objects or JSON strings (strings starting with '{')
             return !formats.includes('comfyui');
           }
         ),

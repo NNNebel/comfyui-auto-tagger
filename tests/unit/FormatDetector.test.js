@@ -63,17 +63,33 @@ describe('FormatDetector', () => {
       expect(formats).toEqual([]);
     });
 
-    it('should not detect ComfyUI if workflow is a string', () => {
-      const rawChunks = { 
-        workflow: 'not an object' 
+    it('should detect ComfyUI if workflow is a JSON string', () => {
+      const rawChunks = {
+        workflow: '{"nodes":[],"connections":[]}'
+      };
+      const formats = FormatDetector.detectFormats(rawChunks);
+      expect(formats).toContain('comfyui');
+    });
+
+    it('should detect ComfyUI if prompt is a JSON string', () => {
+      const rawChunks = {
+        prompt: '{"1":{"class_type":"KSampler"}}'
+      };
+      const formats = FormatDetector.detectFormats(rawChunks);
+      expect(formats).toContain('comfyui');
+    });
+
+    it('should not detect ComfyUI if workflow is a non-JSON string', () => {
+      const rawChunks = {
+        workflow: 'not a json object'
       };
       const formats = FormatDetector.detectFormats(rawChunks);
       expect(formats).not.toContain('comfyui');
     });
 
-    it('should not detect ComfyUI if prompt is a string', () => {
-      const rawChunks = { 
-        prompt: 'not an object' 
+    it('should not detect ComfyUI if prompt is a non-JSON string', () => {
+      const rawChunks = {
+        prompt: 'not a json object'
       };
       const formats = FormatDetector.detectFormats(rawChunks);
       expect(formats).not.toContain('comfyui');

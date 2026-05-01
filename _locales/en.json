@@ -136,11 +136,16 @@
         "case2": "Temporarily disabled node during experimentation",
         "hint": "💡 Hint: Usually select \"Exclude\"",
         "hintDetail": "Only information from actually used nodes will be recorded.",
+        "warningCardTitle": "⚠️ Potentially Unused Node(s)",
+        "nodeLabel": "Node",
+        "reasonLabel": "Reason",
+        "suggestionLabel": "Suggestion",
         "reason": {
             "imageProcessingNoInput": "Image processing node '{{nodeType}}' has no image/pixels input",
             "vaeEncodeNoInput": "VAEEncode node has no pixels/image input",
             "vaeDecodeNoInput": "VAEDecode node has no samples/latent input",
-            "samplerNoInput": "Sampler node '{{nodeType}}' has no latent_image input"
+            "samplerNoInput": "Sampler node '{{nodeType}}' has no latent_image input",
+            "missingInput": "Node '{{nodeType}}' has missing required inputs"
         },
         "suggestion": {
             "disconnected": "This node may be disconnected or have missing connections. Check if this node should be included in the workflow.",

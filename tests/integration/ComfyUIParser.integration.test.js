@@ -31,8 +31,12 @@ describe('ComfyUIParser Direct Tests (with Real Fixtures)', () => {
     const parser = new ComfyUIParser();
     const metadata = parser.parse(rawChunks);
 
-    // A1111 format should return null (not recognized as ComfyUI)
-    expect(metadata).toBeNull();
+    // ComfyUIParser always returns a metadata object (format detection is FormatDetector's job)
+    // A1111 data results in empty ComfyUI metadata with no sampler/prompt info
+    expect(metadata).not.toBeNull();
+    expect(metadata.format).toBe('comfyui');
+    expect(metadata.seed).toBeUndefined();
+    expect(metadata.positive).toBeUndefined();
   });
 
   it('should parse ComfyUI-formatted metadata when present', () => {

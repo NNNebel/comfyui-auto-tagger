@@ -39,10 +39,16 @@ class FormatDetector {
    */
   static _isComfyUIMetadata(rawChunks) {
     // ComfyUI metadata is identified by the presence of 'workflow' or 'prompt' keys
-    // These should be objects (JSON parsed) not strings
-    const hasWorkflow = rawChunks.workflow && typeof rawChunks.workflow === 'object';
-    const hasPrompt = rawChunks.prompt && typeof rawChunks.prompt === 'object';
-    
+    // These can be either parsed objects or JSON strings starting with '{'
+    const hasWorkflow = rawChunks.workflow && (
+      typeof rawChunks.workflow === 'object' ||
+      (typeof rawChunks.workflow === 'string' && rawChunks.workflow.trim().startsWith('{'))
+    );
+    const hasPrompt = rawChunks.prompt && (
+      typeof rawChunks.prompt === 'object' ||
+      (typeof rawChunks.prompt === 'string' && rawChunks.prompt.trim().startsWith('{'))
+    );
+
     return hasWorkflow || hasPrompt;
   }
 

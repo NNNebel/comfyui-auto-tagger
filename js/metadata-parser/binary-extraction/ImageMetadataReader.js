@@ -83,24 +83,18 @@ class ImageMetadataReader {
       const type = BinaryUtils.readFourCC(buffer, offset);
       offset += 4;
       
-      // Process tEXt chunks
+      // Process tEXt chunks - return raw text
       if (type === 'tEXt') {
         const chunkData = BinaryUtils.slice(buffer, offset, offset + length);
         const { keyword, text } = this._decodePngText(chunkData);
-
-        // Try to parse all tEXt chunks as JSON; fall back to raw string
-        const parsed = ParsingUtils.parseJsonSafely(text, null);
-        result[keyword] = parsed !== null ? parsed : text;
+        result[keyword] = text;
       }
-      
-      // Process comf chunks (ComfyUI custom chunk)
+
+      // Process comf chunks (ComfyUI custom chunk) - return raw text
       if (type === 'comf') {
         const chunkData = BinaryUtils.slice(buffer, offset, offset + length);
         const { keyword, text } = this._decodeComfChunk(chunkData);
-
-        // Try to parse all comf chunks as JSON; fall back to raw string
-        const parsed = ParsingUtils.parseJsonSafely(text, null);
-        result[keyword] = parsed !== null ? parsed : text;
+        result[keyword] = text;
       }
       
       // Move to next chunk (data + CRC)
@@ -295,32 +289,32 @@ class ImageMetadataReader {
     const decoder = new TextDecoder('iso-8859-1');
     const binaryString = decoder.decode(data);
 
-    // Helper to parse JSON from binary string
-    const parseJson = (key) => {
+    // Helper to extract JSON string from binary data
+    const extractJsonString = (key) => {
       const match = binaryString.match(new RegExp(`${key}:\\s*(\\{)`, 'i'));
       if (match) {
         const jsonStart = match.index + match[0].lastIndexOf('{');
-        const json = this._parseJsonFromPos(data, jsonStart);
-        if (json) {
-          result[key.toLowerCase()] = json;
+        const jsonString = this._extractJsonStringFromPos(data, jsonStart);
+        if (jsonString) {
+          result[key.toLowerCase()] = jsonString;
         }
       }
     };
 
-    // Extract workflow and prompt JSON
-    parseJson('workflow');
-    parseJson('prompt');
-    parseJson('eagle_bridge');
+    // Extract workflow and prompt as JSON strings
+    extractJsonString('workflow');
+    extractJsonString('prompt');
+    extractJsonString('eagle_bridge');
   }
 
   /**
-   * Parse JSON from a specific position in a buffer
+   * Extract JSON string from a specific position in a buffer
    * @private
    * @param {Uint8Array} fullBuffer - Full buffer containing JSON
    * @param {number} startPos - Starting position of JSON
-   * @returns {Object|null} Parsed JSON object or null if parsing fails
+   * @returns {string|null} JSON string or null if extraction fails
    */
-  static _parseJsonFromPos(fullBuffer, startPos) {
+  static _extractJsonStringFromPos(fullBuffer, startPos) {
     let braceCount = 0;
     let inString = false;
     let escape = false;
@@ -362,12 +356,33 @@ class ImageMetadataReader {
         const jsonString = new TextDecoder('utf-8').decode(
           fullBuffer.slice(startPos, endPos + 1)
         );
-        return JSON.parse(jsonString);
+        // Validate it's valid JSON by attempting to parse
+        JSON.parse(jsonString);
+        return jsonString;
       } catch (e) {
         return null;
       }
     }
 
+    return null;
+  }
+
+  /**
+   * Parse JSON from a specific position in a buffer (deprecated, use _extractJsonStringFromPos)
+   * @private
+   * @param {Uint8Array} fullBuffer - Full buffer containing JSON
+   * @param {number} startPos - Starting position of JSON
+   * @returns {Object|null} Parsed JSON object or null if parsing fails
+   */
+  static _parseJsonFromPos(fullBuffer, startPos) {
+    const jsonString = this._extractJsonStringFromPos(fullBuffer, startPos);
+    if (jsonString) {
+      try {
+        return JSON.parse(jsonString);
+      } catch (e) {
+        return null;
+      }
+    }
     return null;
   }
 

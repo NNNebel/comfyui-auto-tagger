@@ -309,5 +309,79 @@ describe('ComfyUIParser', () => {
       const result = parser.parse(rawChunks);
       expect(result.format).toBe('comfyui');
     });
+
+    it('should parse JSON string workflow and extract data', () => {
+      const rawChunks = {
+        workflow: '{"nodes":[{"type":"CheckpointLoaderSimple","widgets_values":["model.safetensors"]}]}'
+      };
+      const result = parser.parse(rawChunks);
+      expect(result.checkpoint).toBe("model.safetensors");
+    });
+
+    it('should parse JSON string prompt and extract data', () => {
+      const rawChunks = {
+        prompt: '{"4":{"class_type":"CheckpointLoaderSimple","inputs":{"ckpt_name":"sd_xl_base.safetensors"}}}'
+      };
+      const result = parser.parse(rawChunks);
+      expect(result.checkpoint).toBe("sd_xl_base.safetensors");
+    });
+
+    it('should handle invalid JSON string gracefully', () => {
+      const rawChunks = {
+        workflow: '{"nodes":[invalid json'
+      };
+      const result = parser.parse(rawChunks);
+      expect(result.format).toBe('comfyui');
+      expect(result.checkpoint).toBeUndefined();
+    });
+  });
+
+  describe('_parseJsonFields', () => {
+    it('should convert workflow JSON string to object', () => {
+      const rawChunks = {
+        workflow: '{"nodes":[],"connections":[]}'
+      };
+      const parsed = parser._parseJsonFields(rawChunks);
+      expect(typeof parsed.workflow).toBe('object');
+      expect(Array.isArray(parsed.workflow.nodes)).toBe(true);
+    });
+
+    it('should convert prompt JSON string to object', () => {
+      const rawChunks = {
+        prompt: '{"1":{"class_type":"KSampler"}}'
+      };
+      const parsed = parser._parseJsonFields(rawChunks);
+      expect(typeof parsed.prompt).toBe('object');
+      expect(parsed.prompt["1"].class_type).toBe("KSampler");
+    });
+
+    it('should leave object fields unchanged', () => {
+      const workflowObj = { nodes: [], connections: [] };
+      const promptObj = { "1": { class_type: "KSampler" } };
+      const rawChunks = {
+        workflow: workflowObj,
+        prompt: promptObj
+      };
+      const parsed = parser._parseJsonFields(rawChunks);
+      expect(parsed.workflow).toBe(workflowObj);
+      expect(parsed.prompt).toBe(promptObj);
+    });
+
+    it('should handle invalid JSON string by setting field to undefined', () => {
+      const rawChunks = {
+        workflow: '{"invalid json"'
+      };
+      const parsed = parser._parseJsonFields(rawChunks);
+      expect(parsed.workflow).toBeUndefined();
+    });
+
+    it('should convert eagle_bridge JSON string to object', () => {
+      const rawChunks = {
+        eagle_bridge: '{"final_node_id":5}'
+      };
+      const parsed = parser._parseJsonFields(rawChunks);
+      expect(typeof parsed.eagle_bridge).toBe('object');
+      expect(parsed.eagle_bridge.final_node_id).toBe(5);
+    });
   });
 });

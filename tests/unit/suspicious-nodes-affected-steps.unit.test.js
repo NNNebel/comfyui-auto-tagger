@@ -22,11 +22,11 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
   });
 
   describe('affectedSteps field in suspicious nodes', () => {
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should include affectedSteps when suspicious nodes are detected', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should include affectedSteps when suspicious nodes are detected', () => {
       // Load test fixture with suspicious nodes from actual image
-      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
-      const fixtureData = rawMetadata.prompt;
+      const fixtureData = typeof rawMetadata.prompt === 'string' ? JSON.parse(rawMetadata.prompt) : rawMetadata.prompt;
 
       const metadata = {};
       parser.extractFromPrompt(fixtureData, metadata, { suspiciousNodeHandling: 'exclude' });
@@ -51,11 +51,11 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
       });
     });
 
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should correctly identify which steps are affected by suspicious nodes', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should correctly identify which steps are affected by suspicious nodes', () => {
       // Load comfyui_suspicious_node fixture from actual image
-      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
-      const fixtureData = rawMetadata.prompt;
+      const fixtureData = typeof rawMetadata.prompt === 'string' ? JSON.parse(rawMetadata.prompt) : rawMetadata.prompt;
 
       const metadata = {};
       parser.extractFromPrompt(fixtureData, metadata, { suspiciousNodeHandling: 'exclude' });
@@ -122,11 +122,11 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
   });
 
   describe('integration with suspiciousNodeHandling options', () => {
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should include affectedSteps regardless of handling mode', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should include affectedSteps regardless of handling mode', () => {
       // Load from actual image
-      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
-      const fixtureData = rawMetadata.prompt;
+      const fixtureData = typeof rawMetadata.prompt === 'string' ? JSON.parse(rawMetadata.prompt) : rawMetadata.prompt;
 
       // Test with 'exclude' mode
       const metadataExclude = {};
@@ -141,11 +141,11 @@ describe('Suspicious Nodes - Affected Steps Detection', () => {
       expect(metadataInclude.suspiciousNodes[0].affectedSteps).toBeDefined();
     });
 
-    it.skipIf(!fixtureExists('comfyui_suspicious_node.webp'))('should work with overrides', () => {
+    it.skipIf(!fixtureExists('comfyui_suspicious_node_dualpath.webp'))('should work with overrides', () => {
       // Load from actual image
-      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node.webp'));
+      const imageBuffer = fs.readFileSync(path.join(__dirname, '../fixtures/comfyui_suspicious_node_dualpath.webp'));
       const rawMetadata = ImageMetadataReader.extractRawMetadata(imageBuffer, 'image/webp');
-      const fixtureData = rawMetadata.prompt;
+      const fixtureData = typeof rawMetadata.prompt === 'string' ? JSON.parse(rawMetadata.prompt) : rawMetadata.prompt;
 
       const metadata = {};
       parser.extractFromPrompt(fixtureData, metadata, {

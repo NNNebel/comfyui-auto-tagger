@@ -1,0 +1,70 @@
+{
+  "format": "comfyui",
+  "eagle_bridge": {
+    "final_node_id": "46"
+  },
+  "sampler_fallback": false,
+  "generationSteps": [
+    {
+      "nodeId": "18",
+      "nodeName": "KSampler",
+      "nodeType": "KSampler",
+      "isBase": true,
+      "seed": 1111111,
+      "steps": 30,
+      "cfg": 8,
+      "sampler": "euler_ancestral",
+      "scheduler": "simple",
+      "positive": "masterpiece, 1girl,witch hat, burgundy color hair, simple background",
+      "negative": "worst quality,",
+      "checkpoint": "novaAnimeXL_ilV140.safetensors",
+      "distance": 1,
+      "stepIndex": 1
+    },
+    {
+      "nodeId": "28",
+      "nodeName": "KSampler",
+      "nodeType": "KSampler",
+      "isBase": false,
+      "seed": 222222,
+      "steps": 20,
+      "cfg": 7,
+      "sampler": "euler_ancestral",
+      "scheduler": "normal",
+      "positive": "(ultra-detailed),",
+      "negative": "bad hands",
+      "checkpoint": "boleromixIllustrious_v815.safetensors",
+      "distance": 2,
+      "stepIndex": 2
+    }
+  ],
+  "extra_samplers": [
+    {
+      "id": "18",
+      "seed": 1111111,
+      "steps": 30,
+      "cfg": 8,
+      "sampler": "euler_ancestral",
+      "scheduler": "simple",
+      "is_base": true
+    },
+    {
+      "id": "28",
+      "seed": 222222,
+      "steps": 20,
+      "cfg": 7,
+      "sampler": "euler_ancestral",
+      "scheduler": "normal",
+      "is_base": false
+    }
+  ],
+  "seed": 1111111,
+  "steps": 30,
+  "cfg": 8,
+  "sampler": "euler_ancestral",
+  "scheduler": "simple",
+  "checkpoint": "novaAnimeXL_ilV140.safetensors",
+  "positive": "masterpiece, 1girl,witch hat, burgundy color hair, simple background\n(ultra-detailed),",
+  "negative": "worst quality,\nbad hands",
+  "loras": []
+}

@@ -100,6 +100,14 @@ describe('Sample Images Integration Tests', () => {
       mimeType: 'image/jpeg',
       format: 'comfyui',
       shouldSucceed: true
+    },
+    {
+      name: 'ComfyUI Sampler Custom Advanced PNG',
+      imagePath: 'tests/fixtures/comfy-samplerCustomAdvanced.png',
+      expectedPath: 'tests/expected/comfy-samplerCustomAdvanced.json',
+      mimeType: 'image/png',
+      format: 'comfyui',
+      shouldSucceed: true
     }
   ];
 

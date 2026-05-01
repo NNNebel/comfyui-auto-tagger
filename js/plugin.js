@@ -253,6 +253,14 @@ Promise.all([
     
     const suspiciousNodeHandlingSelect = document.getElementById('suspicious-node-handling');
 
+    // Define getSuspiciousNodeHandling for use in processing
+    window.getSuspiciousNodeHandling = function() {
+        if (suspiciousNodeHandlingSelect && suspiciousNodeHandlingSelect.value) {
+            return suspiciousNodeHandlingSelect.value;
+        }
+        return 'exclude'; // Default to exclude if not set
+    };
+
     // --- 2.1 Debug Logging ---
     const LOG_DIR = path.join(os.tmpdir(), 'comfyui-auto-tagger');
     let DEBUG_LOG_FILE = '';
@@ -447,9 +455,19 @@ Promise.all([
                 await debugLog('File info: ext=' + ext + ', size=' + buffer.length + ' bytes, mimeType=' + mimeType, item);
                 
                 // Get suspicious node handling option from UI
-                const suspiciousNodeHandling = window.getSuspiciousNodeHandling ? window.getSuspiciousNodeHandling() : 'exclude';
-                await debugLog('Suspicious node handling: ' + suspiciousNodeHandling, item);
-                
+                let suspiciousNodeHandling = window.getSuspiciousNodeHandling ? window.getSuspiciousNodeHandling() : 'exclude';
+                await debugLog('Suspicious node handling (from UI): ' + suspiciousNodeHandling, item);
+                await debugLog('suspiciousNodeHandlingSelect element exists: ' + (suspiciousNodeHandlingSelect ? 'yes' : 'no'), item);
+                await debugLog('suspiciousNodeHandlingSelect value: ' + (suspiciousNodeHandlingSelect ? suspiciousNodeHandlingSelect.value : 'NOT FOUND'), item);
+
+                // Convert 'ask' mode to 'include' for metadata extraction
+                // (ダイアログは後で判定する)
+                const originalSuspiciousNodeHandling = suspiciousNodeHandling;
+                if (suspiciousNodeHandling === 'ask') {
+                    suspiciousNodeHandling = 'include';
+                    await debugLog('Converting ask mode to include for metadata extraction', item);
+                }
+
                 // Use new MetadataService with options
                 await debugLog('Extracting metadata...', item);
                 const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui', {
@@ -459,7 +477,9 @@ Promise.all([
                 if (metadata) {
                     await debugLog('=== METADATA EXTRACTION COMPLETE ===', item);
                     await debugLog('Format: ' + metadata.format, item);
-                    
+                    await debugLog('suspiciousNodes exists: ' + (metadata.suspiciousNodes !== undefined), item);
+                    await debugLog('suspiciousNodes length: ' + (metadata.suspiciousNodes ? metadata.suspiciousNodes.length : 0), item);
+
                     // Log full metadata content
                     await debugLog('--- Full Metadata Content ---', item);
                     await debugLog(JSON.stringify(metadata, null, 2), item);
@@ -528,13 +548,13 @@ Promise.all([
                         }
                     }
                     
-                    if (suspiciousNodeHandling === 'exclude') {
+                    if (originalSuspiciousNodeHandling === 'exclude') {
                         await debugLog('Action: Automatically excluding suspicious nodes', item);
                         log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
-                    } else if (suspiciousNodeHandling === 'include') {
+                    } else if (originalSuspiciousNodeHandling === 'include') {
                         await debugLog('Action: Including all nodes (ignoring suspicious status)', item);
                         log('log.caution.suspicious_nodes_included', {name: item.name, count: metadata.suspiciousNodes.length});
-                    } else if (suspiciousNodeHandling === 'ask') {
+                    } else if (originalSuspiciousNodeHandling === 'ask') {
                         await debugLog('Action: Showing dialog to user', item);
                         // Check if handleSuspiciousNodes is available
                         if (typeof window.handleSuspiciousNodes !== 'function') {

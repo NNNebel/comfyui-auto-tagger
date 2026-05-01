@@ -58,8 +58,8 @@ describe('Plugin.js E2E Tests - Processing Flow', () => {
       'comfyui_simple.png',
       'comfyui_simple.webp',
       'comfyui_simple.jpeg',
-      'comfyui_suspicious_node.webp',
-      'comfyui_suspicious_node2.webp',
+      'comfyui_suspicious_node_dualpath.webp',
+      'comfyui_suspicious_node_simple.webp',
       'gemini-generate.png',
       // bridge-* fixtures - all formats (JPEG, PNG, WebP)
       'bridge-simple.jpg',
@@ -179,16 +179,16 @@ describe('Plugin.js E2E Tests - Processing Flow', () => {
   });
 
   describe('Full Processing Flow with processMetadata', () => {
-    it('should complete full processing flow for comfyui_suspicious_node2.webp', async () => {
-      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node2.webp');
+    it('should complete full processing flow for comfyui_suspicious_node_simple.webp', async () => {
+      const fixturePath = path.join(__dirname, '../fixtures/comfyui_suspicious_node_simple.webp');
       
       if (!fs.existsSync(fixturePath)) {
-        console.warn('Skipping test: comfyui_suspicious_node2.webp not found');
+        console.warn('Skipping test: comfyui_suspicious_node_simple.webp not found');
         return;
       }
 
       const buffer = fs.readFileSync(fixturePath);
-      const item = { name: 'comfyui_suspicious_node2', tags: [], annotation: '' };
+      const item = { name: 'comfyui_orphaned', tags: [], annotation: '' };
 
       const settings = {
         checkpoint: true,

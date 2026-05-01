@@ -136,11 +136,16 @@
         "case2": "試行錯誤中に一時的に無効化したノード",
         "hint": "💡 ヒント: 通常は「除外」を選択してください。",
         "hintDetail": "実際に使用されたノードの情報のみが記録されます。",
+        "warningCardTitle": "⚠️ 未使用の可能性があるノード",
+        "nodeLabel": "ノード",
+        "reasonLabel": "理由",
+        "suggestionLabel": "提案",
         "reason": {
             "imageProcessingNoInput": "画像処理ノード '{{nodeType}}' に画像/ピクセル入力がありません",
             "vaeEncodeNoInput": "VAEEncodeノードに画像/ピクセル入力がありません",
             "vaeDecodeNoInput": "VAEDecodeノードにサンプル/潜在入力がありません",
-            "samplerNoInput": "サンプラーノード '{{nodeType}}' に潜在画像入力がありません"
+            "samplerNoInput": "サンプラーノード '{{nodeType}}' に潜在画像入力がありません",
+            "missingInput": "ノード '{{nodeType}}' に必須入力が不足しています"
         },
         "suggestion": {
             "disconnected": "このノードは接続が切れているか、必要な接続が欠けている可能性があります。このノードをワークフローに含めるべきか確認してください。",

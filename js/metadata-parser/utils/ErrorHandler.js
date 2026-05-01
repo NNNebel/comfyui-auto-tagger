@@ -147,7 +147,7 @@
     static logParsingError(component, error, context = {}) {
       // Extract suggestions from ParseError instances
       const enhancedContext = { ...context };
-      
+
       if (error && typeof error === 'object') {
         // Check if error has ParseError properties
         if (error.context) {
@@ -163,8 +163,11 @@
           };
         }
       }
-      
-      this._log(LogLevel.ERROR, component, 'Parsing failed', enhancedContext, error);
+
+      // GraphConstructionError is expected during property-based testing with random inputs
+      // Log as warning to reduce noise while still recording the issue
+      const level = (error && error.name === 'GraphConstructionError') ? LogLevel.WARN : LogLevel.ERROR;
+      this._log(level, component, 'Parsing failed', enhancedContext, error);
     }
 
     /**
