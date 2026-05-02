@@ -152,6 +152,11 @@
             "vaeEncodeRequired": "VAEEncodeはエンコードするために画像入力が必要です。このノードは実行されない可能性があります。",
             "vaeDecodeRequired": "VAEDecodeはデコードするために潜在サンプルが必要です。このノードは実行されない可能性があります。",
             "samplerRequired": "サンプラーは潜在画像入力が必要です。このノードは実行されない可能性があります。"
-        }
+        },
+        "stepDisplay": "ステップ {{stepIndex}} / {{totalSteps}}",
+        "samplerInfo": "{{samplerType}} (seed: {{seed}}, steps: {{steps}}, cfg: {{cfg}})",
+        "notExecuted": "⚠️ このステップは実行されなかった可能性があります",
+        "excludedSamplerTitle": "除外されたサンプラー: {{samplerType}} (#{{nodeId}})",
+        "suspiciousSamplerTitle": "疑わしいサンプラー: {{samplerType}} (#{{nodeId}})"
     }
 }

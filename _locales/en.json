@@ -152,6 +152,11 @@
             "vaeEncodeRequired": "VAEEncode requires an image input to encode. This node may not execute.",
             "vaeDecodeRequired": "VAEDecode requires latent samples to decode. This node may not execute.",
             "samplerRequired": "Samplers require a latent image input. This node may not execute."
-        }
+        },
+        "stepDisplay": "Step {{stepIndex}} / {{totalSteps}}",
+        "samplerInfo": "{{samplerType}} (seed: {{seed}}, steps: {{steps}}, cfg: {{cfg}})",
+        "notExecuted": "⚠️ This step may not have been executed",
+        "excludedSamplerTitle": "Excluded sampler: {{samplerType}} (#{{nodeId}})",
+        "suspiciousSamplerTitle": "Suspicious sampler: {{samplerType}} (#{{nodeId}})"
     }
 }
