@@ -4,18 +4,16 @@
   'use strict';
 
   // Get dependencies for both environments
-  var BinaryUtils, ErrorHandler, ParsingUtils;
-  
+  var BinaryUtils, ErrorHandler;
+
   if (typeof window !== 'undefined') {
     // Browser environment
     BinaryUtils = window.BinaryUtils;
     ErrorHandler = window.ErrorHandler;
-    ParsingUtils = window.ParsingUtils;
   } else if (typeof require !== 'undefined') {
     // Node.js environment (testing)
     BinaryUtils = require('../utils/BinaryUtils');
     ErrorHandler = require('../utils/ErrorHandler').ErrorHandler;
-    ParsingUtils = require('../utils/ParsingUtils');
   } else {
     throw new Error('Required dependencies not found');
   }
@@ -368,11 +366,8 @@ class ImageMetadataReader {
   }
 
   /**
-   * Parse JSON from a specific position in a buffer (deprecated, use _extractJsonStringFromPos)
    * @private
-   * @param {Uint8Array} fullBuffer - Full buffer containing JSON
-   * @param {number} startPos - Starting position of JSON
-   * @returns {Object|null} Parsed JSON object or null if parsing fails
+   * @deprecated Use _extractJsonStringFromPos instead
    */
   static _parseJsonFromPos(fullBuffer, startPos) {
     const jsonString = this._extractJsonStringFromPos(fullBuffer, startPos);
