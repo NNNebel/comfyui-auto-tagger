@@ -829,7 +829,11 @@
     <script src="js/metadata-processor/TagGenerator.js"></script>
     <script src="js/metadata-processor/AnnotationBuilder.js"></script>
     <script src="js/metadata-processor/MetadataProcessor.js"></script>
-    
+
+    <!-- Plugin UI helpers (step-centric suspicious node dialog) -->
+    <script src="js/inspector/SuspiciousNodeCategorizer.js"></script>
+    <script src="js/plugin-ui/SuspiciousNodeDialog.js"></script>
+
     <!-- Legacy core.js for processMetadata -->
     <script src="js/core.js"></script>
     <script src="js/plugin.js"></script>
@@ -1644,13 +1648,13 @@
     </script>
     
     <script>
-        // Suspicious node handling
-        let suspiciousNodeQueue = [];
-        let currentSuspiciousNodeIndex = 0;
-        let suspiciousNodeDecisions = {};
+        // Step-centric suspicious node dialog state
+        let dialogSteps = [];
+        let currentDialogStepIndex = 0;
+        let stepDecisions = {};            // { stepIndex: 'include'|'exclude' }
         let suspiciousNodeResolve = null;
-        let currentImageItem = null; // Store current image item
-        let globalSuspiciousNodeDecision = null; // Store global decision (null, 'exclude', 'include')
+        let currentImageItem = null;
+        let globalSuspiciousNodeDecision = null;
 
         function getSuspiciousNodeHandling() {
             const select = document.getElementById('suspicious-node-handling');
@@ -1659,27 +1663,23 @@
 
         async function handleSuspiciousNodes(imageItem, suspiciousNodes) {
             const handling = getSuspiciousNodeHandling();
-            
+
             console.log('[DEBUG] handleSuspiciousNodes called for:', imageItem.name);
             console.log('[DEBUG] globalSuspiciousNodeDecision:', globalSuspiciousNodeDecision);
             console.log('[DEBUG] handling mode:', handling);
-            
-            // Check if there's a global decision from previous dialog
+
             if (globalSuspiciousNodeDecision) {
                 console.log('[DEBUG] Using global decision:', globalSuspiciousNodeDecision, 'for image:', imageItem.name);
                 return { action: globalSuspiciousNodeDecision, overrides: {} };
             }
-            
+
             if (handling === 'exclude') {
-                // Exclude without logging (plugin.js will log)
                 console.log('[DEBUG] Using exclude mode (no dialog)');
                 return { action: 'exclude', overrides: {} };
             } else if (handling === 'include') {
-                // Include all without asking
                 console.log('[DEBUG] Using include mode (no dialog)');
                 return { action: 'include', overrides: {} };
             } else if (handling === 'ask') {
-                // Show dialog for each suspicious node
                 console.log('[DEBUG] Showing dialog for:', imageItem.name);
                 return await showSuspiciousNodeDialog(imageItem, suspiciousNodes);
             }
@@ -1687,23 +1687,31 @@
 
         async function showSuspiciousNodeDialog(imageItem, suspiciousNodes) {
             return new Promise((resolve) => {
-                suspiciousNodeQueue = suspiciousNodes;
-                currentSuspiciousNodeIndex = 0;
-                suspiciousNodeDecisions = {};
+                dialogSteps = window.SuspiciousNodeDialog.buildDialogSteps({ suspiciousNodes });
+
+                // No step-level dialog needed (orphan-only or empty) — fall back to legacy behaviour:
+                // exclude all suspicious nodes.
+                if (dialogSteps.length === 0) {
+                    console.log('[DEBUG] No dialog steps to show, defaulting to exclude');
+                    resolve({ action: 'exclude', overrides: {} });
+                    return;
+                }
+
+                currentDialogStepIndex = 0;
+                stepDecisions = {};
                 suspiciousNodeResolve = resolve;
-                currentImageItem = imageItem; // Store image item
-                
-                showNextSuspiciousNode();
+                currentImageItem = imageItem;
+
+                showNextDialogStep();
             });
         }
 
-        function showNextSuspiciousNode() {
-            if (currentSuspiciousNodeIndex >= suspiciousNodeQueue.length) {
-                // All nodes processed
+        function showNextDialogStep() {
+            if (currentDialogStepIndex >= dialogSteps.length) {
+                // All steps processed
                 document.getElementById('suspicious-node-dialog').classList.remove('visible');
-                
-                // Resize window back to normal when dialog is closed
-                console.log('[DEBUG] Resizing window back to 610px');
+
+                console.log('[DEBUG] Resizing window back to 550px');
                 if (typeof eagle !== 'undefined' && eagle.window) {
                     try {
                         eagle.window.setSize(640, 550);
@@ -1711,67 +1719,64 @@
                         console.log('Window resize not supported:', e);
                     }
                 }
-                
-                // Determine final action
-                const decisions = Object.values(suspiciousNodeDecisions);
-                const hasInclude = decisions.some(d => d === 'include');
-                const hasExclude = decisions.some(d => d === 'exclude');
-                
-                let overrides = {};
-                for (const [nodeId, decision] of Object.entries(suspiciousNodeDecisions)) {
-                    if (decision === 'include') {
-                        overrides[nodeId] = { forceInclude: true };
-                    } else if (decision === 'exclude') {
-                        overrides[nodeId] = { forceExclude: true };
-                    }
-                }
-                
-                // Determine base action: if all are the same, use that; otherwise use 'exclude' as default
-                let baseAction = 'exclude';
-                if (hasInclude && !hasExclude) {
-                    baseAction = 'include';
-                } else if (!hasInclude && hasExclude) {
-                    baseAction = 'exclude';
-                }
-                
+
+                const result = window.SuspiciousNodeDialog.mapStepDecisionsToNodeOverrides(
+                    dialogSteps,
+                    stepDecisions
+                );
+
                 if (suspiciousNodeResolve) {
-                    suspiciousNodeResolve({ 
-                        action: baseAction,
-                        overrides: overrides
-                    });
+                    suspiciousNodeResolve(result);
                     suspiciousNodeResolve = null;
                 }
-                currentImageItem = null; // Clear image item
+                currentImageItem = null;
                 return;
             }
 
-            const node = suspiciousNodeQueue[currentSuspiciousNodeIndex];
+            const step = dialogSteps[currentDialogStepIndex];
             const dialog = document.getElementById('suspicious-node-dialog');
-            
-            // Update progress
-            document.getElementById('dialog-progress').textContent = 
-                `${currentSuspiciousNodeIndex + 1} / ${suspiciousNodeQueue.length}`;
-            
-            // Update image
+            const t = (key, params) => (window.i18next ? window.i18next.t(key, params) : key);
+
+            // Step n / total
+            document.getElementById('dialog-progress').textContent =
+                t('suspiciousNode.stepDisplay', {
+                    stepIndex: currentDialogStepIndex + 1,
+                    totalSteps: dialogSteps.length
+                });
+
+            // Image preview
             const img = document.getElementById('dialog-image');
             img.src = currentImageItem.url || currentImageItem.filePath;
-            
-            // Update filename
             document.getElementById('dialog-filename').textContent = currentImageItem.name;
-            
-            // Update node info
-            const nodeInfoText = window.i18next 
-                ? window.i18next.t('ui.dialog.nodeInfo', { nodeId: node.nodeId, nodeType: node.nodeType || 'Unknown' })
-                : `ノード #${node.nodeId} (${node.nodeType || 'Unknown'})`;
-            document.getElementById('dialog-node-id').textContent = nodeInfoText;
-            
-            // Draw workflow graph
-            drawWorkflowGraph(node);
-            
+
+            // Sampler header (e.g. "KSampler (seed: 123, steps: 20, cfg: 7)")
+            const meta = step.stepMetadata || {};
+            const titleKey = step.type === 'excluded-sampler'
+                ? 'suspiciousNode.excludedSamplerTitle'
+                : 'suspiciousNode.suspiciousSamplerTitle';
+            const headerText = t(titleKey, {
+                samplerType: meta.nodeType || 'Sampler',
+                nodeId: meta.nodeId || '?'
+            });
+            document.getElementById('dialog-node-id').textContent = headerText;
+
+            // Sampler parameters line
+            document.getElementById('dialog-node-description').textContent = t('suspiciousNode.samplerInfo', {
+                samplerType: meta.nodeType || 'Sampler',
+                seed: meta.seed != null ? meta.seed : '?',
+                steps: meta.steps != null ? meta.steps : '?',
+                cfg: meta.cfg != null ? meta.cfg : '?'
+            });
+
+            // Question line
+            document.getElementById('dialog-node-question').textContent = t('suspiciousNode.notExecuted');
+
+            // Render warning cards into the existing graph slot
+            renderWarningCards(step.suspiciousNodesInfo || []);
+
             dialog.classList.add('visible');
-            
-            // Resize window when dialog is shown
-            console.log('[DEBUG] Resizing window to 900px for dialog');
+
+            console.log('[DEBUG] Resizing window to 1250px for dialog');
             if (typeof eagle !== 'undefined' && eagle.window) {
                 try {
                     eagle.window.setSize(640, 1250);
@@ -1781,129 +1786,68 @@
             }
         }
 
-        /**
-         * Draw a simple workflow graph showing the branch structure
-         * @param {Object} node - Suspicious node information
-         */
-        function drawWorkflowGraph(node) {
-            const graphContainer = document.getElementById('workflow-graph');
-            if (!graphContainer) return;
-            
-            // Clear previous graph
-            graphContainer.innerHTML = '';
-            
-            // Get affected steps info
-            const affectedSteps = node.affectedSteps || [];
-            if (affectedSteps.length === 0) {
-                const noGraphText = window.i18next ? window.i18next.t('suspiciousNode.noGraphInfo') : 'グラフ情報が利用できません';
-                graphContainer.innerHTML = `<div style="color: var(--secondary-text); font-size: 11px;">${noGraphText}</div>`;
+        function renderWarningCards(suspiciousNodes) {
+            const container = document.getElementById('workflow-graph');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!suspiciousNodes || suspiciousNodes.length === 0) {
+                const noInfo = window.i18next ? window.i18next.t('suspiciousNode.noGraphInfo') : 'No info';
+                container.innerHTML = `<div style="color: var(--secondary-text); font-size: 11px;">${noInfo}</div>`;
                 return;
             }
-            
-            // Build graph structure
-            const mainRouteLabel = window.i18next ? window.i18next.t('suspiciousNode.mainRoute') : 'メインルート';
-            const unusedRouteLabel = window.i18next ? window.i18next.t('suspiciousNode.unusedRoute') : '未使用ルート';
-            
-            // Create graph HTML
-            let graphHTML = '<div style="display: flex; align-items: center; gap: 8px; font-size: 11px; flex-wrap: wrap;">';
-            
-            // Start node
-            graphHTML += `<div style="padding: 6px 10px; background-color: rgba(76, 175, 80, 0.2); border: 1px solid #4caf50; border-radius: 3px; font-weight: 500;">Start</div>`;
-            graphHTML += `<div style="color: var(--secondary-text);">→</div>`;
-            
-            // Branch point (first affected step)
-            const firstStep = affectedSteps[0];
-            const branchNodeId = firstStep.stepNodeId;
-            const branchNodeType = firstStep.stepNodeType;
-            
-            graphHTML += `<div style="padding: 6px 10px; background-color: rgba(33, 150, 243, 0.2); border: 1px solid #2196f3; border-radius: 3px; font-weight: 500;">`;
-            graphHTML += `#${branchNodeId}<br><span style="font-size: 9px; font-weight: normal;">${branchNodeType}</span>`;
-            graphHTML += `</div>`;
-            
-            // Branch structure
-            graphHTML += `<div style="display: flex; flex-direction: column; gap: 8px; margin-left: 8px;">`;
-            
-            // Main route (used) - with label and actual nodes
-            graphHTML += `<div style="display: flex; align-items: center; gap: 8px;">`;
-            graphHTML += `<div style="color: #4caf50; font-weight: bold;">┬→</div>`;
-            
-            // Main route label (different style from nodes)
-            graphHTML += `<div style="padding: 2px 6px; background-color: transparent; border: 1px dashed #4caf50; border-radius: 3px; font-size: 9px; color: #4caf50; font-weight: 500;">`;
-            graphHTML += `${mainRouteLabel}`;
-            graphHTML += `</div>`;
-            
-            // Show next step in main route if available
-            if (affectedSteps.length > 1) {
-                const nextStep = affectedSteps[1];
-                graphHTML += `<div style="color: var(--secondary-text);">→</div>`;
-                graphHTML += `<div style="padding: 6px 10px; background-color: rgba(76, 175, 80, 0.2); border: 1px solid #4caf50; border-radius: 3px;">`;
-                graphHTML += `#${nextStep.stepNodeId}<br><span style="font-size: 9px;">${nextStep.stepNodeType}</span>`;
-                graphHTML += `</div>`;
-                graphHTML += `<div style="color: var(--secondary-text);">→ ...</div>`;
-            } else {
-                graphHTML += `<div style="color: var(--secondary-text);">→ ...</div>`;
+
+            const t = (key, params) => (window.i18next ? window.i18next.t(key, params) : key);
+            const nodeLabel = t('suspiciousNode.nodeLabel');
+            const reasonLabel = t('suspiciousNode.reasonLabel');
+            const suggestionLabel = t('suspiciousNode.suggestionLabel');
+
+            const escape = (s) => String(s).replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            for (const n of suspiciousNodes) {
+                const reason = n.reasonKey ? t(n.reasonKey, n.reasonParams || {}) : '';
+                const suggestion = n.suggestionKey ? t(n.suggestionKey, n.suggestionParams || {}) : '';
+                html += `
+                    <div style="padding: 10px; background-color: rgba(244, 67, 54, 0.08); border-left: 3px solid #f44336; border-radius: 3px; font-size: 12px;">
+                        <div style="font-weight: 600; margin-bottom: 4px;">${escape(nodeLabel)}: ${escape(n.nodeType || 'Unknown')} #${escape(n.nodeId || '?')}</div>
+                        ${reason ? `<div style="margin-top: 4px;"><span style="color: var(--secondary-text);">${escape(reasonLabel)}:</span> ${escape(reason)}</div>` : ''}
+                        ${suggestion ? `<div style="margin-top: 4px;"><span style="color: var(--secondary-text);">${escape(suggestionLabel)}:</span> ${escape(suggestion)}</div>` : ''}
+                    </div>
+                `;
             }
-            graphHTML += `</div>`;
-            
-            // Unused route (suspicious node) - with label and actual node
-            graphHTML += `<div style="display: flex; align-items: center; gap: 8px;">`;
-            graphHTML += `<div style="color: #f44336; font-weight: bold;">└→</div>`;
-            
-            // Unused route label (different style from nodes)
-            graphHTML += `<div style="padding: 2px 6px; background-color: transparent; border: 1px dashed #f44336; border-radius: 3px; font-size: 9px; color: #f44336; font-weight: 500;">`;
-            graphHTML += `${unusedRouteLabel}`;
-            graphHTML += `</div>`;
-            
-            graphHTML += `<div style="color: var(--secondary-text);">→</div>`;
-            graphHTML += `<div style="padding: 6px 10px; background-color: rgba(244, 67, 54, 0.2); border: 1px solid #f44336; border-radius: 3px;">`;
-            graphHTML += `#${node.nodeId}<br><span style="font-size: 9px;">${node.nodeType}</span>`;
-            graphHTML += `</div>`;
-            graphHTML += `<div style="color: var(--secondary-text);">→ ❌</div>`;
-            graphHTML += `</div>`;
-            
-            graphHTML += `</div>`; // Close branch structure
-            graphHTML += '</div>'; // Close main container
-            
-            graphContainer.innerHTML = graphHTML;
+            html += '</div>';
+            container.innerHTML = html;
         }
 
-        function handleNodeDecision(event, decision, scope) {
-            const node = suspiciousNodeQueue[currentSuspiciousNodeIndex];
+        function handleStepDecision(event, decision, scope) {
+            const step = dialogSteps[currentDialogStepIndex];
             const isShiftPressed = event && event.shiftKey;
-            
-            console.log('[DEBUG] handleNodeDecision called:', {
-                decision: decision,
-                scope: scope,
-                isShiftPressed: isShiftPressed,
-                nodeId: node.nodeId
+
+            console.log('[DEBUG] handleStepDecision called:', {
+                decision, scope, isShiftPressed, stepIndex: step && step.stepIndex
             });
-            
+
             if (scope === 'node') {
-                // Apply to current node only
-                suspiciousNodeDecisions[node.nodeId] = decision;
-                currentSuspiciousNodeIndex++;
-                
-                if (isShiftPressed) {
-                    // Shift key pressed: Apply to all remaining images
-                    console.log('[DEBUG] Setting global decision (node scope):', decision);
-                    globalSuspiciousNodeDecision = decision;
-                }
+                // Apply to current step only
+                if (step) stepDecisions[step.stepIndex] = decision;
+                currentDialogStepIndex++;
             } else if (scope === 'image') {
-                // Apply to all remaining nodes in current image
-                for (let i = currentSuspiciousNodeIndex; i < suspiciousNodeQueue.length; i++) {
-                    suspiciousNodeDecisions[suspiciousNodeQueue[i].nodeId] = decision;
+                // Apply to all remaining steps in current image
+                for (let i = currentDialogStepIndex; i < dialogSteps.length; i++) {
+                    stepDecisions[dialogSteps[i].stepIndex] = decision;
                 }
-                currentSuspiciousNodeIndex = suspiciousNodeQueue.length;
-                
-                if (isShiftPressed) {
-                    // Shift key pressed: Apply to all remaining images
-                    console.log('[DEBUG] Setting global decision (image scope):', decision);
-                    globalSuspiciousNodeDecision = decision;
-                }
+                currentDialogStepIndex = dialogSteps.length;
             }
-            
-            // Show next node
-            showNextSuspiciousNode();
+
+            if (isShiftPressed) {
+                console.log('[DEBUG] Setting global decision:', decision);
+                globalSuspiciousNodeDecision = decision;
+            }
+
+            showNextDialogStep();
         }
 
         // Export for use in plugin.js
@@ -1913,20 +1857,20 @@
             console.log('[DEBUG] Resetting global decision');
             globalSuspiciousNodeDecision = null;
         };
-        
+
         // Add event listeners to dialog buttons
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('btn-exclude-node').addEventListener('click', function(e) {
-                handleNodeDecision(e, 'exclude', 'node');
+                handleStepDecision(e, 'exclude', 'node');
             });
             document.getElementById('btn-include-node').addEventListener('click', function(e) {
-                handleNodeDecision(e, 'include', 'node');
+                handleStepDecision(e, 'include', 'node');
             });
             document.getElementById('btn-exclude-image').addEventListener('click', function(e) {
-                handleNodeDecision(e, 'exclude', 'image');
+                handleStepDecision(e, 'exclude', 'image');
             });
             document.getElementById('btn-include-image').addEventListener('click', function(e) {
-                handleNodeDecision(e, 'include', 'image');
+                handleStepDecision(e, 'include', 'image');
             });
         });
         
