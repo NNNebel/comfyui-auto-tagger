@@ -1771,8 +1771,8 @@
             // Question line
             document.getElementById('dialog-node-question').textContent = t('suspiciousNode.notExecuted');
 
-            // Render warning cards into the existing graph slot
-            renderWarningCards(step.suspiciousNodesInfo || []);
+            // Render workflow graph and warning cards
+            drawWorkflowGraph(step);
 
             dialog.classList.add('visible');
 
@@ -1786,14 +1786,125 @@
             }
         }
 
-        function renderWarningCards(suspiciousNodes) {
+        function drawWorkflowGraph(step) {
             const container = document.getElementById('workflow-graph');
             if (!container) return;
             container.innerHTML = '';
 
+            if (!step) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const t = (key, params) => (window.i18next ? window.i18next.t(key, params) : key);
+            const meta = step.stepMetadata || {};
+            const suspNodes = step.suspiciousNodesInfo || [];
+
+            // Create canvas for workflow visualization
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 180;
+            canvas.style.maxWidth = '100%';
+            canvas.style.border = '1px solid var(--border-color)';
+            canvas.style.borderRadius = '3px';
+            canvas.style.marginBottom = '12px';
+            canvas.style.backgroundColor = 'rgba(0,0,0,0.03)';
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                container.innerHTML = '<div style="color: var(--secondary-text);">Graph not available</div>';
+                return;
+            }
+
+            // Draw workflow graph
+            const padding = 20;
+            const nodeWidth = 100;
+            const nodeHeight = 50;
+            const centerY = canvas.height / 2;
+
+            // Helper to draw a node box
+            const drawNode = (x, y, label, subLabel, isHighlight) => {
+                const bgColor = isHighlight ? 'rgba(76, 175, 80, 0.15)' : 'rgba(200, 200, 200, 0.2)';
+                const borderColor = isHighlight ? '#4CAF50' : '#999';
+                const textColor = isHighlight ? '#2E7D32' : '#333';
+
+                ctx.fillStyle = bgColor;
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = isHighlight ? 2 : 1;
+                ctx.fillRect(x, y, nodeWidth, nodeHeight);
+                ctx.strokeRect(x, y, nodeWidth, nodeHeight);
+
+                ctx.fillStyle = textColor;
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, x + nodeWidth/2, y + 18);
+
+                if (subLabel) {
+                    ctx.font = '9px sans-serif';
+                    ctx.fillStyle = '#666';
+                    ctx.fillText(subLabel, x + nodeWidth/2, y + 33);
+                }
+            };
+
+            // Draw arrow between nodes
+            const drawArrow = (x1, y1, x2, y2) => {
+                const headlen = 8;
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                // Arrow head
+                ctx.fillStyle = '#666';
+                ctx.beginPath();
+                ctx.moveTo(x2, y2);
+                ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+                ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+                ctx.closePath();
+                ctx.fill();
+            };
+
+            // Position nodes
+            const upstreamX = padding;
+            const samplerX = upstreamX + nodeWidth + 60;
+            const downstreamX = samplerX + nodeWidth + 60;
+
+            // Draw upstream nodes (generic input)
+            drawNode(upstreamX, centerY - nodeHeight/2, 'Input', 'nodes', false);
+
+            // Draw arrows
+            drawArrow(upstreamX + nodeWidth, centerY, samplerX, centerY);
+            drawArrow(samplerX + nodeWidth, centerY, downstreamX, centerY);
+
+            // Draw center sampler (highlighted)
+            const samplerLabel = meta.nodeType || 'Sampler';
+            const samplerSubLabel = `#${meta.nodeId || '?'}`;
+            drawNode(samplerX, centerY - nodeHeight/2, samplerLabel, samplerSubLabel, true);
+
+            // Draw downstream nodes (generic output)
+            drawNode(downstreamX, centerY - nodeHeight/2, 'Output', 'nodes', false);
+
+            container.appendChild(canvas);
+
+            // Add warning cards below graph
+            renderWarningCards(suspNodes);
+        }
+
+        function renderWarningCards(suspiciousNodes) {
+            const container = document.getElementById('workflow-graph');
+            if (!container) return;
+
             if (!suspiciousNodes || suspiciousNodes.length === 0) {
                 const noInfo = window.i18next ? window.i18next.t('suspiciousNode.noGraphInfo') : 'No info';
-                container.innerHTML = `<div style="color: var(--secondary-text); font-size: 11px;">${noInfo}</div>`;
+                const div = document.createElement('div');
+                div.style.color = 'var(--secondary-text)';
+                div.style.fontSize = '11px';
+                div.textContent = noInfo;
+                container.appendChild(div);
                 return;
             }
 
@@ -1819,7 +1930,7 @@
                 `;
             }
             html += '</div>';
-            container.innerHTML = html;
+            container.innerHTML += html;
         }
 
         function handleStepDecision(event, decision, scope) {

@@ -60,3 +60,9 @@ tests/expected/*.json
 !tests/expected/bridge-*.json
 !tests/expected/sample/
 tests/expected/raw-metadata/
+
+# Debug and test output files
+debug-*.js
+test-*.txt
+test_*.txt
+TEST_RULES.md
