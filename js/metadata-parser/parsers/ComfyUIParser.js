@@ -161,38 +161,74 @@ class ComfyUIParser extends MetadataParserBase {
     
     // Store suspicious nodes in metadata with affected steps
     if (suspiciousNodes && suspiciousNodes.length > 0) {
+      // Compute the "exclude-base" sampler set: what samplers exist when ALL suspicious
+      // nodes are excluded. This is the stable reference for affectedSteps comparison —
+      // it does not depend on options.suspiciousNodeHandling, so the dialog gets the
+      // same stepMetadata regardless of whether the caller chose include / exclude.
+      let excludeBaseSamplersMetadata;
+      if (options.suspiciousNodeHandling === 'exclude' &&
+          !suspiciousNodes.some(sn => options.overrides && options.overrides[sn.nodeId] && options.overrides[sn.nodeId].forceInclude)) {
+        // Fast path: allSamplersMetadata is already the exclude-base
+        excludeBaseSamplersMetadata = allSamplersMetadata;
+      } else {
+        const excludeOverrides = { ...(options.overrides || {}) };
+        for (const sn of suspiciousNodes) {
+          excludeOverrides[sn.nodeId] = { forceExclude: true };
+        }
+        const excludeOptions = {
+          ...options,
+          suspiciousNodeHandling: 'exclude',
+          overrides: excludeOverrides,
+          dictionary: dictionary
+        };
+        const excludeGraph = new ComfyUIGraph(promptData, excludeOptions);
+        const excludeAnalyzer = new ComfyUISamplerAnalyzer(excludeGraph);
+        excludeAnalyzer.setDictionary(dictionary);
+        excludeAnalyzer.setReporter(reporter);
+        excludeBaseSamplersMetadata = excludeAnalyzer.extractAllSamplersMetadata();
+      }
+
       // For each suspicious node, find which steps are affected
       metadata.suspiciousNodes = suspiciousNodes.map(suspNode => {
         const affectedSteps = [];
-        
-        // Create a temporary graph with this suspicious node force-included
+
+        // Isolate this suspicious node's effect: force-include only this one,
+        // force-exclude all other suspicious nodes. Without this, in 'include' mode
+        // the other suspicious nodes would still appear in tempSamplersMetadata and
+        // cross-contaminate the affectedSteps comparison.
+        const tempOverrides = { ...(options.overrides || {}) };
+        for (const sn of suspiciousNodes) {
+          if (sn.nodeId !== suspNode.nodeId) {
+            tempOverrides[sn.nodeId] = { forceExclude: true };
+          }
+        }
+        tempOverrides[suspNode.nodeId] = { forceInclude: true };
+
         const tempOptions = {
           ...options,
-          overrides: {
-            ...options.overrides,
-            [suspNode.nodeId]: { forceInclude: true }
-          }
+          suspiciousNodeHandling: 'exclude',
+          overrides: tempOverrides
         };
-        
+
         const tempGraph = new ComfyUIGraph(promptData, tempOptions);
         const tempAnalyzer = new ComfyUISamplerAnalyzer(tempGraph);
-        
+
         // Extract all samplers with the suspicious node included
         const tempSamplersMetadata = tempAnalyzer.extractAllSamplersMetadata();
 
         // If this suspicious node is itself a sampler, capture its own step metadata
         const ownStepMetadata = tempSamplersMetadata.find(s => s.nodeId === suspNode.nodeId);
 
-        // Compare with original samplers to find which EXTERNAL steps would be affected
-        // (exclude self-referencing: if the suspicious node is the sampler itself, that's ownStepMetadata)
+        // Compare against the exclude-base to find samplers that only appear when
+        // this suspicious node is included.
         tempSamplersMetadata.forEach((tempStep, index) => {
           if (tempStep.nodeId === suspNode.nodeId) return; // self — handled via ownStepMetadata
 
-          // Check if this sampler exists in the original metadata
-          const originalStep = allSamplersMetadata.find(s => s.nodeId === tempStep.nodeId);
+          const inExcludeBase = excludeBaseSamplersMetadata.find(s => s.nodeId === tempStep.nodeId);
 
-          if (!originalStep) {
-            // This sampler only appears when suspicious node is included — capture full metadata for display
+          if (!inExcludeBase) {
+            // This sampler does not exist when all suspicious nodes are excluded —
+            // including this suspicious node makes it appear. Capture full metadata for display.
             affectedSteps.push({
               stepIndex: index + 1,
               stepNodeId: tempStep.nodeId,
@@ -200,12 +236,13 @@ class ComfyUIParser extends MetadataParserBase {
               stepMetadata: tempStep
             });
           } else {
-            // Sampler exists in both - check if suspicious node is in its dependency chain
+            // Sampler exists even without this suspicious node — check if suspicious
+            // node is in its dependency chain (to confirm causal relationship).
             const ancestors = tempGraph.getAllAncestors(tempStep.nodeId);
             if (ancestors.has(suspNode.nodeId)) {
-              const originalIndex = allSamplersMetadata.findIndex(s => s.nodeId === tempStep.nodeId);
+              const refIndex = allSamplersMetadata.findIndex(s => s.nodeId === tempStep.nodeId);
               affectedSteps.push({
-                stepIndex: originalIndex + 1,
+                stepIndex: (refIndex >= 0 ? refIndex : index) + 1,
                 stepNodeId: tempStep.nodeId,
                 stepNodeType: tempStep.nodeType
               });
