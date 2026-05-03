@@ -464,8 +464,8 @@ Promise.all([
                 // (ダイアログは後で判定する)
                 const originalSuspiciousNodeHandling = suspiciousNodeHandling;
                 if (suspiciousNodeHandling === 'ask') {
-                    suspiciousNodeHandling = 'exclude';
-                    await debugLog('Converting ask mode to exclude for initial metadata extraction (dialog needs excluded-sampler info)', item);
+                    suspiciousNodeHandling = 'include';
+                    await debugLog('Converting ask mode to include for metadata extraction', item);
                 }
 
                 // Use new MetadataService with options
