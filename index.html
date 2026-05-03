@@ -1687,6 +1687,16 @@
 
         async function showSuspiciousNodeDialog(imageItem, suspiciousNodes) {
             return new Promise((resolve) => {
+                // Debug: log the actual structure of suspiciousNodes before dialog construction
+                console.log('[DEBUG] showSuspiciousNodeDialog: suspiciousNodes count:', suspiciousNodes.length);
+                for (let i = 0; i < suspiciousNodes.length; i++) {
+                    const sn = suspiciousNodes[i];
+                    console.log(`  [${i}] nodeId:${sn.nodeId} type:${sn.nodeType} stepMetadata:${!!sn.stepMetadata} affectedSteps:${(sn.affectedSteps||[]).length}`);
+                    for (let j = 0; j < (sn.affectedSteps || []).length; j++) {
+                        const as = sn.affectedSteps[j];
+                        console.log(`      [${j}] stepNodeId:${as.stepNodeId} has_stepMetadata:${!!as.stepMetadata}`);
+                    }
+                }
                 dialogSteps = window.SuspiciousNodeDialog.buildDialogSteps({ suspiciousNodes });
 
                 // No step-level dialog needed (orphan-only or empty) — fall back to legacy behaviour:

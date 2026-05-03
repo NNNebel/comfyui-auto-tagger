@@ -165,10 +165,11 @@ class ComfyUISamplerAnalyzer {
         result.nodes.forEach(function(s) { reachableSamplers.add(s.id); });
         
         // Collect suspicious nodes
+        debugLog('    traceToType result.suspiciousNodes count: ' + (result.suspiciousNodes ? result.suspiciousNodes.length : 0), 'warn');
         if (result.suspiciousNodes && result.suspiciousNodes.length > 0) {
           debugLog('    Found ' + result.suspiciousNodes.length + ' suspicious nodes', 'warn');
           result.suspiciousNodes.forEach(function(node) {
-            debugLog('      Suspicious: ' + node.nodeId + ' (' + node.nodeType + ') - Missing: ' + JSON.stringify(node.missingInputs), 'warn');
+            debugLog('      Suspicious: ' + node.nodeId + ' (' + node.nodeType + ')', 'warn');
           });
           allSuspiciousNodes.push.apply(allSuspiciousNodes, result.suspiciousNodes);
         }
