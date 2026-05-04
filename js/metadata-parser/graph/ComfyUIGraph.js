@@ -419,15 +419,8 @@ class ComfyUIGraph {
     
     // Mark as visiting
     visiting.add(nodeId);
-    
-    // If node has no inputs, it's a source node and is executable
-    if (!node.inputs || Object.keys(node.inputs).length === 0) {
-      visiting.delete(nodeId);
-      cache.set(nodeId, true);
-      return true;
-    }
-    
-    // Heuristic check: detect suspicious nodes
+
+    // Heuristic check: detect suspicious nodes BEFORE accepting empty inputs
     // A node is suspicious if it's expected to output something (has consumers)
     // but lacks typical inputs for that output type
     const suspicion = this._detectSuspiciousNode(nodeId, node);
@@ -455,7 +448,14 @@ class ComfyUIGraph {
         });
       }
     }
-    
+
+    // After suspicious detection, check if node has no inputs → it's a source node
+    if (!node.inputs || Object.keys(node.inputs).length === 0) {
+      visiting.delete(nodeId);
+      cache.set(nodeId, true);
+      return true;
+    }
+
     // Check all link inputs - verify that linked nodes exist and are executable
     for (const [key, value] of Object.entries(node.inputs)) {
       if (Array.isArray(value) && value.length === 2) {
