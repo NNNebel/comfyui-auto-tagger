@@ -51,6 +51,13 @@ class MetadataService {
      */
     this.registry = new ParserRegistry();
     this.initializeParsers();
+
+    /**
+     * Container reader registry for binary extraction
+     * Initialized once to avoid creating reader instances on every call
+     * @type {ContainerReaderRegistry}
+     */
+    this.containerRegistry = ContainerReaderRegistry.createDefault();
   }
 
   /**
@@ -94,8 +101,7 @@ class MetadataService {
         Validators.validateMimeType(mimeType);
 
         // Step 1: Extract raw chunks from the image using ContainerReaderRegistry
-        const registry = ContainerReaderRegistry.createDefault();
-        const reader = registry.getReader(mimeType);
+        const reader = this.containerRegistry.getReader(mimeType);
         const rawChunks = reader ? reader.extractRawChunks(buffer) : {};
 
         // Validate raw chunks

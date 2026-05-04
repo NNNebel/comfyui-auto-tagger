@@ -23,6 +23,11 @@
     extractRawChunks(buffer) {
       const result = {};
 
+      // Check minimum buffer size for JPEG signature
+      if (buffer.length < 2) {
+        return result;
+      }
+
       // Verify JPEG signature: FFD8
       if (buffer[0] !== 0xFF || buffer[1] !== 0xD8) {
         return result;
