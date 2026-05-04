@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+(No unreleased changes)
+
+---
+
+## [1.3.8] - 2026-05-04
+
 ### 🇬🇧 English
 #### 🎉 New Features
 - **Step-centric suspicious node dialog**: When a workflow contains suspicious nodes (`ask` mode), the prompt now shows the affected sampler step (seed / steps / cfg / sampler) with a list of warning cards explaining why it may not have been executed, instead of asking about each disconnected node one by one.
@@ -13,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - **Inspector categorization extracted**: `SuspiciousNodeCategorizer` is now a standalone module with its own unit tests, making it reusable across inspector and dialog.
 - **Parser self-parsing**: `ComfyUIParser` now accepts both pre-parsed objects and raw JSON strings for `workflow` / `prompt` / `eagle_bridge`. `ImageMetadataReader` returns raw text for all formats (PNG/WebP/JPEG), eliminating premature JSON parsing.
 - **A1111 parse noise removed**: `parseJsonSafely` no longer logs errors when a non-JSON field (e.g. A1111 `parameters`) falls back to the default value.
+- **Comprehensive test coverage**: Added 142 new test cases covering MetadataCacheService, excludeBaseSamplersMetadata logic, plugin initialization, and cache flow integration (1371 total tests, all passing).
 
 #### 🐛 Bug Fixes
 - **Orphan suspicious nodes no longer leak into unrelated warnings**: A node with no `affectedSteps` and no `stepMetadata` is treated as orphan and excluded from sampler tabs / dialog steps (regression guard for the #395 mix-up).
@@ -26,6 +33,7 @@ All notable changes to this project will be documented in this file.
 - **分類ロジック分離**: `SuspiciousNodeCategorizer` を独立モジュール化し、ユニットテスト付きでインスペクターとダイアログから共用。
 - **パーサーの自己責任化**: `ComfyUIParser` が `workflow` / `prompt` / `eagle_bridge` のオブジェクトと JSON 文字列の両方を受け付けるように。`ImageMetadataReader` は PNG/WebP/JPEG いずれも生テキストを返す。
 - **A1111 パースエラーの抑止**: `parseJsonSafely` の不要な console.error を除去（A1111 `parameters` のような非 JSON フィールドは静かにフォールバック）。
+- **テストカバレッジの拡大**: MetadataCacheService、excludeBaseSamplersMetadata ロジック、プラグイン初期化、キャッシュフロー統合の 142 新規テストケースを追加（全 1371 テスト合格）。
 
 #### 🐛 バグ修正
 - **孤立 suspicious ノードが他のカードに混入する問題**: `affectedSteps` も `stepMetadata` も持たないノードは orphan として扱い、サンプラータブやダイアログステップから除外。
