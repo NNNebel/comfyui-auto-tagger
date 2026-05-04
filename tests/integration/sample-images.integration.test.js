@@ -398,6 +398,12 @@ describe('Sample Images Integration Tests', () => {
       // Verify expected keys
       expect(suspiciousNode.reasonKey).toBe('suspiciousNode.reason.imageProcessingNoInput');
       expect(suspiciousNode.suggestionKey).toBe('suspiciousNode.suggestion.disconnected');
+
+      // Verify workflow structure fields (prevNodes, nextNodes)
+      expect(suspiciousNode.prevNodes).toBeDefined();
+      expect(Array.isArray(suspiciousNode.prevNodes)).toBe(true);
+      expect(suspiciousNode.nextNodes).toBeDefined();
+      expect(Array.isArray(suspiciousNode.nextNodes)).toBe(true);
     });
     
     it('should not detect suspicious nodes in comfyui_simple.png', () => {

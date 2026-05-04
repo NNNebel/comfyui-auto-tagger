@@ -352,15 +352,29 @@ class ComfyUIGraph {
     }
     
     // Return both results and suspicious nodes
+    const self = this;
     return {
       nodes: results,
-      suspiciousNodes: Array.from(suspiciousNodes).map(s => ({
-        nodeId: s.nodeId,
-        nodeType: this.nodes.get(s.nodeId)?.class_type || 'Unknown',
-        reasonKey: s.reasonKey,
-        reasonParams: s.reasonParams || {},
-        suggestionKey: s.suggestionKey
-      }))
+      suspiciousNodes: Array.from(suspiciousNodes).map(s => {
+        const prevNodeIds = this.edges.get(s.nodeId) || new Set();
+        const nextNodeIds = this.reverseEdges.get(s.nodeId) || new Set();
+
+        return {
+          nodeId: s.nodeId,
+          nodeType: this.nodes.get(s.nodeId)?.class_type || 'Unknown',
+          reasonKey: s.reasonKey,
+          reasonParams: s.reasonParams || {},
+          suggestionKey: s.suggestionKey,
+          prevNodes: Array.from(prevNodeIds).map(nodeId => ({
+            nodeId: nodeId,
+            nodeType: this.nodes.get(nodeId)?.class_type || 'Unknown'
+          })),
+          nextNodes: Array.from(nextNodeIds).map(nodeId => ({
+            nodeId: nodeId,
+            nodeType: this.nodes.get(nodeId)?.class_type || 'Unknown'
+          }))
+        };
+      })
     };
   }
   
