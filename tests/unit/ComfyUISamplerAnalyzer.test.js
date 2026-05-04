@@ -1,5 +1,5 @@
 // tests/unit/ComfyUISamplerAnalyzer.test.js
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import ComfyUIGraph from '../../js/metadata-parser/graph/ComfyUIGraph.js';
 import ComfyUISamplerAnalyzer from '../../js/metadata-parser/graph/ComfyUISamplerAnalyzer.js';
 import { createRequire } from 'module';
@@ -967,5 +967,102 @@ describe('ComfyUISamplerAnalyzer', () => {
       analyzer.setDictionary(NodeDefinitionDictionary.getDefault());
       const meta = analyzer.extractSamplerMetadata('10');
       expect(meta.positive).toBe('valid text');
+    });
+  });
+
+  describe('setReporter', () => {
+    it('should store reporter instance', () => {
+      const graph = new ComfyUIGraph({});
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+
+      const mockReporter = {
+        log: vi.fn(),
+        warn: vi.fn()
+      };
+
+      analyzer.setReporter(mockReporter);
+      expect(analyzer.reporter).toBe(mockReporter);
+    });
+
+    it('should initialize with null reporter', () => {
+      const graph = new ComfyUIGraph({});
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+
+      expect(analyzer.reporter).toBeNull();
+    });
+
+    it('should accept null to clear reporter', () => {
+      const graph = new ComfyUIGraph({});
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+
+      const mockReporter = { log: vi.fn() };
+      analyzer.setReporter(mockReporter);
+      expect(analyzer.reporter).toBe(mockReporter);
+
+      analyzer.setReporter(null);
+      expect(analyzer.reporter).toBeNull();
+    });
+
+    it('should allow setting different reporter instances', () => {
+      const graph = new ComfyUIGraph({});
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+
+      const reporter1 = { id: 'reporter1' };
+      const reporter2 = { id: 'reporter2' };
+
+      analyzer.setReporter(reporter1);
+      expect(analyzer.reporter).toBe(reporter1);
+
+      analyzer.setReporter(reporter2);
+      expect(analyzer.reporter).toBe(reporter2);
+    });
+
+    it('should preserve reporter through extraction operations', () => {
+      const promptData = {
+        '1': { class_type: 'EmptyLatentImage', inputs: {} },
+        '2': {
+          class_type: 'KSampler',
+          inputs: {
+            latent_image: ['1', 0],
+            seed: 123,
+            steps: 20,
+            cfg: 7,
+            sampler_name: 'euler',
+            scheduler: 'normal'
+          }
+        },
+        '3': { class_type: 'SaveImage', inputs: { images: ['2', 0] } }
+      };
+
+      const graph = new ComfyUIGraph(promptData);
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+      const mockReporter = { log: vi.fn() };
+
+      analyzer.setReporter(mockReporter);
+
+      // Perform extraction
+      const result = analyzer.findBaseSampler();
+      expect(result.baseSampler).toBe('2');
+
+      // Reporter should still be set
+      expect(analyzer.reporter).toBe(mockReporter);
+    });
+
+    it('should handle reporter object with various method signatures', () => {
+      const graph = new ComfyUIGraph({});
+      const analyzer = new ComfyUISamplerAnalyzer(graph);
+
+      const complexReporter = {
+        log: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+        custom: vi.fn()
+      };
+
+      analyzer.setReporter(complexReporter);
+      expect(analyzer.reporter).toBe(complexReporter);
+      expect(analyzer.reporter.log).toBeDefined();
+      expect(analyzer.reporter.warn).toBeDefined();
     });
   });

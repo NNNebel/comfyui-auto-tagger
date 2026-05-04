@@ -494,6 +494,14 @@ class ComfyUIGraph {
     const inputs = node.inputs || {};
     const inputKeys = Object.keys(inputs);
 
+    // DEBUG: log dictionary state and node type
+    if (typeof window !== 'undefined' && window.isDebugMode && window.isDebugMode()) {
+      const hasDictionary = !!this.dictionary;
+      if (nodeType === 'ComfyNumberConvert' || nodeType === 'KSampler') {
+        console.log('[DEBUG _detectSuspiciousNode] node=' + nodeId + ', type=' + nodeType + ', hasDictionary=' + hasDictionary + ', inputKeys=' + JSON.stringify(inputKeys));
+      }
+    }
+
     // ── Dictionary-first: check suspicious_detection field ──────────────
     // Nodes in the dictionary with a suspicious_detection entry are checked
     // against their required_input_patterns before falling through to heuristics.
