@@ -54,7 +54,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 Select any AI-generated image in Eagle and the inspector panel appears automatically, showing prompts, parameters, and model info — each with a copy button. Multi-sampler workflows are split into tabs.
 
 <p align="center">
-  <img src="assets/insupector_movie.gif" alt="Generation Info Inspector" width="514">
+  <img src="assets/insupector_movie.gif" alt="Generation Info Inspector" width="100%">
 </p>
 
 #### Advanced Workflow Analysis
@@ -191,7 +191,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 Eagleで画像を選択するとインスペクターパネルが自動表示され、プロンプト・パラメータ・モデル情報を確認できます。各フィールドにはコピーボタンが付いており、マルチサンプラーワークフローはタブで切り替えられます。
 
 <p align="center">
-  <img src="assets/insupector_movie.gif" alt="生成情報インスペクター" width="514">
+  <img src="assets/insupector_movie.gif" alt="生成情報インスペクター" width="100%">
 </p>
 
 #### 高度なワークフロー解析
