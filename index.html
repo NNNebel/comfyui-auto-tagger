@@ -265,7 +265,7 @@
             border-radius: 8px;
             padding: 20px;
             max-width: 600px;
-            max-height: 80vh;
+            max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
@@ -705,6 +705,17 @@
                     <label for="chk-debug-log-settings"></label>
                 </div>
                 <div class="settings-description"></div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-section-title"></div>
+                <div class="option-group">
+                    <input type="checkbox" id="chk-skip-cache-debug-settings">
+                    <label for="chk-skip-cache-debug-settings"></label>
+                </div>
+                <div class="settings-description"></div>
+                <button class="settings-button-action" id="btn-clear-all-cache" style="width: 100%; padding: 8px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 8px;"></button>
+                <div class="settings-description" style="margin-top: 6px;"></div>
             </div>
 
             <div class="settings-section">
@@ -1781,15 +1792,21 @@
             // Question line
             document.getElementById('dialog-node-question').textContent = t('suspiciousNode.notExecuted');
 
+            // Set workflow graph title
+            const graphTitleDiv = document.querySelector('#workflow-graph').previousElementSibling;
+            if (graphTitleDiv) {
+                graphTitleDiv.textContent = t('suspiciousNode.graphTitle');
+            }
+
             // Render workflow graph and warning cards
             drawWorkflowGraph(step);
 
             dialog.classList.add('visible');
 
-            console.log('[DEBUG] Resizing window to 1250px for dialog');
+            console.log('[DEBUG] Resizing window to 950px for dialog');
             if (typeof eagle !== 'undefined' && eagle.window) {
                 try {
-                    eagle.window.setSize(640, 1250);
+                    eagle.window.setSize(640, 950);
                 } catch (e) {
                     console.log('Window resize not supported:', e);
                 }
