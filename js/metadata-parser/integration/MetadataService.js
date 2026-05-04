@@ -4,11 +4,11 @@
   'use strict';
 
   // Get dependencies for both environments
-  var ImageMetadataReader, FormatDetector, ParserRegistry, ComfyUIParser, A1111Parser, ErrorHandler, Validators;
-  
+  var ContainerReaderRegistry, FormatDetector, ParserRegistry, ComfyUIParser, A1111Parser, ErrorHandler, Validators;
+
   if (typeof window !== 'undefined') {
     // Browser environment
-    ImageMetadataReader = window.ImageMetadataReader;
+    ContainerReaderRegistry = window.ContainerReaderRegistry;
     FormatDetector = window.FormatDetector;
     ParserRegistry = window.ParserRegistry;
     ComfyUIParser = window.ComfyUIParser;
@@ -17,7 +17,7 @@
     Validators = window.Validators;
   } else if (typeof require !== 'undefined') {
     // Node.js environment
-    ImageMetadataReader = require('../binary-extraction/ImageMetadataReader');
+    ContainerReaderRegistry = require('../containers/ContainerReaderRegistry');
     FormatDetector = require('../binary-extraction/FormatDetector');
     ParserRegistry = require('../parsers/ParserRegistry');
     ComfyUIParser = require('../parsers/ComfyUIParser');
@@ -92,19 +92,21 @@ class MetadataService {
         // Validate inputs
         Validators.validateBuffer(buffer);
         Validators.validateMimeType(mimeType);
-        
-        // Step 1: Extract raw chunks from the image
-        const rawChunks = ImageMetadataReader.extractRawMetadata(buffer, mimeType);
-        
+
+        // Step 1: Extract raw chunks from the image using ContainerReaderRegistry
+        const registry = ContainerReaderRegistry.createDefault();
+        const reader = registry.getReader(mimeType);
+        const rawChunks = reader ? reader.extractRawChunks(buffer) : {};
+
         // Validate raw chunks
         Validators.validateRawChunks(rawChunks);
-        
+
         // Step 2: Detect which formats are present
         const formats = FormatDetector.detectFormats(rawChunks);
-        
+
         // Step 3: Parse all detected formats
         const results = this.registry.parseAll(formats, rawChunks, options);
-        
+
         return results;
       },
       [],
