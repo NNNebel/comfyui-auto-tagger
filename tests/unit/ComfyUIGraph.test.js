@@ -547,6 +547,82 @@ describe('ComfyUIGraph', () => {
     });
   });
   
+  describe('_detectSuspiciousNode — dictionary interaction', () => {
+    // ImageUpscaleWithModel without image input (upscale_model only)
+    const upscaleNodeNoImage = {
+      class_type: 'ImageUpscaleWithModel',
+      inputs: { upscale_model: ['1', 0] }
+    };
+    const upscaleNodeWithImage = {
+      class_type: 'ImageUpscaleWithModel',
+      inputs: { upscale_model: ['1', 0], image: ['2', 0] }
+    };
+
+    it('flags image processing node without image input when no dictionary is set', () => {
+      const graph = new ComfyUIGraph({});
+      const result = graph._detectSuspiciousNode('2', upscaleNodeNoImage);
+      expect(result).not.toBeNull();
+    });
+
+    it('flags image processing node when dictionary has definition WITHOUT suspicious_detection', () => {
+      // Regression test: before the fix, this silently skipped both dictionary check
+      // and heuristic, returning null (not detected). Dictionary should only suppress
+      // the heuristic when it explicitly defines suspicious_detection.
+      const dict = {
+        hasDefinition: () => true,
+        getNodeDefinition: () => ({})  // known to dictionary, but no suspicious_detection
+      };
+      const graph = new ComfyUIGraph({}, { dictionary: dict });
+      const result = graph._detectSuspiciousNode('2', upscaleNodeNoImage);
+      expect(result).not.toBeNull();
+    });
+
+    it('uses dictionary suspicious_detection check when defined and node lacks required input', () => {
+      const dict = {
+        hasDefinition: () => true,
+        getNodeDefinition: () => ({
+          suspicious_detection: {
+            required_input_patterns: ['image'],
+            reason_key: 'suspiciousNode.reason.missingInput',
+            suggestion_key: 'suspiciousNode.suggestion.disconnected'
+          }
+        })
+      };
+      const graph = new ComfyUIGraph({}, { dictionary: dict });
+      const result = graph._detectSuspiciousNode('2', upscaleNodeNoImage);
+      expect(result).not.toBeNull();
+      expect(result.reasonKey).toBe('suspiciousNode.reason.missingInput');
+    });
+
+    it('returns null when dictionary suspicious_detection confirms required input is present', () => {
+      const dict = {
+        hasDefinition: () => true,
+        getNodeDefinition: () => ({
+          suspicious_detection: { required_input_patterns: ['image'] }
+        })
+      };
+      const graph = new ComfyUIGraph({}, { dictionary: dict });
+      const result = graph._detectSuspiciousNode('2', upscaleNodeWithImage);
+      expect(result).toBeNull();
+    });
+
+    it('returns null for provider-type nodes regardless of inputs', () => {
+      const dict = {
+        hasDefinition: () => true,
+        getNodeDefinition: () => ({ type: 'provider' })
+      };
+      const graph = new ComfyUIGraph({}, { dictionary: dict });
+      const result = graph._detectSuspiciousNode('2', upscaleNodeNoImage);
+      expect(result).toBeNull();
+    });
+
+    it('does not flag image processing node when image input is present and no dictionary', () => {
+      const graph = new ComfyUIGraph({});
+      const result = graph._detectSuspiciousNode('2', upscaleNodeWithImage);
+      expect(result).toBeNull();
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle nodes with no inputs', () => {
       const promptData = {

@@ -509,14 +509,19 @@ class ComfyUIGraph {
       }
     }
 
-    // ── Heuristic fallbacks for nodes NOT in the dictionary ──────────────
+    // ── Heuristic fallbacks ──────────────────────────────────────────────
+    // Run heuristics when the dictionary is silent on suspicious_detection
+    // (either no definition, or definition without suspicious_detection field).
+    // Dictionary takes precedence only when it explicitly addresses this topic.
+    const hasDictSuspiciousDetection = this.dictionary?.hasDefinition(nodeType) &&
+      this.dictionary.getNodeDefinition(nodeType)?.suspicious_detection != null;
 
     // Image processing nodes without image input
     const imageProcessingNodes = [
       'ImageUpscaleWithModel', 'ImageScaleBy', 'ImageScale',
       'ImageResize', 'ImageCrop', 'ImageBlur'
     ];
-    if (!this.dictionary?.hasDefinition(nodeType) &&
+    if (!hasDictSuspiciousDetection &&
         imageProcessingNodes.some(type => nodeType.includes(type))) {
       const hasImageInput = inputKeys.some(key =>
         key.toLowerCase().includes('image') || key.toLowerCase().includes('pixels')
@@ -532,7 +537,7 @@ class ComfyUIGraph {
     }
 
     // VAE nodes without proper inputs
-    if (!this.dictionary?.hasDefinition(nodeType)) {
+    if (!hasDictSuspiciousDetection) {
       if (nodeType.includes('VAEEncode')) {
         const hasPixelsInput = inputKeys.some(key => key.toLowerCase().includes('pixels') || key.toLowerCase().includes('image'));
         if (!hasPixelsInput) {

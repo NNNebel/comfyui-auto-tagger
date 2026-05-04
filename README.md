@@ -54,7 +54,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 Select any AI-generated image in Eagle and the inspector panel appears automatically, showing prompts, parameters, and model info — each with a copy button. Multi-sampler workflows are split into tabs.
 
 <p align="center">
-  <img src="assets/inspector.png" alt="Generation Info Inspector" width="514">
+  <img src="assets/insupector_movie.gif" alt="Generation Info Inspector" width="514">
 </p>
 
 #### Advanced Workflow Analysis
@@ -170,7 +170,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 * **高度なワークフロー解析**: ComfyUIのノードグラフを動的に解析し、実際の実行ルートを特定。複雑なマルチステージワークフロー（HiresFix、FaceDetailer等）からも正確にパラメータを抽出。
     * 複雑なノード接続を追跡して実際の生成パイプラインを特定
     * 複数のサンプラーと改善ステージを持つマルチステージワークフローに対応
-* **疑わしいノード検出**: ComfyUIのメタデータには実際の実行経路が記録されないため、プラグインは入力の欠落などから「実行されなかった未使用ノード（ノイズ）」を推測します。しかし、未知のカスタムノードを誤って除外しないよう、検知時はダイアログを表示し、抽出情報に含めるか除外するかの判断をユーザーに委ねます。
+* **疑わしいノード検出**: ComfyUIのメタデータには実際の実行経路が記録されないため、プラグインは入力の欠落などから「実行されなかった未使用ノード」を推測します。しかし、未知のカスタムノードを誤って除外しないよう、検知時はダイアログを表示し、抽出情報に含めるか除外するかの判断をユーザーに委ねます。
 * **強制削除モード**: Shiftキーを押しながら削除ボタンをクリックすることで、解析を行わずにタグ・メモを一括削除。
 * **デバッグモード**: 詳細なログを表示してトラブルシューティングを支援（チェックボックスで切替）。
 * **外部依存なし**: インストール後すぐ使えます。追加ライブラリは不要です。
@@ -191,7 +191,7 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 Eagleで画像を選択するとインスペクターパネルが自動表示され、プロンプト・パラメータ・モデル情報を確認できます。各フィールドにはコピーボタンが付いており、マルチサンプラーワークフローはタブで切り替えられます。
 
 <p align="center">
-  <img src="assets/inspector.png" alt="生成情報インスペクター" width="514">
+  <img src="assets/insupector_movie.gif" alt="生成情報インスペクター" width="514">
 </p>
 
 #### 高度なワークフロー解析

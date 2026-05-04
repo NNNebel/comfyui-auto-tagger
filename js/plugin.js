@@ -460,8 +460,9 @@ Promise.all([
                 await debugLog('suspiciousNodeHandlingSelect element exists: ' + (suspiciousNodeHandlingSelect ? 'yes' : 'no'), item);
                 await debugLog('suspiciousNodeHandlingSelect value: ' + (suspiciousNodeHandlingSelect ? suspiciousNodeHandlingSelect.value : 'NOT FOUND'), item);
 
-                // Convert 'ask' mode to 'include' for metadata extraction
-                // (ダイアログは後で判定する)
+                // Convert 'ask' mode to 'exclude' for initial metadata extraction.
+                // Suspicious nodes are excluded from the trace so affectedSteps can be computed
+                // by comparing with/without each node. Dialog decision is applied on re-parse.
                 const originalSuspiciousNodeHandling = suspiciousNodeHandling;
                 if (suspiciousNodeHandling === 'ask') {
                     suspiciousNodeHandling = 'exclude';
