@@ -747,7 +747,7 @@
                     <!-- 4. Workflow graph visualization -->
                     <div style="margin-top: 12px;">
                         <div style="font-weight: 500; margin-bottom: 8px;"></div>
-                        <div id="workflow-graph" style="padding: 12px; background-color: var(--log-bg); border-radius: 4px; overflow-x: auto;"></div>
+                        <div id="workflow-graph" style="padding: 12px; background-color: var(--log-bg); border-radius: 4px; overflow-x: hidden;"></div>
                     </div>
                     
                     <!-- 5. Common cases -->
@@ -1702,7 +1702,17 @@
                 console.log('[DEBUG] showSuspiciousNodeDialog: suspiciousNodes count:', suspiciousNodes.length);
                 for (let i = 0; i < suspiciousNodes.length; i++) {
                     const sn = suspiciousNodes[i];
-                    console.log(`  [${i}] nodeId:${sn.nodeId} type:${sn.nodeType} stepMetadata:${!!sn.stepMetadata} affectedSteps:${(sn.affectedSteps||[]).length}`);
+                    console.log(`  [${i}] nodeId:${sn.nodeId} type:${sn.nodeType} stepMetadata:${!!sn.stepMetadata} affectedSteps:${(sn.affectedSteps||[]).length} prevNodes:${(sn.prevNodes||[]).length} nextNodes:${(sn.nextNodes||[]).length}`);
+                    if (sn.prevNodes && sn.prevNodes.length > 0) {
+                        for (let j = 0; j < sn.prevNodes.length; j++) {
+                            console.log(`      prevNode[${j}]: ${sn.prevNodes[j].nodeType} #${sn.prevNodes[j].nodeId}`);
+                        }
+                    }
+                    if (sn.nextNodes && sn.nextNodes.length > 0) {
+                        for (let j = 0; j < sn.nextNodes.length; j++) {
+                            console.log(`      nextNode[${j}]: ${sn.nextNodes[j].nodeType} #${sn.nextNodes[j].nodeId}`);
+                        }
+                    }
                     for (let j = 0; j < (sn.affectedSteps || []).length; j++) {
                         const as = sn.affectedSteps[j];
                         console.log(`      [${j}] stepNodeId:${as.stepNodeId} has_stepMetadata:${!!as.stepMetadata}`);
@@ -1815,7 +1825,9 @@
 
         function drawWorkflowGraph(step) {
             const container = document.getElementById('workflow-graph');
-            if (!container) return;
+            if (!container) {
+                return;
+            }
             container.innerHTML = '';
 
             if (!step) {
@@ -1824,18 +1836,36 @@
             }
 
             const t = (key, params) => (window.i18next ? window.i18next.t(key, params) : key);
-            const meta = step.stepMetadata || {};
+            const samplerMeta = step.stepMetadata || {};
             const suspNodes = step.suspiciousNodesInfo || [];
 
+            if (suspNodes.length === 0) {
+                renderWarningCards(suspNodes);
+                return;
+            }
+
+            const suspNode = suspNodes[0];
+            const prevNodes = suspNode.prevNodes || [];
+            const nextNodes = suspNode.nextNodes || [];
+
+            // Find sampler in nextNodes if present
+            const samplerInNext = nextNodes.find(n => n.nodeId === samplerMeta.nodeId);
+
+            // Check if suspNode itself is the sampler
+            const suspNodeIsSampler = suspNode.nodeId === samplerMeta.nodeId;
+
             // Create canvas for workflow visualization
+            // Internal resolution fixed at 600×180; CSS width=100% scales it to fit the container
             const canvas = document.createElement('canvas');
             canvas.width = 600;
             canvas.height = 180;
-            canvas.style.maxWidth = '100%';
+            canvas.style.width = '100%';
+            canvas.style.height = 'auto';
+            canvas.style.display = 'block';
             canvas.style.border = '1px solid var(--border-color)';
             canvas.style.borderRadius = '3px';
             canvas.style.marginBottom = '12px';
-            canvas.style.backgroundColor = 'rgba(0,0,0,0.03)';
+            canvas.style.backgroundColor = '#333333';
 
             const ctx = canvas.getContext('2d');
             if (!ctx) {
@@ -1843,39 +1873,79 @@
                 return;
             }
 
-            // Draw workflow graph
+
             const padding = 20;
-            const nodeWidth = 100;
+            const nodeWidth = 90;
             const nodeHeight = 50;
             const centerY = canvas.height / 2;
+            const spacing = 70;
 
             // Helper to draw a node box
-            const drawNode = (x, y, label, subLabel, isHighlight) => {
-                const bgColor = isHighlight ? 'rgba(76, 175, 80, 0.15)' : 'rgba(200, 200, 200, 0.2)';
-                const borderColor = isHighlight ? '#4CAF50' : '#999';
-                const textColor = isHighlight ? '#2E7D32' : '#333';
+            const drawNode = (x, y, label, subLabel, isSuspicious, isSampler) => {
+                let bgColor, borderColor, textColor;
+                const isBoth = isSuspicious && isSampler;
 
-                ctx.fillStyle = bgColor;
+                if (isBoth) {
+                    // Split diagonal red and green
+                    // Red triangle (top-left to bottom-right)
+                    ctx.fillStyle = 'rgba(244, 67, 54, 0.4)';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + nodeWidth, y);
+                    ctx.lineTo(x, y + nodeHeight);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Green triangle (top-right to bottom-left)
+                    ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
+                    ctx.beginPath();
+                    ctx.moveTo(x + nodeWidth, y);
+                    ctx.lineTo(x + nodeWidth, y + nodeHeight);
+                    ctx.lineTo(x, y + nodeHeight);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    borderColor = '#ff6b6b';
+                    textColor = '#ffffff';
+                } else if (isSuspicious) {
+                    bgColor = 'rgba(244, 67, 54, 0.4)';
+                    borderColor = '#ff6b6b';
+                    textColor = '#ffffff';
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(x, y, nodeWidth, nodeHeight);
+                } else if (isSampler) {
+                    bgColor = 'rgba(76, 175, 80, 0.4)';
+                    borderColor = '#81c784';
+                    textColor = '#ffffff';
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(x, y, nodeWidth, nodeHeight);
+                } else {
+                    bgColor = 'rgba(158, 158, 158, 0.4)';
+                    borderColor = '#757575';
+                    textColor = '#ffffff';
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(x, y, nodeWidth, nodeHeight);
+                }
+
                 ctx.strokeStyle = borderColor;
-                ctx.lineWidth = isHighlight ? 2 : 1;
-                ctx.fillRect(x, y, nodeWidth, nodeHeight);
+                ctx.lineWidth = (isSuspicious || isSampler) ? 2 : 1;
                 ctx.strokeRect(x, y, nodeWidth, nodeHeight);
 
                 ctx.fillStyle = textColor;
-                ctx.font = 'bold 11px sans-serif';
+                ctx.font = 'bold 10px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(label, x + nodeWidth/2, y + 18);
 
                 if (subLabel) {
-                    ctx.font = '9px sans-serif';
-                    ctx.fillStyle = '#666';
+                    ctx.font = '10px sans-serif';
+                    ctx.fillStyle = '#ffffff';
                     ctx.fillText(subLabel, x + nodeWidth/2, y + 33);
                 }
             };
 
-            // Draw arrow between nodes
+            // Draw arrow
             const drawArrow = (x1, y1, x2, y2) => {
-                const headlen = 8;
+                const headlen = 6;
                 const angle = Math.atan2(y2 - y1, x2 - x1);
 
                 ctx.strokeStyle = '#666';
@@ -1885,7 +1955,6 @@
                 ctx.lineTo(x2, y2);
                 ctx.stroke();
 
-                // Arrow head
                 ctx.fillStyle = '#666';
                 ctx.beginPath();
                 ctx.moveTo(x2, y2);
@@ -1895,25 +1964,96 @@
                 ctx.fill();
             };
 
-            // Position nodes
-            const upstreamX = padding;
-            const samplerX = upstreamX + nodeWidth + 60;
-            const downstreamX = samplerX + nodeWidth + 60;
+            // Compute positions
+            let currentX = padding;
+            const prevNodeLabel = prevNodes.length === 1
+                ? prevNodes[0].nodeType
+                : (prevNodes.length > 1 ? `${prevNodes.length} nodes` : 'Input');
 
-            // Draw upstream nodes (generic input)
-            drawNode(upstreamX, centerY - nodeHeight/2, 'Input', 'nodes', false);
+            try {
+                // Draw prev node(s)
+                drawNode(currentX, centerY - nodeHeight/2, prevNodeLabel,
+                    prevNodes.length === 1 ? `#${prevNodes[0].nodeId}` : '', false, false);
+            } catch (e) {
+                console.error('Error drawing prev node:', e.message);
+                throw e;
+            }
+            const prevX = currentX + nodeWidth / 2;
+            currentX += nodeWidth + spacing;
 
-            // Draw arrows
-            drawArrow(upstreamX + nodeWidth, centerY, samplerX, centerY);
-            drawArrow(samplerX + nodeWidth, centerY, downstreamX, centerY);
+            // Draw arrow to suspicious node
+            const suspX = currentX + nodeWidth / 2;
+            drawArrow(prevX, centerY, currentX, centerY);
 
-            // Draw center sampler (highlighted)
-            const samplerLabel = meta.nodeType || 'Sampler';
-            const samplerSubLabel = `#${meta.nodeId || '?'}`;
-            drawNode(samplerX, centerY - nodeHeight/2, samplerLabel, samplerSubLabel, true);
+            // Draw suspicious node with sampler style if it IS the sampler
+            drawNode(currentX, centerY - nodeHeight/2, suspNode.nodeType,
+                `#${suspNode.nodeId}`, true, suspNodeIsSampler);
+            const suspRightX = currentX + nodeWidth;
 
-            // Draw downstream nodes (generic output)
-            drawNode(downstreamX, centerY - nodeHeight/2, 'Output', 'nodes', false);
+            // Only draw next node/sampler if suspNode is not the sampler
+            if (!suspNodeIsSampler) {
+                currentX += nodeWidth + spacing;
+                // Draw next nodes / sampler
+                const nextLeftX = currentX;
+                drawArrow(suspRightX, centerY, nextLeftX, centerY);
+
+                if (samplerMeta.nodeId && samplerInNext) {
+                    // Sampler is in nextNodes — show it highlighted
+                    drawNode(currentX, centerY - nodeHeight/2, samplerMeta.nodeType || 'Sampler',
+                        `#${samplerMeta.nodeId}`, false, true);
+                } else if (samplerMeta.nodeId) {
+                    // Sampler is NOT in nextNodes (e.g., excluded-sampler case)
+                    // Show sampler anyway, highlighted
+                    drawNode(currentX, centerY - nodeHeight/2, samplerMeta.nodeType || 'Sampler',
+                        `#${samplerMeta.nodeId}`, false, true);
+                } else if (nextNodes.length > 0) {
+                    // No sampler metadata — show first next node
+                    const nextLabel = nextNodes.length === 1
+                        ? nextNodes[0].nodeType
+                        : `${nextNodes.length} nodes`;
+                    drawNode(currentX, centerY - nodeHeight/2, nextLabel,
+                        nextNodes.length === 1 ? `#${nextNodes[0].nodeId}` : '', false, false);
+                } else {
+                    // No next nodes — show placeholder
+                    drawNode(currentX, centerY - nodeHeight/2, 'Output', 'nodes', false, false);
+                }
+            }
+
+            // Draw legend on canvas (top-right corner)
+            const legendBoxWidth = 105;
+            const legendBoxHeight = 62;
+            const legendX = canvas.width - legendBoxWidth - 10;
+            const legendY = 8;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.fillRect(legendX, legendY, legendBoxWidth, legendBoxHeight);
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(legendX, legendY, legendBoxWidth, legendBoxHeight);
+
+            const legendItems = [
+                { color: '#ff6b6b', label: t('suspiciousNode.legendSuspicious') || '疑わしい' },
+                { color: '#81c784', label: t('suspiciousNode.legendSampler') || 'サンプラー' },
+                { color: '#757575', label: t('suspiciousNode.legendOther') || 'その他' }
+            ];
+
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'left';
+
+            let legendItemY = legendY + 15;
+            for (const item of legendItems) {
+                // Color box
+                ctx.fillStyle = item.color;
+                ctx.fillRect(legendX + 6, legendItemY - 5, 8, 8);
+                ctx.strokeStyle = '#aaa';
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(legendX + 6, legendItemY - 5, 8, 8);
+
+                // Label
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(item.label, legendX + 17, legendItemY);
+                legendItemY += 18;
+            }
 
             container.appendChild(canvas);
 
@@ -1944,20 +2084,42 @@
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             }[c]));
 
-            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.gap = '10px';
             for (const n of suspiciousNodes) {
                 const reason = n.reasonKey ? t(n.reasonKey, n.reasonParams || {}) : '';
                 const suggestion = n.suggestionKey ? t(n.suggestionKey, n.suggestionParams || {}) : '';
-                html += `
-                    <div style="padding: 10px; background-color: rgba(244, 67, 54, 0.08); border-left: 3px solid #f44336; border-radius: 3px; font-size: 12px;">
-                        <div style="font-weight: 600; margin-bottom: 4px;">${escape(nodeLabel)}: ${escape(n.nodeType || 'Unknown')} #${escape(n.nodeId || '?')}</div>
-                        ${reason ? `<div style="margin-top: 4px;"><span style="color: var(--secondary-text);">${escape(reasonLabel)}:</span> ${escape(reason)}</div>` : ''}
-                        ${suggestion ? `<div style="margin-top: 4px;"><span style="color: var(--secondary-text);">${escape(suggestionLabel)}:</span> ${escape(suggestion)}</div>` : ''}
-                    </div>
-                `;
+                const card = document.createElement('div');
+                card.style.cssText = 'padding: 10px; background-color: rgba(244, 67, 54, 0.08); border-left: 3px solid #f44336; border-radius: 3px; font-size: 12px;';
+                const title = document.createElement('div');
+                title.style.cssText = 'font-weight: 600; margin-bottom: 4px;';
+                title.textContent = `${nodeLabel}: ${n.nodeType || 'Unknown'} #${n.nodeId || '?'}`;
+                card.appendChild(title);
+                if (reason) {
+                    const reasonDiv = document.createElement('div');
+                    reasonDiv.style.marginTop = '4px';
+                    const label = document.createElement('span');
+                    label.style.color = 'var(--secondary-text)';
+                    label.textContent = `${reasonLabel}: `;
+                    reasonDiv.appendChild(label);
+                    reasonDiv.appendChild(document.createTextNode(reason));
+                    card.appendChild(reasonDiv);
+                }
+                if (suggestion) {
+                    const suggDiv = document.createElement('div');
+                    suggDiv.style.marginTop = '4px';
+                    const label = document.createElement('span');
+                    label.style.color = 'var(--secondary-text)';
+                    label.textContent = `${suggestionLabel}: `;
+                    suggDiv.appendChild(label);
+                    suggDiv.appendChild(document.createTextNode(suggestion));
+                    card.appendChild(suggDiv);
+                }
+                wrapper.appendChild(card);
             }
-            html += '</div>';
-            container.innerHTML += html;
+            container.appendChild(wrapper);
         }
 
         function handleStepDecision(event, decision, scope) {

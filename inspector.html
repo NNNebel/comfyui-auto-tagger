@@ -200,7 +200,31 @@
         /* ── Custom Scrollbar ── */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-        
+
+        /* ── Cache Control ── */
+        #cache-control {
+            margin: 10px 4px 0 4px;
+            padding: 0;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        #btn-delete-cache {
+            background: none;
+            color: var(--text-muted);
+            border: none;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        #btn-delete-cache:hover {
+            color: var(--text);
+        }
+
         /* ── Warning (suspicious node) ── */
         .tab.has-warning { color: #d4860a; }
         .tab.has-warning.active { color: #d4860a; }
@@ -256,7 +280,8 @@
 <body>
     <div id="filename" style="display:none"></div>
     <div id="content" style="display:none"></div>
-    <div id="empty-state">READING METADATA...</div>
+    <div id="empty-state"></div>
+    <div id="cache-control"></div>
 
     <!-- Scripts -->
     <script src="js/metadata-parser/utils/ParsingUtils.js"></script>
@@ -286,6 +311,10 @@
     <script>
         const fsp = require('fs').promises;
         const path = require('path');
+
+        // Global paths - will be set by eagle.onPluginCreate
+        let globalPluginPath = null;
+        let globalLibraryPath = null;
 
         // 翻訳ユーティリティ
         function t(key, r = {}) {
@@ -445,35 +474,35 @@
             // 1. Prompts
             const promptTitle = document.createElement('div');
             promptTitle.className = 'section-title';
-            promptTitle.textContent = 'Prompts';
+            promptTitle.textContent = t('inspector.prompts', { defaultValue: 'Prompts' });
             panel.appendChild(promptTitle);
 
             const promptCard = document.createElement('div');
             promptCard.className = 'card';
-            appendTo(promptCard, createRow('Positive', step.positive));
-            appendTo(promptCard, createRow('Negative', step.negative));
+            appendTo(promptCard, createRow(t('inspector.positive', { defaultValue: 'Positive' }), step.positive));
+            appendTo(promptCard, createRow(t('inspector.negative', { defaultValue: 'Negative' }), step.negative));
             if (promptCard.children.length > 0) panel.appendChild(promptCard);
 
             // 2. Parameters
             const paramTitle = document.createElement('div');
             paramTitle.className = 'section-title';
-            paramTitle.textContent = 'Parameters';
+            paramTitle.textContent = t('inspector.parameters', { defaultValue: 'Parameters' });
             panel.appendChild(paramTitle);
 
             const paramCard = document.createElement('div');
             paramCard.className = 'card';
-            appendTo(paramCard, createRow('Seed', step.seed, true));
+            appendTo(paramCard, createRow(t('inspector.seed', { defaultValue: 'Seed' }), step.seed, true));
 
             const grid1 = document.createElement('div');
             grid1.className = 'grid-row';
-            appendTo(grid1, createRow('Steps', step.steps, true));
-            appendTo(grid1, createRow('CFG Scale', step.cfg, true));
+            appendTo(grid1, createRow(t('inspector.steps', { defaultValue: 'Steps' }), step.steps, true));
+            appendTo(grid1, createRow(t('inspector.cfgScale', { defaultValue: 'CFG Scale' }), step.cfg, true));
             paramCard.appendChild(grid1);
 
             const grid2 = document.createElement('div');
             grid2.className = 'grid-row';
-            appendTo(grid2, createRow('Sampler', step.sampler));
-            appendTo(grid2, createRow('Scheduler', step.scheduler));
+            appendTo(grid2, createRow(t('inspector.sampler', { defaultValue: 'Sampler' }), step.sampler));
+            appendTo(grid2, createRow(t('inspector.scheduler', { defaultValue: 'Scheduler' }), step.scheduler));
             paramCard.appendChild(grid2);
 
             panel.appendChild(paramCard);
@@ -485,13 +514,13 @@
             if (step.checkpoint || loras) {
                 const modelTitle = document.createElement('div');
                 modelTitle.className = 'section-title';
-                modelTitle.textContent = 'Model';
+                modelTitle.textContent = t('inspector.model', { defaultValue: 'Model' });
                 panel.appendChild(modelTitle);
 
                 const modelCard = document.createElement('div');
                 modelCard.className = 'card';
-                if (step.checkpoint) appendTo(modelCard, createRow('Checkpoint', path.basename(step.checkpoint)));
-                if (loras) appendTo(modelCard, createRow('LoRAs', loras));
+                if (step.checkpoint) appendTo(modelCard, createRow(t('inspector.checkpoint', { defaultValue: 'Checkpoint' }), path.basename(step.checkpoint)));
+                if (loras) appendTo(modelCard, createRow(t('inspector.loras', { defaultValue: 'LoRAs' }), loras));
                 panel.appendChild(modelCard);
             }
 
@@ -522,7 +551,9 @@
                 steps.forEach((step, i) => {
                     const tab = document.createElement('div');
                     tab.className = `tab ${tabIndex === 0 ? 'active' : ''}`;
-                    const tabLabel = step.isBase ? 'Base' : (step.nodeTitle || `Step ${i+1}`);
+                    const baseLabel = t('inspector.base', { defaultValue: 'Base' });
+                    const stepLabel = t('inspector.step', { defaultValue: 'Step' });
+                    const tabLabel = step.isBase ? baseLabel : (step.nodeTitle || `${stepLabel} ${i+1}`);
                     const nodeType = step.nodeName || step.nodeType || '';
                     const stepWarnings = stepWarningMap[step.nodeId] || [];
 
@@ -647,6 +678,31 @@
             }
         }
 
+        // Load settings from file
+        async function loadSettings() {
+            try {
+                // Use global library path to load settings from Eagle's plugin directory
+                let libraryPath = globalLibraryPath;
+                if (!libraryPath) {
+                    const params = new URLSearchParams(window.location.search);
+                    libraryPath = params.get('libraryPath');
+                }
+                if (!libraryPath) {
+                    console.log('[Inspector] No library path available, using defaults');
+                    return { skipCache: false };
+                }
+
+                const settingsPath = path.join(libraryPath, '.eagle', 'plugins', 'comfyui-auto-tagger', 'inspector-settings.json');
+                console.log('[Inspector] Reading settings from:', settingsPath);
+                const data = JSON.parse(require('fs').readFileSync(settingsPath, 'utf8'));
+                console.log('[Inspector] Successfully loaded settings:', data);
+                return data;
+            } catch (e) {
+                console.log('[Inspector] Settings file error (using defaults):', e.message);
+                return { skipCache: false };
+            }
+        }
+
         async function loadSelected() {
             const params = new URLSearchParams(window.location.search);
             const filePath = params.get('path');
@@ -654,6 +710,14 @@
             if (!filePath) return;
 
             try {
+                // Load settings
+                const settings = await loadSettings();
+                const skipCacheEnabled = settings.skipCache === true;
+                console.log('[Inspector] skipCache from settings file:', skipCacheEnabled);
+
+                // Set initial state message
+                document.getElementById('empty-state').textContent = t('inspector.readingMetadata', { defaultValue: 'READING METADATA...' });
+
                 const filenameEl = document.getElementById('filename');
                 if (filenameEl) filenameEl.textContent = path.basename(filePath);
                 
@@ -703,21 +767,66 @@
                         });
                     }
                     renderMetadata(metadata);
-                    // Save to cache for next time
-                    if (cacheService && itemId) {
+                    // Save to cache for next time (unless skip cache is enabled)
+                    console.log('[Inspector] Cache decision:', {
+                        skipCacheEnabled: skipCacheEnabled,
+                        cacheService: !!cacheService,
+                        itemId: itemId,
+                        willSave: cacheService && itemId && !skipCacheEnabled
+                    });
+                    if (cacheService && itemId && !skipCacheEnabled) {
                         await cacheService.set(itemId, metadata);
+                        console.log('[Inspector] ✓ Metadata cached for item:', itemId);
+                    } else {
+                        const reason = !cacheService ? 'no cache service' : !itemId ? 'no itemId' : skipCacheEnabled ? 'skipCache=true' : 'unknown';
+                        console.log('[Inspector] ✗ Skipped caching -', reason);
                     }
                 } else {
-                    document.getElementById('empty-state').textContent = 'NO METADATA';
+                    document.getElementById('empty-state').textContent = t('inspector.noMetadata', { defaultValue: 'NO METADATA' });
+                }
+
+                // Setup cache delete button
+                if (itemId && libPath) {
+                    const cacheControl = document.getElementById('cache-control');
+                    cacheControl.innerHTML = '';
+                    const btn = document.createElement('button');
+                    btn.id = 'btn-delete-cache';
+                    btn.textContent = t('inspector.deleteCache', { defaultValue: '🗑️ Delete Cache' });
+                    btn.title = t('inspector.deleteCacheTitle', { defaultValue: 'Delete the cached metadata analysis information for this image' });
+                    btn.onclick = async () => {
+                        const confirmDeleteCache = t('confirm.clearAllCache', { defaultValue: 'Delete cache for this image?' });
+                        if (!confirm(confirmDeleteCache)) return;
+                        try {
+                            const cacheServiceForDelete = new window.MetadataCacheService(libPath);
+                            await cacheServiceForDelete.delete(itemId);
+                            console.log('[Inspector] Cache deleted successfully for:', itemId);
+                            // Reload metadata from file
+                            document.getElementById('content').innerHTML = '';
+                            document.getElementById('content').style.display = 'none';
+                            document.getElementById('empty-state').textContent = t('inspector.readingMetadata', { defaultValue: 'READING METADATA...' });
+                            document.getElementById('empty-state').style.display = 'block';
+                            await loadSelected();
+                        } catch (e) {
+                            console.error('[Inspector] Error deleting cache:', e);
+                            const errorMsg = t('log.error.generic', { name: 'Cache', message: e.message });
+                            alert(errorMsg);
+                        }
+                    };
+                    cacheControl.appendChild(btn);
                 }
             } catch (e) {
                 console.error('[Inspector] Error loading metadata:', e);
-                document.getElementById('empty-state').textContent = 'ERROR';
+                document.getElementById('empty-state').textContent = t('inspector.error', { defaultValue: 'ERROR' });
             }
         }
 
         if (typeof eagle !== 'undefined') {
             eagle.onPluginCreate(async (plugin) => {
+                // Store paths globally for use in loadSettings()
+                globalPluginPath = plugin.path;
+                globalLibraryPath = eagle.library.path;
+                console.log('[Inspector] Paths set - plugin:', globalPluginPath, 'library:', globalLibraryPath);
+
                 // Load dictionary using plugin.path to avoid Electron __dirname issues
                 try {
                     const dictPath = require('path').join(plugin.path, 'js/metadata-parser/dictionary/default-dictionary.json');

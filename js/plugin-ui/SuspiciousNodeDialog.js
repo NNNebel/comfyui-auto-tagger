@@ -73,13 +73,21 @@
     const overrides = {};
     let hasInclude = false;
     let hasExclude = false;
+    let includedSteps = 0;
+    let excludedSteps = 0;
 
     for (const step of dialogSteps) {
       const decision = decisions[step.stepIndex];
       if (decision !== 'include' && decision !== 'exclude') continue;
 
-      if (decision === 'include') hasInclude = true;
-      if (decision === 'exclude') hasExclude = true;
+      if (decision === 'include') {
+        hasInclude = true;
+        includedSteps++;
+      }
+      if (decision === 'exclude') {
+        hasExclude = true;
+        excludedSteps++;
+      }
 
       // The sampler step itself
       if (step.stepMetadata && step.stepMetadata.nodeId) {
@@ -100,7 +108,15 @@
     let action = 'exclude';
     if (hasInclude && !hasExclude) action = 'include';
 
-    return { action, overrides };
+    return {
+      action,
+      overrides,
+      stepCounts: {
+        total: dialogSteps.length,
+        included: includedSteps,
+        excluded: excludedSteps
+      }
+    };
   }
 
   const SuspiciousNodeDialog = {

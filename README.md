@@ -112,6 +112,14 @@ The plugin provides several configuration options accessible via the settings di
 
 * **Enable debug mode**: Outputs detailed debug logs to console. Useful for diagnosing issues or reporting bugs.
 
+#### Cache Settings
+
+* **Do not use cache**: When enabled, the plugin will not cache metadata for images. This is useful for testing or when you want to ensure fresh metadata is always extracted. Changes take effect immediately.
+* **Clear All Cache**: Permanently deletes all cached metadata files. This frees up disk space and allows you to start fresh.
+* **Delete Cache (Inspector)**: When viewing an image in the Inspector panel, a delete button (🗑️) appears at the bottom. Click it to delete the cached metadata for that specific image.
+
+Cache files are stored in `{Library Path}/.eagle/plugins/comfyui-auto-tagger/metadata-cache/` and are automatically used to speed up repeated metadata viewing.
+
 ### 🚀 Usage
 
 1.  Select one or more AI-generated images (ComfyUI/A1111/Civitai) in Eagle
@@ -249,7 +257,15 @@ ComfyUIの画像に埋め込まれるメタデータには、「実際にどの�
 
 * **デバッグモードを有効にする**: 詳細なデバッグログをコンソールに出力します。問題の診断やバグ報告に役立ちます。
 
-### � 使い方
+#### キャッシュ設定
+
+* **キャッシュを使わない**: 有効にすると、プラグインは画像のメタデータをキャッシュしません。テスト時や常に新しいメタデータを取得したい場合に便利です。設定の変更は即座に反映されます。
+* **🗑️ キャッシュをすべて削除**: キャッシュされたすべてのメタデータファイルを完全に削除します。ディスク容量を解放し、キャッシュをリセットしたい場合に使用します。
+* **キャッシュを削除（インスペクター）**: インスペクターパネルで画像を表示すると、下部に削除ボタン（🗑️）が表示されます。クリックして、その画像のキャッシュされたメタデータのみを削除できます。
+
+キャッシュファイルは `{ライブラリパス}/.eagle/plugins/comfyui-auto-tagger/metadata-cache/` に保存されており、メタデータ表示の高速化に自動的に使用されます。
+
+### 🚀 使い方
 
 1.  EagleでAI生成画像（ComfyUI/A1111/Civitai）を1つ以上選択
 2.  右クリックして **「プラグイン」** > **「ComfyUI Auto Tagger」** を選択

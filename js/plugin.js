@@ -39,7 +39,38 @@ Promise.all([
             if (window.initializeDictionary) {
                 await window.initializeDictionary();
             }
+
+            // Initialize settings file if it doesn't exist
+            await initializeSettingsFile();
         } catch (e) { console.error("[i18n] Init failed", e); }
+    }
+
+    async function initializeSettingsFile() {
+        try {
+            const libraryPath = eagle.library.path;
+            if (!libraryPath) {
+                console.warn('[Settings] Library path not available, skipping settings file init');
+                return;
+            }
+
+            const settingsPath = path.join(libraryPath, '.eagle', 'plugins', 'comfyui-auto-tagger', 'inspector-settings.json');
+            try {
+                // Try to read existing file
+                await fsp.readFile(settingsPath, 'utf8');
+                console.log('[Settings] Settings file already exists:', settingsPath);
+            } catch (e) {
+                // File doesn't exist, create with defaults
+                await fsp.mkdir(path.dirname(settingsPath), { recursive: true });
+                const defaults = {
+                    skipCache: false,
+                    suspiciousNodeHandling: 'exclude'
+                };
+                await fsp.writeFile(settingsPath, JSON.stringify(defaults, null, 2), 'utf8');
+                console.log('[Settings] Created default settings file:', settingsPath);
+            }
+        } catch (e) {
+            console.error('[Settings] Failed to initialize settings file:', e);
+        }
     }
 
     function updateUILabels() {
@@ -162,7 +193,8 @@ Promise.all([
         if (settingsSectionTitles[2]) settingsSectionTitles[2].textContent = t('ui.settings.dictionarySettings');
         if (settingsSectionTitles[3]) settingsSectionTitles[3].textContent = t('ui.settings.tagGenerationSettings');
         if (settingsSectionTitles[4]) settingsSectionTitles[4].textContent = t('ui.settings.debugSettings');
-        if (settingsSectionTitles[5]) settingsSectionTitles[5].textContent = t('ui.settings.support');
+        if (settingsSectionTitles[5]) settingsSectionTitles[5].textContent = t('ui.settings.cacheSettings');
+        if (settingsSectionTitles[6]) settingsSectionTitles[6].textContent = t('ui.settings.support');
         
         const chunkSizeSettingsLabel = document.querySelector('label[for="chunk-size-settings"]');
         if (chunkSizeSettingsLabel) chunkSizeSettingsLabel.textContent = t('ui.settings.chunkSize');
@@ -186,7 +218,13 @@ Promise.all([
         
         const debugModeSettingsLabel = document.querySelector('label[for="chk-debug-log-settings"]');
         if (debugModeSettingsLabel) debugModeSettingsLabel.textContent = t('ui.settings.debugMode');
-        
+
+        const skipCacheLabel = document.querySelector('label[for="chk-skip-cache-debug-settings"]');
+        if (skipCacheLabel) skipCacheLabel.textContent = t('ui.settings.skipCache');
+
+        const btnClearAllCache = document.getElementById('btn-clear-all-cache');
+        if (btnClearAllCache) btnClearAllCache.textContent = t('ui.settings.clearAllCache');
+
         const btnReportIssue = document.getElementById('btn-report-issue');
         if (btnReportIssue) btnReportIssue.textContent = t('ui.settings.reportIssue');
         
@@ -196,7 +234,9 @@ Promise.all([
         if (settingsDescriptions[2]) settingsDescriptions[2].textContent = t('ui.settings.fetchDictionaryDescription');
         if (settingsDescriptions[3]) settingsDescriptions[3].textContent = t('ui.settings.includeAllSamplersDescription');
         if (settingsDescriptions[4]) settingsDescriptions[4].textContent = t('ui.settings.debugModeDescription');
-        if (settingsDescriptions[5]) settingsDescriptions[5].textContent = t('ui.settings.reportIssueDescription');
+        if (settingsDescriptions[5]) settingsDescriptions[5].textContent = t('ui.settings.skipCacheDescription');
+        if (settingsDescriptions[6]) settingsDescriptions[6].textContent = t('ui.settings.clearAllCacheDescription');
+        if (settingsDescriptions[7]) settingsDescriptions[7].textContent = t('ui.settings.reportIssueDescription');
         
         // Suspicious node dialog content
         const dialogNodeDescription = document.getElementById('dialog-node-description');
@@ -438,6 +478,25 @@ Promise.all([
         const metadataService = new MetadataService();
         await debugLog('MetadataService initialized');
 
+        // Check skipCache setting
+        const chkSkipCache = document.getElementById('chk-skip-cache-debug-settings');
+        const skipCache = chkSkipCache ? chkSkipCache.checked : false;
+        await debugLog('skipCache setting: ' + skipCache);
+
+        // Initialize cache service if not skipping cache
+        let cacheService = null;
+        if (!skipCache && typeof MetadataCacheService !== 'undefined') {
+            try {
+                const libraryPath = eagle.library.path;
+                if (libraryPath) {
+                    cacheService = new MetadataCacheService(libraryPath);
+                    await debugLog('Cache service initialized');
+                }
+            } catch (e) {
+                await debugLog('Failed to initialize cache service: ' + e.message);
+            }
+        }
+
         const processItem = async (item) => {
             try {
                 await debugLog('--- Processing item: ' + item.name + ' ---');
@@ -451,7 +510,7 @@ Promise.all([
                     '.webp': 'image/webp'
                 };
                 const mimeType = mimeTypeMap[ext] || 'image/webp';
-                
+
                 await debugLog('File info: ext=' + ext + ', size=' + buffer.length + ' bytes, mimeType=' + mimeType, item);
                 
                 // Get suspicious node handling option from UI
@@ -469,11 +528,37 @@ Promise.all([
                     await debugLog('Converting ask mode to exclude for initial parse (need full suspicious node list for dialog)', item);
                 }
 
-                // Use new MetadataService with options
-                await debugLog('Extracting metadata...', item);
-                const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui', {
-                    suspiciousNodeHandling: suspiciousNodeHandling
-                });
+                // Try to get from cache first (if enabled)
+                let metadata = null;
+                if (cacheService && !skipCache) {
+                    try {
+                        const cachedMetadata = await cacheService.get(item.id);
+                        if (cachedMetadata) {
+                            await debugLog('Loaded metadata from cache', item);
+                            metadata = cachedMetadata;
+                        }
+                    } catch (e) {
+                        await debugLog('Cache retrieval failed: ' + e.message, item, 'warn');
+                    }
+                }
+
+                // Extract from file if not cached
+                if (!metadata) {
+                    await debugLog('Extracting metadata from file...', item);
+                    metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui', {
+                        suspiciousNodeHandling: suspiciousNodeHandling
+                    });
+
+                    // Save to cache if enabled
+                    if (metadata && cacheService && !skipCache) {
+                        try {
+                            await cacheService.set(item.id, metadata);
+                            await debugLog('Metadata cached', item);
+                        } catch (e) {
+                            await debugLog('Failed to cache metadata: ' + e.message, item, 'warn');
+                        }
+                    }
+                }
                 
                 if (metadata) {
                     await debugLog('=== METADATA EXTRACTION COMPLETE ===', item);
@@ -551,10 +636,26 @@ Promise.all([
                     
                     if (originalSuspiciousNodeHandling === 'exclude') {
                         await debugLog('Action: Automatically excluding suspicious nodes', item);
-                        log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
+                        // Count suspicious steps (not nodes)
+                        var suspiciousStepsCount = 0;
+                        for (var i = 0; i < metadata.suspiciousNodes.length; i++) {
+                            var node = metadata.suspiciousNodes[i];
+                            if (node.affectedSteps && node.affectedSteps.length > 0) {
+                                suspiciousStepsCount += node.affectedSteps.length;
+                            }
+                        }
+                        log('log.caution.suspicious_nodes_excluded', {name: item.name, total: suspiciousStepsCount});
                     } else if (originalSuspiciousNodeHandling === 'include') {
                         await debugLog('Action: Including all nodes (ignoring suspicious status)', item);
-                        log('log.caution.suspicious_nodes_included', {name: item.name, count: metadata.suspiciousNodes.length});
+                        // Count suspicious steps (not nodes)
+                        var suspiciousStepsCount = 0;
+                        for (var i = 0; i < metadata.suspiciousNodes.length; i++) {
+                            var node = metadata.suspiciousNodes[i];
+                            if (node.affectedSteps && node.affectedSteps.length > 0) {
+                                suspiciousStepsCount += node.affectedSteps.length;
+                            }
+                        }
+                        log('log.caution.suspicious_nodes_included', {name: item.name, total: suspiciousStepsCount});
                     } else if (originalSuspiciousNodeHandling === 'ask') {
                         await debugLog('Action: Showing dialog to user', item);
                         // Check if handleSuspiciousNodes is available
@@ -562,7 +663,14 @@ Promise.all([
                             await debugLog('ERROR: window.handleSuspiciousNodes is not defined!', item, 'error');
                             log('log.error.generic', { name: item.name, message: 'Dialog function not available' });
                             // Fallback to exclude mode
-                            log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
+                            var suspiciousStepsCount = 0;
+                            for (var i = 0; i < metadata.suspiciousNodes.length; i++) {
+                                var node = metadata.suspiciousNodes[i];
+                                if (node.affectedSteps && node.affectedSteps.length > 0) {
+                                    suspiciousStepsCount += node.affectedSteps.length;
+                                }
+                            }
+                            log('log.caution.suspicious_nodes_excluded', {name: item.name, total: suspiciousStepsCount});
                         } else {
                             await debugLog('Showing suspicious node dialog', item);
                             
@@ -584,11 +692,19 @@ Promise.all([
                                         Object.assign(metadata, metadataWithDecision);
                                     }
                                     
-                                    // Log the decision
-                                    if (decision.action === 'exclude') {
-                                        log('log.caution.suspicious_nodes_excluded', {name: item.name, count: metadata.suspiciousNodes.length});
+                                    // Log the decision with breakdown using step-level counts
+                                    const stepCounts = decision.stepCounts || {};
+                                    const total = stepCounts.total || 0;
+                                    const excluded = stepCounts.excluded || 0;
+                                    const included = stepCounts.included || 0;
+
+                                    if (excluded > 0 && included > 0) {
+                                        // Mixed decision: show breakdown
+                                        log('log.caution.suspicious_nodes_mixed', {name: item.name, total: total, excluded: excluded, included: included});
+                                    } else if (decision.action === 'exclude') {
+                                        log('log.caution.suspicious_nodes_excluded', {name: item.name, total: total});
                                     } else if (decision.action === 'include') {
-                                        log('log.caution.suspicious_nodes_included', {name: item.name, count: metadata.suspiciousNodes.length});
+                                        log('log.caution.suspicious_nodes_included', {name: item.name, total: total});
                                     }
                                 } else {
                                     await debugLog('User cancelled dialog', item, 'warn');
@@ -815,19 +931,82 @@ Promise.all([
     document.getElementById('startButton').onclick = () => { saveSettings(); startTagging(); };
     document.getElementById('deleteInfoButton').onclick = removeInfo;
     document.getElementById('cancelButton').onclick = () => isCancelled = true;
-    
+
     // チェックボックス変更時にも保存
     for(const k in checkboxes) {
         if(checkboxes[k]) checkboxes[k].onchange = saveSettings;
     }
-    
+
     // 疑わしいノードの処理方法変更時にも保存
     if (suspiciousNodeHandlingSelect) {
         suspiciousNodeHandlingSelect.onchange = saveSettings;
     }
-    
+
+    // Clear All Cache button handler
+    const btnClearAllCache = document.getElementById('btn-clear-all-cache');
+    if (btnClearAllCache) {
+        btnClearAllCache.onclick = async () => {
+            const confirmMsg = t('confirm.clearAllCache');
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                // Get library path from eagle
+                const libraryPath = eagle.library.path;
+                if (!libraryPath) {
+                    alert(t('alert.noItemSelected'));
+                    return;
+                }
+
+                // Use MetadataCacheService via require (Node.js context)
+                const MetadataCacheServiceLocal = require(plugin.path + '/js/metadata-parser/utils/MetadataCacheService');
+                const cacheService = new MetadataCacheServiceLocal(libraryPath);
+                const success = await cacheService.clearAll();
+                if (!success) {
+                    alert(t('log.error.generic', { name: 'Cache', message: 'Failed to clear cache' }));
+                } else {
+                    console.log('[Cache Clear] All cache cleared successfully');
+                }
+            } catch (e) {
+                console.error('[Cache Clear] Error:', e);
+                alert(t('log.error.generic', { name: 'Cache', message: e.message }));
+            }
+        };
+    }
+
+    // Skip Cache Debug checkbox
+    const chkSkipCacheDebug = document.getElementById('chk-skip-cache-debug-settings');
+    if (chkSkipCacheDebug) {
+        chkSkipCacheDebug.onchange = async () => {
+            localStorage.setItem('comfyui-auto-tagger-skip-cache-debug', chkSkipCacheDebug.checked);
+            // Also save to settings file for cross-context access (Eagle plugin directory)
+            try {
+                const libraryPath = eagle.library.path;
+                if (!libraryPath) {
+                    console.warn('[Settings] Library path not available');
+                    return;
+                }
+
+                const settingsPath = path.join(libraryPath, '.eagle', 'plugins', 'comfyui-auto-tagger', 'inspector-settings.json');
+                const settings = {
+                    skipCache: chkSkipCacheDebug.checked,
+                    suspiciousNodeHandling: suspiciousNodeHandlingSelect ? suspiciousNodeHandlingSelect.value : 'exclude'
+                };
+                await fsp.mkdir(path.dirname(settingsPath), { recursive: true });
+                await fsp.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+                console.log('[Settings] Saved to:', settingsPath, settings);
+            } catch (e) {
+                console.error('[Settings] Failed to save settings file:', e);
+            }
+        };
+        // Load saved state
+        const saved = localStorage.getItem('comfyui-auto-tagger-skip-cache-debug');
+        if (saved !== null) {
+            chkSkipCacheDebug.checked = saved === 'true';
+        }
+    }
+
     // Listen for settings changed event from settings dialog
     document.addEventListener('settingsChanged', saveSettings);
-    
+
     console.log("Initialized.");
 });

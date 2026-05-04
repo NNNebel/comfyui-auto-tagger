@@ -76,12 +76,33 @@
      */
     async delete(itemId) {
       if (!fsp || !path) return;
-      
+
       const cachePath = path.join(this.cacheDir, `${itemId}.json`);
       try {
         await fsp.unlink(cachePath);
       } catch (e) {
         // Ignore if file doesn't exist
+      }
+    }
+
+    /**
+     * Clear all cached metadata
+     * @returns {Promise<boolean>} Success status
+     */
+    async clearAll() {
+      if (!fsp || !path) return false;
+
+      try {
+        const files = await fsp.readdir(this.cacheDir);
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            await fsp.unlink(path.join(this.cacheDir, file));
+          }
+        }
+        return true;
+      } catch (e) {
+        console.error('[MetadataCacheService] Failed to clear cache:', e);
+        return false;
       }
     }
 
