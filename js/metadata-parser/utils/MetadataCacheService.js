@@ -113,9 +113,10 @@
      */
     static resolveLibraryPath(filePath) {
       if (!filePath || !path) return null;
-      
+
       // Eagle structure: Library/images/ITEM_ID.info/file.png
-      const parts = filePath.split(path.sep);
+      // Split by either forward or back slash to handle cross-platform paths
+      const parts = filePath.replace(/\\/g, '/').split('/').filter(p => p);
       const imagesIdx = parts.lastIndexOf('images');
       if (imagesIdx !== -1) {
         return parts.slice(0, imagesIdx).join(path.sep);
