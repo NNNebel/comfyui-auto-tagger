@@ -10,7 +10,10 @@
 
 ## 🇬🇧 English
 
-**ComfyUI Auto Tagger** is a plugin for [Eagle](https://en.eagle.cool/) that automatically extracts metadata (Workflow/Prompt JSON) from AI-generated images and saves them as Eagle **Tags** and **Notes**.
+**ComfyUI Auto Tagger** is a plugin for [Eagle](https://en.eagle.cool/) that automatically extracts metadata from AI-generated images. It provides two main features:
+
+1. **Generation Info Inspector** — Instantly view prompts, seeds, and generation parameters when you select an image (with copy buttons for quick reuse)
+2. **Auto-Tagging** — Save extracted metadata as Tags and Notes for organization and filtering
 
 It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Forge, and other variants; referred to as "A1111" below), and **Civitai** generated images in **PNG**, **WebP**, and **JPEG** formats, and allows you to filter which information to import.
 
@@ -26,13 +29,13 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 
 * **Generation Info Inspector**: When you select an image in Eagle, a panel automatically appears showing the generation metadata — prompts, seed, sampler, model, and LoRA — with a copy button for each field. Multi-sampler workflows display as tabs (Base / Step 2, etc.).
 * **Multi-Format Support**: Supports ComfyUI workflows (including complex multi-sampler), A1111 (Stable Diffusion WebUI) parameters, and Civitai generation metadata.
-* **Metadata Extraction**: Automatically detects Checkpoint, LoRA, Prompts (Positive/Negative), and Generation Parameters (Seed, Steps, CFG, Sampler).
+* **Metadata Extraction**: Automatically extracts the models used (Checkpoints, LoRA), prompts, and generation settings (Seed, Sampler, Steps, CFG).
 * **Flexible Output**:
     * **Tags**: Adds extracted info to Eagle tags (e.g., `#checkpoint_name`, `#lora_name`, `seed:12345`).
     * **Notes (Annotation)**: Saves full prompts and parameters in the Note section for easy reference.
 * **Selective Import**: Allows toggling specific items (e.g., "Import Checkpoint but ignore Seed") via checkboxes.
 * **Batch Processing**: Efficiently processes multiple images with a progress bar.
-* **Advanced Workflow Analysis**: Dynamically analyzes ComfyUI node graphs to trace the actual execution path, accurately extracting parameters even from complex multi-stage workflows (HiresFix, FaceDetailer, etc.).
+* **Advanced Workflow Analysis**: Dynamically analyzes ComfyUI workflows to trace the actual execution path. Accurately extracts parameters even from complex workflows with multiple generation stages (HiresFix, FaceDetailer, etc.).
 * **Suspicious Node Detection**: Detects nodes with missing required inputs in ComfyUI workflows and allows users to decide whether to include or exclude them from metadata extraction.
 * **Force Delete Mode**: Removes all tags and notes from selected items without analysis (Shift + Click on "Delete Info").
 * **Debug Mode**: Detailed logs for troubleshooting (toggle via checkbox).
@@ -71,9 +74,9 @@ The plugin traces complex ComfyUI workflows to identify the actual generation pi
 
 #### Suspicious Node Detection
 
-ComfyUI metadata doesn't record the actual execution path. The plugin traces back from the final image save node to extract prompts and parameters. When workflows contain both txt2img and img2img paths, some nodes may not have been executed. To eliminate this noise, the plugin detects nodes with missing required inputs (e.g., latent) as "suspicious nodes (likely not executed)".
+ComfyUI metadata doesn't record the actual execution path. The plugin traces back from the final image save node to extract prompts and parameters. In this process, **nodes that weren't actually used** may be included.
 
-However, ComfyUI has many custom nodes, and some may work correctly even with seemingly missing inputs. To prevent automatic exclusion from causing information loss, the plugin displays a dialog when suspicious nodes are detected, allowing users to decide whether to include or exclude them from metadata extraction.
+For example, a workflow designed for txt2img (text-to-image) might contain img2img (image-to-image) nodes. If you used only txt2img, those img2img nodes were never executed — but the plugin cannot detect this automatically. When suspicious nodes are detected, the plugin displays a dialog, allowing you to decide whether to include or exclude them from metadata extraction.
 
 <p align="center">
   <img src="assets/suspicious_node detecter.png" alt="Suspicious Node Detection" width="100%">
@@ -153,7 +156,10 @@ This project is licensed under the [MIT License](LICENSE).
 ## 🇯🇵 日本語
 
 **ComfyUI Auto Tagger** は、画像収集管理ソフト [Eagle](https://jp.eagle.cool/) 用のプラグインです。
-AI画像生成ツールで生成された画像に含まれるメタデータ（Workflow/Prompt）を解析し、モデル名やプロンプトなどを自動でEagleの「タグ」や「メモ」に追加します。
+AI生成画像のメタデータを自動抽出し、以下の2つの機能を提供します：
+
+1. **生成情報インスペクター** — 画像を選ぶと、プロンプト・Seed・生成パラメータが自動表示されます（各フィールドにコピーボタン付き）
+2. **自動タグ付け** — 抽出したメタデータをEagleの「タグ」や「メモ」として保存し、整理・検索を効率化
 
 **ComfyUI**、**Stable Diffusion WebUI**（Automatic1111、Forge等の派生版を含む。以下「A1111」と表記）、**Civitai** で生成された **PNG**・**WebP**・**JPEG** 形式の画像に対応しており、取り込む情報を選択できます。
 
@@ -169,13 +175,13 @@ AI画像生成ツールで生成された画像に含まれるメタデータ（
 
 * **生成情報インスペクター**: Eagleで画像を選択すると、プロンプト・Seed・サンプラー・モデル・LoRAなどの生成情報がパネルに自動表示されます。各フィールドにコピーボタン付き。マルチサンプラーワークフローはタブ（Base / Step 2 など）で切り替え表示。
 * **複数フォーマット対応**: ComfyUIワークフロー、A1111（Stable Diffusion WebUI）、Civitai生成画像に対応。
-* **メタデータ抽出**: チェックポイント、LoRA、プロンプト（Positive/Negative）、生成パラメータ（Seed, Steps, CFG, Sampler）を自動検出。
+* **メタデータ抽出**: 使用したモデル（チェックポイント・LoRA）、プロンプト、生成設定（Seed・サンプラー・ステップ数・CFG）を自動抽出。
 * **柔軟な出力先**:
     * **タグ**: 抽出した情報をEagleのタグとして追加（例: `#checkpoint_name`, `seed:12345`）。
     * **メモ（アノテーション）**: プロンプトやパラメータの詳細をメモ欄に保存し、参照・コピーを容易に。
 * **選択的取り込み**: チェックボックスで必要な情報のみ（例: チェックポイントのみ）を選択して取り込み可能。
 * **バッチ処理**: 複数画像をまとめて効率的に処理し、進捗状況を表示。
-* **高度なワークフロー解析**: ComfyUIのノードグラフを動的に解析し、実際の実行ルートを特定。複雑なマルチステージワークフロー（HiresFix、FaceDetailer等）からも正確にパラメータを抽出。
+* **高度なワークフロー解析**: ComfyUIのワークフローを動的に解析し、実際の実行ルートを特定。HiresFix、FaceDetailer等、複数回に渡って画像生成を行う複雑なワークフローからも正確にパラメータを抽出。
     * 複雑なノード接続を追跡して実際の生成パイプラインを特定
     * 複数のサンプラーと改善ステージを持つマルチステージワークフローに対応
 * **疑わしいノード検出**: ComfyUIのメタデータには実際の実行経路が記録されないため、プラグインは入力の欠落などから「実行されなかった未使用ノード」を推測します。しかし、未知のカスタムノードを誤って除外しないよう、検知時はダイアログを表示し、抽出情報に含めるか除外するかの判断をユーザーに委ねます。
@@ -216,9 +222,9 @@ Eagleで画像を選択するとインスペクターパネルが自動表示さ
 
 #### 疑わしいノード検出
 
-ComfyUIの画像に埋め込まれるメタデータには、「実際にどのノードを通って生成されたか」という実行経路の記録が存在しません。そのため、本プラグインは最終的な画像保存ノードから呼び出し元を逆算してプロンプトやパラメータを抽出します。
+ComfyUIのメタデータには実行経路が記録されていないため、プラグインは最終的な画像保存ノードから逆算してプロンプトやパラメータを取得します。その過程で、**実際には使われなかったノード**が含まれることがあります。
 
-1つのワークフロー内にt2iとi2iが混在している場合など、実際には実行されていないノードが存在することがあります。これらの不要なノイズを排除するため、プラグインは必須入力（Latentなど）が欠落しているノードを「疑わしいノード（実行されていない可能性が高いノード）」として推測し、検出します。
+例えば、テキストから画像を生成する（txt2img）ワークフローに、画像から画像を生成する（img2img）用のノードが入っている場合、img2imgのノードは実行されていないにもかかわらず、プラグインはそれを検出できません。このような未実行ノードを「疑わしいノード」として推測し、ユーザーに判断を委ねる設計になっています。
 
 ただし、ComfyUIには独自のカスタムノードが多数存在し、一見入力が不足していても正常に動作する場合があります。プラグインによる機械的な自動除外による情報の欠落を防ぐため、疑わしいノードを検出した際はダイアログを表示し、メタデータ抽出の対象に「含める」か「除外する」かの選択をユーザーに委ねる設計となっています。
 
