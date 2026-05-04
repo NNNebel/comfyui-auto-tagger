@@ -24,7 +24,8 @@ const METADATA_PARSER_DIR = path.join(process.cwd(), 'js', 'metadata-parser');
 const BROWSER_COMPATIBLE_DIRS = [
   path.join(METADATA_PARSER_DIR, 'binary-extraction'),
   path.join(METADATA_PARSER_DIR, 'parsers'),
-  path.join(METADATA_PARSER_DIR, 'integration')
+  path.join(METADATA_PARSER_DIR, 'integration'),
+  path.join(METADATA_PARSER_DIR, 'containers')
 ];
 
 /**

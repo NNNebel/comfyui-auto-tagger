@@ -70,6 +70,18 @@
 
       return null;
     }
+
+    _parseJsonFromPos(fullBuffer, startPos) {
+      const jsonString = this._extractJsonStringFromPos(fullBuffer, startPos);
+      if (jsonString) {
+        try {
+          return JSON.parse(jsonString);
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    }
   }
 
   if (typeof window !== 'undefined') window.BaseContainerReader = BaseContainerReader;
