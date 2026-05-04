@@ -186,6 +186,14 @@
       "passthrough_rules": {
         "output": ["input_true", "input_false"]
       }
+    },
+    "ComfyNumberConvert": {
+      "type": "transformer",
+      "suspicious_detection": {
+        "required_input_patterns": ["value"],
+        "reason_key": "suspiciousNode.reason.transformerNoInput",
+        "suggestion_key": "suspiciousNode.suggestion.checkConnections"
+      }
     }
   }
 }

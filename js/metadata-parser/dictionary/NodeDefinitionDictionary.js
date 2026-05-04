@@ -64,7 +64,7 @@
           continue;
         }
 
-        const validTypes = ['sampler', 'router', 'provider', 'checkpoint_loader', 'lora_loader', 'image_processor', 'vae'];
+        const validTypes = ['sampler', 'router', 'provider', 'checkpoint_loader', 'lora_loader', 'image_processor', 'vae', 'transformer'];
         if (!validTypes.includes(definition.type)) {
           errors.push(`Node "${classType}": Invalid type "${definition.type}". Must be one of: ${validTypes.join(', ')}`);
         }

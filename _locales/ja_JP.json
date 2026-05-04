@@ -24,6 +24,11 @@
             "debugSettings": "デバッグ設定",
             "debugMode": "デバッグモードを有効にする",
             "debugModeDescription": "詳細なデバッグログをコンソールに出力します。問題の診断に役立ちます。",
+            "cacheSettings": "キャッシュ設定",
+            "skipCache": "キャッシュを使わない",
+            "skipCacheDescription": "有効にすると、キャッシュされたメタデータを使用しません。常に画像から新しいメタデータを取得します。",
+            "clearAllCache": "🗑️ キャッシュをすべて削除",
+            "clearAllCacheDescription": "キャッシュされたメタデータをすべて削除します。",
             "support": "サポート",
             "reportIssue": "🐛 GitHubでIssueを報告",
             "reportIssueDescription": "問題や改善提案をGitHubで報告できます。クリックするとGitHubのIssue作成ページが開きます。"
@@ -92,8 +97,9 @@
         "caution": {
             "sampler_fallback": "Base Samplerを特定できなかったため、最小IDのノードを採用しました。",
             "sampler_fallback_item": "[要確認] {{name}}: Base Samplerを特定できず、最小IDで代用しました。",
-            "suspicious_nodes_excluded": "[要確認] {{name}}: {{count}}個の疑わしいノードを除外しました。",
-            "suspicious_nodes_included": "[情報] {{name}}: すべてのノードを含めます（{{count}}個の疑わしいノードを含む）。"
+            "suspicious_nodes_excluded": "[要確認] {{name}}: {{total}}個の疑わしいノードを除外しました。",
+            "suspicious_nodes_included": "[情報] {{name}}: {{total}}個の疑わしいノードをすべて含めます。",
+            "suspicious_nodes_mixed": "[要確認] {{name}}: {{total}}個の疑わしいノードのうち{{excluded}}件を除外、{{included}}件を含めました。"
         },
         "error": {
             "generic": "[エラー] {{name}}: {{message}}",
@@ -107,14 +113,16 @@
             "cancelledMessage": "削除中止。(削除: {{removedCount}}, スキップ: {{skippedCount}}, 失敗: {{errorCount}})"
         },
         "debugLogFile": "デバッグログファイル: {{path}}",
-        "cancelling": "... 処理を中止しています ..."
+        "cancelling": "... 処理を中止しています ...",
+        "cacheCleared": "[成功] キャッシュの削除に成功しました。"
     },
     "alert": {
         "noItemSelected": "アイテムが選択されていません。"
     },
     "confirm": {
         "deleteAll": "選択中の{{count}} 件のアイテムから、このプラグインが生成したタグとメモを削除します。よろしいですか？",
-        "forceDeleteAll": "【強制削除モード】\n選択中の{{count}} 件のアイテムのタグを「全て」削除し、メモ情報を除去します。\n解析処理を行わないため高速ですが、ユーザーが付与したタグも消える可能性があります。\n\n実行しますか？"
+        "forceDeleteAll": "【強制削除モード】\n選択中の{{count}} 件のアイテムのタグを「全て」削除し、メモ情報を除去します。\n解析処理を行わないため高速ですが、ユーザーが付与したタグも消える可能性があります。\n\n実行しますか？",
+        "clearAllCache": "すべてのキャッシュを削除してもよろしいですか？この操作は取り消せません。"
     },
     "dictionary": {
         "bundled": "バンドルされた辞書を使用しています",
@@ -122,6 +130,27 @@
         "fetchSuccess": "オンライン辞書の取得に成功しました",
         "cached": "キャッシュされた辞書を使用しています",
         "fetchFailed": "オンライン取得に失敗しました。バンドルされた辞書を使用しています"
+    },
+    "inspector": {
+        "deleteCache": "🗑️ キャッシュを削除",
+        "deleteCacheTitle": "この画像のメタデータ解析情報のキャッシュを削除",
+        "readingMetadata": "メタデータを読み込み中...",
+        "noMetadata": "メタデータが見つかりません",
+        "error": "エラー",
+        "prompts": "プロンプト",
+        "parameters": "パラメータ",
+        "model": "モデル",
+        "positive": "ポジティブ",
+        "negative": "ネガティブ",
+        "checkpoint": "Checkpoint",
+        "loras": "LoRAs",
+        "seed": "Seed",
+        "steps": "Steps",
+        "cfgScale": "CFG Scale",
+        "sampler": "Sampler",
+        "scheduler": "Scheduler",
+        "base": "ベース",
+        "step": "ステップ"
     },
     "suspiciousNode": {
         "title": "⚠️ 未使用の可能性があるノード",
@@ -145,10 +174,12 @@
             "vaeEncodeNoInput": "VAEEncodeノードに画像/ピクセル入力がありません",
             "vaeDecodeNoInput": "VAEDecodeノードにサンプル/潜在入力がありません",
             "samplerNoInput": "サンプラーノード '{{nodeType}}' に潜在画像入力がありません",
+            "transformerNoInput": "変換ノード '{{nodeType}}' に入力接続がありません",
             "missingInput": "ノード '{{nodeType}}' に必須入力が不足しています"
         },
         "suggestion": {
             "disconnected": "このノードは接続が切れているか、必要な接続が欠けている可能性があります。このノードをワークフローに含めるべきか確認してください。",
+            "checkConnections": "このノードの入力が正しく接続されているか確認してください。変換ノードは機能するために入力が必要です。",
             "vaeEncodeRequired": "VAEEncodeはエンコードするために画像入力が必要です。このノードは実行されない可能性があります。",
             "vaeDecodeRequired": "VAEDecodeはデコードするために潜在サンプルが必要です。このノードは実行されない可能性があります。",
             "samplerRequired": "サンプラーは潜在画像入力が必要です。このノードは実行されない可能性があります。"
@@ -157,6 +188,9 @@
         "samplerInfo": "{{samplerType}} (seed: {{seed}}, steps: {{steps}}, cfg: {{cfg}})",
         "notExecuted": "⚠️ このステップは実行されなかった可能性があります",
         "excludedSamplerTitle": "除外されたサンプラー: {{samplerType}} (#{{nodeId}})",
-        "suspiciousSamplerTitle": "疑わしいサンプラー: {{samplerType}} (#{{nodeId}})"
+        "suspiciousSamplerTitle": "疑わしいサンプラー: {{samplerType}} (#{{nodeId}})",
+        "legendSuspicious": "疑わしいノード",
+        "legendSampler": "サンプラー",
+        "legendOther": "その他のノード"
     }
 }

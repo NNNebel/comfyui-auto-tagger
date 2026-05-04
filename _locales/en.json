@@ -24,6 +24,11 @@
             "debugSettings": "Debug Settings",
             "debugMode": "Enable debug mode",
             "debugModeDescription": "Output detailed debug logs to console. Useful for diagnosing issues.",
+            "cacheSettings": "Cache Settings",
+            "skipCache": "Do not use cache",
+            "skipCacheDescription": "When enabled, cached metadata will not be used. Always fetch fresh metadata from images.",
+            "clearAllCache": "🗑️ Clear All Cache",
+            "clearAllCacheDescription": "Delete all cached metadata permanently.",
             "support": "Support",
             "reportIssue": "🐛 Report Issue on GitHub",
             "reportIssueDescription": "You can report issues or improvement suggestions on GitHub. Click to open the GitHub Issue creation page."
@@ -92,8 +97,9 @@
         "caution": {
             "sampler_fallback": "Base Sampler could not be determined. Used the oldest node ID as fallback.",
             "sampler_fallback_item": "[Caution] {{name}}: Base Sampler was determined by fallback (Min ID).",
-            "suspicious_nodes_excluded": "[Caution] {{name}}: {{count}} suspicious node(s) excluded.",
-            "suspicious_nodes_included": "[Info] {{name}}: All nodes included (including {{count}} suspicious node(s))."
+            "suspicious_nodes_excluded": "[Caution] {{name}}: {{total}} suspicious node(s) excluded.",
+            "suspicious_nodes_included": "[Info] {{name}}: All {{total}} suspicious node(s) included.",
+            "suspicious_nodes_mixed": "[Caution] {{name}}: {{total}} suspicious node(s) found - {{excluded}} excluded, {{included}} included."
         },
         "error": {
             "generic": "[Error] {{name}}: {{message}}",
@@ -107,14 +113,16 @@
             "cancelledMessage": "Removal cancelled. (Removed: {{removedCount}}, Skipped: {{skippedCount}}, Failed: {{errorCount}})"
         },
         "debugLogFile": "Debug log file: {{path}}",
-        "cancelling": "... Cancelling process ..."
+        "cancelling": "... Cancelling process ...",
+        "cacheCleared": "[Success] Cache cleared successfully."
     },
     "alert": {
         "noItemSelected": "No items selected."
     },
     "confirm": {
         "deleteAll": "Are you sure you want to delete all plugin-generated tags and notes from {{count}} items?",
-        "forceDeleteAll": "[FORCE DELETE MODE]\nThis will delete ALL tags and remove note information from {{count}} items.\nThis is fast but may also remove user-added tags.\n\nAre you sure?"
+        "forceDeleteAll": "[FORCE DELETE MODE]\nThis will delete ALL tags and remove note information from {{count}} items.\nThis is fast but may also remove user-added tags.\n\nAre you sure?",
+        "clearAllCache": "Are you sure you want to delete all cached metadata? This cannot be undone."
     },
     "dictionary": {
         "bundled": "Using bundled dictionary",
@@ -122,6 +130,27 @@
         "fetchSuccess": "Successfully fetched online dictionary",
         "cached": "Using cached dictionary",
         "fetchFailed": "Failed to fetch online dictionary. Using bundled dictionary"
+    },
+    "inspector": {
+        "deleteCache": "🗑️ Delete Cache",
+        "deleteCacheTitle": "Delete the cached metadata analysis information for this image",
+        "readingMetadata": "READING METADATA...",
+        "noMetadata": "NO METADATA",
+        "error": "ERROR",
+        "prompts": "Prompts",
+        "parameters": "Parameters",
+        "model": "Model",
+        "positive": "Positive",
+        "negative": "Negative",
+        "checkpoint": "Checkpoint",
+        "loras": "LoRAs",
+        "seed": "Seed",
+        "steps": "Steps",
+        "cfgScale": "CFG Scale",
+        "sampler": "Sampler",
+        "scheduler": "Scheduler",
+        "base": "Base",
+        "step": "Step"
     },
     "suspiciousNode": {
         "title": "⚠️ Potentially Unused Node",
@@ -145,10 +174,12 @@
             "vaeEncodeNoInput": "VAEEncode node has no pixels/image input",
             "vaeDecodeNoInput": "VAEDecode node has no samples/latent input",
             "samplerNoInput": "Sampler node '{{nodeType}}' has no latent_image input",
+            "transformerNoInput": "Transformer node '{{nodeType}}' has no input connections",
             "missingInput": "Node '{{nodeType}}' has missing required inputs"
         },
         "suggestion": {
             "disconnected": "This node may be disconnected or have missing connections. Check if this node should be included in the workflow.",
+            "checkConnections": "Check if this node's inputs are properly connected. Transformer nodes require inputs to function.",
             "vaeEncodeRequired": "VAEEncode requires an image input to encode. This node may not execute.",
             "vaeDecodeRequired": "VAEDecode requires latent samples to decode. This node may not execute.",
             "samplerRequired": "Samplers require a latent image input. This node may not execute."
@@ -157,6 +188,9 @@
         "samplerInfo": "{{samplerType}} (seed: {{seed}}, steps: {{steps}}, cfg: {{cfg}})",
         "notExecuted": "⚠️ This step may not have been executed",
         "excludedSamplerTitle": "Excluded sampler: {{samplerType}} (#{{nodeId}})",
-        "suspiciousSamplerTitle": "Suspicious sampler: {{samplerType}} (#{{nodeId}})"
+        "suspiciousSamplerTitle": "Suspicious sampler: {{samplerType}} (#{{nodeId}})",
+        "legendSuspicious": "Suspicious Node",
+        "legendSampler": "Sampler",
+        "legendOther": "Other Node"
     }
 }
