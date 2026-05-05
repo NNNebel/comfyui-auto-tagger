@@ -6,28 +6,22 @@ All notable changes to this project will be documented in this file.
 
 ### 🇬🇧 English
 #### 🎉 New Features
-- **MP4 video metadata support**: Added `Mp4ContainerReader` to extract metadata from MP4 video files, enabling video workflow analysis for video-based AI generation.
-- **Container Reader architecture**: Refactored metadata extraction into a modular ContainerReader pattern with BaseContainerReader interface and registry-based discovery.
+- **MP4 video metadata support**: Added support to extract metadata from MP4 video files, enabling analysis of video-based AI generation workflows.
 
 #### ✨ Improvements
 - **Sampler detection reliability**: Fixed fallback heuristic for ADetailer-style nodes (DetailerForEachDebug) that have seed/steps/positive/negative but not latent_image.
 - **Sigmas field extraction**: Added sigmas (denoise steps) field to sampler metadata for nodes using manual sigma scheduling.
-- **i18n completeness**: Added missing `inspector.sigmas` translation key to English and Japanese locale files.
-- **Test coverage expansion**: Added 32 new unit tests for positive cases (real fixture extraction) and MetadataService (1425 → 1457 total tests, all passing).
 
 #### 🐛 Bug Fixes
 - **Eagle Bridge compatibility**: Restored proper ADetailer node detection in eagle_bridge trace paths, fixing incorrect sampler selection in multi-step workflows.
 
 ### 🇯🇵 日本語
 #### 🎉 新機能
-- **MP4 動画ファイル対応**: `Mp4ContainerReader` を追加し、MP4 ファイルからメタデータを抽出。動画ベースの AI 生成ワークフロー対応。
-- **Container Reader アーキテクチャ**: メタデータ抽出をモジュール化。BaseContainerReader インターフェースと Registry パターンで拡張性を向上。
+- **MP4 動画ファイル対応**: MP4 ファイルからメタデータを抽出。動画ベースの AI 生成ワークフロー対応。
 
 #### ✨ 改善
 - **サンプラー検出の信頼性向上**: ADetailer ノード（DetailerForEachDebug）の fallback 判定を修正。seed/steps/positive/negative があれば検出するように。
 - **Sigmas フィールド抽出**: 手動 sigma スケジューリングを使用するノードの sigmas（denoise steps）情報を抽出。
-- **国際化完成**: `inspector.sigmas` 訳を英日両言語に追加。
-- **テストカバレッジ拡大**: 正常系テスト 32 件新規追加（実際の fixture ファイルでの抽出検証、MetadataService ユニットテスト）。合計 1457 テスト全通過。
 
 #### 🐛 バグ修正
 - **Eagle Bridge 互換性**: ADetailer ノード検出を復活。eagle_bridge trace パスで正しいサンプラーを選択するように。
