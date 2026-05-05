@@ -21,7 +21,15 @@ describe('Video Metadata Integration Tests (MP4)', () => {
       mimeType: 'video/mp4',
       format: 'comfyui',
       shouldSucceed: true
-    }
+    },
+    // TODO: Add test case for MP4 with eagle_bridge metadata
+    // This will test the bridge's deterministic route discovery:
+    // 1. MP4 contains prompt, workflow, and eagle_bridge (final_node_id)
+    // 2. MetadataService extracts all three via Mp4ContainerReader
+    // 3. ComfyUIParser uses eagle_bridge.final_node_id as forcedOutputNodeIds
+    // 4. ComfyUIGraph performs deterministic BFS from that node
+    // 5. Result matches expected output (no heuristic fallback)
+    // Fixture: tests/fixtures/bridge-*.mp4 (generated via eagle-metadata-bridge)
   ];
 
   testCases.forEach((testCase) => {
