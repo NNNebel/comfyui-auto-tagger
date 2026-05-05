@@ -101,4 +101,59 @@ describe('BaseContainerReader', () => {
       expect(result.workflow).toBe('{"a":1}');
     });
   });
+
+  describe('_parseJsonFromPos', () => {
+    it('parses simple JSON object', () => {
+      const json = '{"a":1}';
+      const buf = new TextEncoder().encode(json);
+      expect(reader._parseJsonFromPos(buf, 0)).toEqual({ a: 1 });
+    });
+
+    it('parses nested JSON object', () => {
+      const json = '{"a":{"b":2}}';
+      const buf = new TextEncoder().encode(json);
+      expect(reader._parseJsonFromPos(buf, 0)).toEqual({ a: { b: 2 } });
+    });
+
+    it('parses JSON with string values', () => {
+      const json = '{"name":"test","type":"sample"}';
+      const buf = new TextEncoder().encode(json);
+      const result = reader._parseJsonFromPos(buf, 0);
+      expect(result.name).toBe('test');
+      expect(result.type).toBe('sample');
+    });
+
+    it('parses JSON with escaped quotes', () => {
+      const json = '{"text":"say \\"hello\\""}';
+      const buf = new TextEncoder().encode(json);
+      const result = reader._parseJsonFromPos(buf, 0);
+      expect(result.text).toBe('say "hello"');
+    });
+
+    it('returns null for malformed JSON', () => {
+      const json = '{"unclosed":1';
+      const buf = new TextEncoder().encode(json);
+      expect(reader._parseJsonFromPos(buf, 0)).toBeNull();
+    });
+
+    it('returns null if no opening brace at position', () => {
+      const text = 'not json at all';
+      const buf = new TextEncoder().encode(text);
+      expect(reader._parseJsonFromPos(buf, 0)).toBeNull();
+    });
+
+    it('parses JSON starting at non-zero position', () => {
+      const fullText = 'prefix:{"x":10}:suffix';
+      const buf = new TextEncoder().encode(fullText);
+      const result = reader._parseJsonFromPos(buf, 7); // Start at {
+      expect(result).toEqual({ x: 10 });
+    });
+
+    it('handles deeply nested JSON', () => {
+      const json = '{"a":{"b":{"c":{"d":1}}}}';
+      const buf = new TextEncoder().encode(json);
+      const result = reader._parseJsonFromPos(buf, 0);
+      expect(result.a.b.c.d).toBe(1);
+    });
+  });
 });
