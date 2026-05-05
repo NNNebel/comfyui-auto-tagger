@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+---
+
+## [1.3.9] - 2026-05-05
+
 ### 🇬🇧 English
 #### 🎉 New Features
 - **MP4 video metadata support**: Added support to extract metadata from MP4 video files, enabling analysis of video-based AI generation workflows.
