@@ -491,14 +491,14 @@ class ComfyUISamplerAnalyzer {
       this.reporter.startTrace(samplerId);
     }
     
-    // Extract scalar metadata (seed, steps, cfg, sampler, scheduler)
-    const scalarTypes = ['seed', 'steps', 'cfg', 'sampler', 'scheduler'];
+    // Extract scalar metadata (seed, steps, cfg, sampler, scheduler, sigmas)
+    const scalarTypes = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'sigmas'];
     for (const type of scalarTypes) {
       const value = this._traceMetadataValue(samplerId, type, this._getPortPatterns(type));
       if (value !== null && value !== undefined) {
         metadata[type] = value;
       } else {
-        metadata[type] = (type === 'sampler' || type === 'scheduler') ? undefined : null;
+        metadata[type] = (type === 'sampler' || type === 'scheduler' || type === 'sigmas') ? undefined : null;
       }
     }
 
@@ -640,6 +640,7 @@ class ComfyUISamplerAnalyzer {
       cfg:       ['cfg', 'guidance'],
       sampler:   ['sampler', 'sampler_name'],
       scheduler: ['scheduler'],
+      sigmas:    ['sigmas'],
     };
     return patterns[metadataType] || [];
   }
@@ -902,7 +903,17 @@ class ComfyUISamplerAnalyzer {
     const portName = metadataType; // 'positive' or 'negative' — matches KSampler input key
 
     // Step 1: follow the direct port link from the sampler
-    const condNodeId = this.graph.getConnectedNodeId(startNodeId, portName);
+    let condNodeId = this.graph.getConnectedNodeId(startNodeId, portName);
+
+    // If direct port not found, try following a guider chain (for SamplerCustomAdvanced pattern)
+    if (!condNodeId) {
+      const guiderNodeId = this.graph.getConnectedNodeId(startNodeId, 'guider');
+      if (guiderNodeId) {
+        // Follow guider to its positive/negative input
+        condNodeId = this.graph.getConnectedNodeId(guiderNodeId, portName);
+      }
+    }
+
     if (!condNodeId) {
       return '';
     }
@@ -969,8 +980,15 @@ class ComfyUISamplerAnalyzer {
           }
         }
       }
-      // If no text was found here, stop — do not expand parents.
-      // Intentional: we don't traverse into unrelated parts of the graph.
+
+      // If no text found, check if this is a conditioning passthrough node (ConditioningCombine, LTXVConditioning, etc.)
+      // and follow the positive/negative inputs to find text providers
+      if (!foundText && node.inputs && metadataType in node.inputs) {
+        const nextId = this.graph.getConnectedNodeId(nodeId, metadataType);
+        if (nextId && !visited.has(nextId)) {
+          queue.push(nextId);
+        }
+      }
     }
 
     return texts.join(', ');

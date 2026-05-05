@@ -507,7 +507,8 @@ Promise.all([
                     '.png': 'image/png',
                     '.jpg': 'image/jpeg',
                     '.jpeg': 'image/jpeg',
-                    '.webp': 'image/webp'
+                    '.webp': 'image/webp',
+                    '.mp4': 'video/mp4'
                 };
                 const mimeType = mimeTypeMap[ext] || 'image/webp';
 
@@ -830,10 +831,11 @@ Promise.all([
                         '.png': 'image/png',
                         '.jpg': 'image/jpeg',
                         '.jpeg': 'image/jpeg',
-                        '.webp': 'image/webp'
+                        '.webp': 'image/webp',
+                        '.mp4': 'video/mp4'
                     };
                     const mimeType = mimeTypeMap[ext] || 'image/webp';
-                    
+
                     // Use new MetadataService
                     const metadataService = new MetadataService();
                     const metadata = metadataService.extractPreferredMetadata(buffer, mimeType, 'comfyui');

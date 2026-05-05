@@ -83,10 +83,10 @@ describe('ContainerReaderRegistry', () => {
       expect(defaultRegistry.getReader('image/jpg')).toBeDefined();
     });
 
-    it('default registry supports 4 MIME types', () => {
+    it('default registry supports 5 MIME types', () => {
       const defaultRegistry = ContainerReaderRegistry.createDefault();
       const types = defaultRegistry.getSupportedMimeTypes();
-      expect(types.length).toBe(4);
+      expect(types.length).toBe(5);
     });
 
     it('all default readers are not null', () => {
@@ -95,6 +95,7 @@ describe('ContainerReaderRegistry', () => {
       expect(defaultRegistry.getReader('image/webp')).not.toBeNull();
       expect(defaultRegistry.getReader('image/jpeg')).not.toBeNull();
       expect(defaultRegistry.getReader('image/jpg')).not.toBeNull();
+      expect(defaultRegistry.getReader('video/mp4')).not.toBeNull();
     });
   });
 });

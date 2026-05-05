@@ -299,6 +299,7 @@
     <script src="js/metadata-parser/containers/PngContainerReader.js"></script>
     <script src="js/metadata-parser/containers/WebpContainerReader.js"></script>
     <script src="js/metadata-parser/containers/JpegContainerReader.js"></script>
+    <script src="js/metadata-parser/containers/Mp4ContainerReader.js"></script>
     <script src="js/metadata-parser/containers/ContainerReaderRegistry.js"></script>
 
     <script src="js/metadata-parser/binary-extraction/ImageMetadataReader.js"></script>
@@ -466,7 +467,7 @@
             return card;
         }
 
-        function renderStep(step, metadata, stepWarnings = []) {
+        function renderStep(step, metadata, stepWarnings = [], mimeType = 'image/png') {
             const panel = document.createElement('div');
             const appendTo = (parent, el) => { if(el) parent.appendChild(el); };
 
@@ -501,17 +502,34 @@
             paramCard.className = 'card';
             appendTo(paramCard, createRow(t('inspector.seed', { defaultValue: 'Seed' }), step.seed, true));
 
-            const grid1 = document.createElement('div');
-            grid1.className = 'grid-row';
-            appendTo(grid1, createRow(t('inspector.steps', { defaultValue: 'Steps' }), step.steps, true));
-            appendTo(grid1, createRow(t('inspector.cfgScale', { defaultValue: 'CFG Scale' }), step.cfg, true));
-            paramCard.appendChild(grid1);
+            // Different layouts for video (MP4) vs static images
+            if (mimeType === 'video/mp4') {
+              // MP4 layout: Sampler + CFG, ManualSigmas
+              const grid1 = document.createElement('div');
+              grid1.className = 'grid-row';
+              appendTo(grid1, createRow(t('inspector.sampler', { defaultValue: 'Sampler' }), step.sampler));
+              if (step.cfg !== null && step.cfg !== undefined) {
+                appendTo(grid1, createRow(t('inspector.cfgScale', { defaultValue: 'CFG Scale' }), step.cfg, true));
+              }
+              paramCard.appendChild(grid1);
 
-            const grid2 = document.createElement('div');
-            grid2.className = 'grid-row';
-            appendTo(grid2, createRow(t('inspector.sampler', { defaultValue: 'Sampler' }), step.sampler));
-            appendTo(grid2, createRow(t('inspector.scheduler', { defaultValue: 'Scheduler' }), step.scheduler));
-            paramCard.appendChild(grid2);
+              if (step.sigmas) {
+                appendTo(paramCard, createRow(t('inspector.sigmas', { defaultValue: 'ManualSigmas' }), step.sigmas, true));
+              }
+            } else {
+              // Static image layout: Steps + CFG, Sampler + Scheduler
+              const grid1 = document.createElement('div');
+              grid1.className = 'grid-row';
+              appendTo(grid1, createRow(t('inspector.steps', { defaultValue: 'Steps' }), step.steps, true));
+              appendTo(grid1, createRow(t('inspector.cfgScale', { defaultValue: 'CFG Scale' }), step.cfg, true));
+              paramCard.appendChild(grid1);
+
+              const grid2 = document.createElement('div');
+              grid2.className = 'grid-row';
+              appendTo(grid2, createRow(t('inspector.sampler', { defaultValue: 'Sampler' }), step.sampler));
+              appendTo(grid2, createRow(t('inspector.scheduler', { defaultValue: 'Scheduler' }), step.scheduler));
+              paramCard.appendChild(grid2);
+            }
 
             panel.appendChild(paramCard);
 
@@ -535,7 +553,7 @@
             return panel;
         }
 
-        function renderMetadata(metadata) {
+        function renderMetadata(metadata, mimeType) {
             const content = document.getElementById('content');
             while (content.firstChild) {
                 content.removeChild(content.firstChild);
@@ -586,7 +604,7 @@
                         tab.title = `⚠️ ${stepWarnings.length} suspicious node(s) detected`;
                     }
 
-                    const panel = renderStep(step, metadata, stepWarnings);
+                    const panel = renderStep(step, metadata, stepWarnings, mimeType);
                     panel.className = `tab-panel ${tabIndex === 0 ? 'active' : ''}`;
                     panels.push(panel);
 
@@ -625,7 +643,7 @@
                     tab.appendChild(subtitle);
                     tab.title = `⚠️ Suspicious upstream node`;
 
-                    const panel = renderStep(entry.stepMetadata, metadata, entry.warnings);
+                    const panel = renderStep(entry.stepMetadata, metadata, entry.warnings, mimeType);
                     panel.className = `tab-panel ${tabIndex === 0 ? 'active' : ''}`;
                     panels.push(panel);
 
@@ -661,7 +679,7 @@
                     tab.title = `⚠️ Suspicious sampler`;
 
                     const warnings = [suspNode];
-                    const panel = renderStep(suspNode.stepMetadata, metadata, warnings);
+                    const panel = renderStep(suspNode.stepMetadata, metadata, warnings, mimeType);
                     panel.className = `tab-panel ${tabIndex === 0 ? 'active' : ''}`;
                     panels.push(panel);
 
@@ -682,7 +700,7 @@
                 content.appendChild(tabBar);
                 panels.forEach(p => content.appendChild(p));
             } else {
-                content.appendChild(renderStep(steps[0] || metadata, metadata));
+                content.appendChild(renderStep(steps[0] || metadata, metadata, [], mimeType));
             }
         }
 
@@ -718,6 +736,11 @@
             if (!filePath) return;
 
             try {
+                // Determine MIME type early
+                const ext = path.extname(filePath).toLowerCase().replace('.', '');
+                const mimeMap = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg', mp4: 'video/mp4' };
+                const currentMimeType = mimeMap[ext] || 'image/png';
+
                 // Load settings
                 const settings = await loadSettings();
                 const skipCacheEnabled = settings.skipCache === true;
@@ -728,7 +751,7 @@
 
                 const filenameEl = document.getElementById('filename');
                 if (filenameEl) filenameEl.textContent = path.basename(filePath);
-                
+
                 // Try cache first
                 const libPath = window.MetadataCacheService.resolveLibraryPath(filePath);
                 let metadata = null;
@@ -741,17 +764,15 @@
 
                 if (metadata) {
                     console.log('[Inspector] Loaded from cache:', itemId);
-                    renderMetadata(metadata);
+                    renderMetadata(metadata, currentMimeType);
                     return;
                 }
 
                 // Cache miss - parse from file
                 const buf = await fsp.readFile(filePath);
-                const ext = path.extname(filePath).toLowerCase().replace('.', '');
-                const mimeMap = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
-                
+
                 const service = new window.MetadataService();
-                metadata = service.extractPreferredMetadata(buf, mimeMap[ext] || 'image/png', 'comfyui', {
+                metadata = service.extractPreferredMetadata(buf, currentMimeType, 'comfyui', {
                     suspiciousNodeHandling: 'exclude'
                 });
 
@@ -759,7 +780,7 @@
                     // Extract and log prompt JSON for debugging
                     const buf2 = await fsp.readFile(filePath);
                     const ImageMetadataReader = window.ImageMetadataReader;
-                    const rawChunks = ImageMetadataReader.extractRawMetadata(buf2, mimeMap[ext] || 'image/png');
+                    const rawChunks = ImageMetadataReader.extractRawMetadata(buf2, currentMimeType);
                     if (rawChunks && rawChunks.prompt) {
                         console.log('[Inspector] Prompt JSON structure:', JSON.stringify(rawChunks.prompt, null, 2));
                     }
@@ -774,7 +795,7 @@
                             console.log(`[Inspector] Suspicious node ${node.nodeId}: affectedSteps=${node.affectedSteps ? node.affectedSteps.length : 0}`, node.affectedSteps);
                         });
                     }
-                    renderMetadata(metadata);
+                    renderMetadata(metadata, currentMimeType);
                     // Save to cache for next time (unless skip cache is enabled)
                     console.log('[Inspector] Cache decision:', {
                         skipCacheEnabled: skipCacheEnabled,

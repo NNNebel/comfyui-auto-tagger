@@ -231,19 +231,31 @@ class ComfyUIGraph {
    * @returns {boolean} True if node is a sampler
    */
   _isSamplerNode(node) {
+    if (!node || !node.class_type) return false;
+
+    const classType = node.class_type;
+
+    // Reject known non-sampler nodes (check FIRST to avoid false positives)
+    if (classType.includes('Select') || classType.includes('CFGGuider') ||
+        classType.includes('Guider') || classType.includes('Loader')) {
+      return false;
+    }
+
+    // Sampler nodes contain "Sampler" in their class_type
+    if (classType.includes('Sampler')) {
+      return true;
+    }
+
+    // KSampler is a traditional sampler (may not have "Sampler" in name due to legacy)
+    if (classType === 'KSampler' || classType === 'KSamplerAdvanced') {
+      return true;
+    }
+
+    // Fallback: heuristic for ADetailer-style nodes (seed+steps+positive/negative)
     if (!node.inputs) return false;
-    
-    // Traditional sampler: has seed, steps, cfg, positive, negative
+
     const samplerParams = ['seed', 'steps', 'cfg', 'positive', 'negative'];
-    const hasSamplerParams = samplerParams.filter(key => node.inputs[key] !== undefined).length >= 3;
-    
-    // Advanced sampler: has sampler, sigmas, latent_image
-    const hasAdvancedParams = 
-      node.inputs.sampler !== undefined &&
-      node.inputs.sigmas !== undefined &&
-      node.inputs.latent_image !== undefined;
-    
-    return hasSamplerParams || hasAdvancedParams;
+    return samplerParams.filter(key => node.inputs[key] !== undefined).length >= 3;
   }
   
   /**

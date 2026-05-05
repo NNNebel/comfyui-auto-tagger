@@ -149,6 +149,7 @@
         "cfgScale": "CFG Scale",
         "sampler": "Sampler",
         "scheduler": "Scheduler",
+        "sigmas": "Manual Sigmas",
         "base": "Base",
         "step": "Step"
     },

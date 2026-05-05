@@ -15,7 +15,7 @@
         "height": 520
     },
     "preview": {
-        "jpg,jpeg,png,webp": {
+        "jpg,jpeg,png,webp,mp4": {
             "inspector": {
                 "path": "inspector.html",
                 "height": 700,

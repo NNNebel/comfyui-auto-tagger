@@ -3,16 +3,18 @@
 (function(global) {
   'use strict';
 
-  var PngContainerReader, WebpContainerReader, JpegContainerReader;
+  var PngContainerReader, WebpContainerReader, JpegContainerReader, Mp4ContainerReader;
 
   if (typeof window !== 'undefined') {
     PngContainerReader = window.PngContainerReader;
     WebpContainerReader = window.WebpContainerReader;
     JpegContainerReader = window.JpegContainerReader;
+    Mp4ContainerReader = window.Mp4ContainerReader;
   } else if (typeof require !== 'undefined') {
     PngContainerReader = require('./PngContainerReader');
     WebpContainerReader = require('./WebpContainerReader');
     JpegContainerReader = require('./JpegContainerReader');
+    Mp4ContainerReader = require('./Mp4ContainerReader');
   } else {
     throw new Error('Required dependencies not found');
   }
@@ -43,7 +45,8 @@
       registry
         .register(new PngContainerReader())
         .register(new WebpContainerReader())
-        .register(new JpegContainerReader());
+        .register(new JpegContainerReader())
+        .register(new Mp4ContainerReader());
       return registry;
     }
   }
