@@ -15,7 +15,7 @@
 1. **Generation Info Inspector** — Instantly view prompts, seeds, and generation parameters when you select an image (with copy buttons for quick reuse)
 2. **Auto-Tagging** — Save extracted metadata as Tags and Notes for organization and filtering
 
-It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Forge, and other variants; referred to as "A1111" below), and **Civitai** generated images in **PNG**, **WebP**, and **JPEG** formats, and allows you to filter which information to import.
+It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Forge, and other variants; referred to as "A1111" below), and **Civitai** generated images in **PNG**, **WebP**, **JPEG**, and **MP4** (video) formats, and allows you to filter which information to import.
 
 > ### 🔗 Better together: Eagle Metadata Bridge
 >
@@ -28,7 +28,7 @@ It supports **ComfyUI**, **Stable Diffusion WebUI** (including Automatic1111, Fo
 ### ✨ Features
 
 * **Generation Info Inspector**: When you select an image in Eagle, a panel automatically appears showing the generation metadata — prompts, seed, sampler, model, and LoRA — with a copy button for each field. Multi-sampler workflows display as tabs (Base / Step 2, etc.).
-* **Multi-Format Support**: Supports ComfyUI workflows (including complex multi-sampler), A1111 (Stable Diffusion WebUI) parameters, and Civitai generation metadata.
+* **Multi-Format Support**: Supports ComfyUI workflows (including complex multi-sampler), A1111 (Stable Diffusion WebUI) parameters, Civitai generation metadata, and MP4 video files.
 * **Metadata Extraction**: Automatically extracts the models used (Checkpoints, LoRA), prompts, and generation settings (Seed, Sampler, Steps, CFG).
 * **Flexible Output**:
     * **Tags**: Adds extracted info to Eagle tags (e.g., `#checkpoint_name`, `#lora_name`, `seed:12345`).
@@ -161,7 +161,7 @@ AI生成画像のメタデータを自動抽出し、以下の2つの機能を�
 1. **生成情報インスペクター** — 画像を選ぶと、プロンプト・Seed・生成パラメータが自動表示されます（各フィールドにコピーボタン付き）
 2. **自動タグ付け** — 抽出したメタデータをEagleの「タグ」や「メモ」として保存し、整理・検索を効率化
 
-**ComfyUI**、**Stable Diffusion WebUI**（Automatic1111、Forge等の派生版を含む。以下「A1111」と表記）、**Civitai** で生成された **PNG**・**WebP**・**JPEG** 形式の画像に対応しており、取り込む情報を選択できます。
+**ComfyUI**、**Stable Diffusion WebUI**（Automatic1111、Forge等の派生版を含む。以下「A1111」と表記）、**Civitai** で生成された **PNG**・**WebP**・**JPEG** 形式の画像、および **MP4**（動画）ファイルに対応しており、取り込む情報を選択できます。
 
 > ### 🔗 組み合わせるとさらに便利：Eagle Metadata Bridge
 >
@@ -174,7 +174,7 @@ AI生成画像のメタデータを自動抽出し、以下の2つの機能を�
 ### ✨ 機能
 
 * **生成情報インスペクター**: Eagleで画像を選択すると、プロンプト・Seed・サンプラー・モデル・LoRAなどの生成情報がパネルに自動表示されます。各フィールドにコピーボタン付き。マルチサンプラーワークフローはタブ（Base / Step 2 など）で切り替え表示。
-* **複数フォーマット対応**: ComfyUIワークフロー、A1111（Stable Diffusion WebUI）、Civitai生成画像に対応。
+* **複数フォーマット対応**: ComfyUIワークフロー、A1111（Stable Diffusion WebUI）、Civitai生成画像、MP4動画ファイルに対応。
 * **メタデータ抽出**: 使用したモデル（チェックポイント・LoRA）、プロンプト、生成設定（Seed・サンプラー・ステップ数・CFG）を自動抽出。
 * **柔軟な出力先**:
     * **タグ**: 抽出した情報をEagleのタグとして追加（例: `#checkpoint_name`, `seed:12345`）。
