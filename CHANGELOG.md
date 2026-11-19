@@ -10,23 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ### 🇬🇧 English
 #### 🐛 Bug Fixes
-- **Inspector in distributed plugin**: The release package now includes `inspector.html`, so Eagle can open the generation information inspector after installation.
-- **Complete local packages**: Local prerelease builds now include all runtime JavaScript modules and dictionaries, using the same file selection as official releases.
-- **MP4 Eagle Bridge metadata**: JSON metadata in MP4 files (`prompt`, `workflow`, and `eagle_bridge`) is decoded for downstream analysis.
-- **Release notes**: Releases with letter suffixes now use the changelog entry matching their tag.
-
-#### 🧪 Testing
-- Added checks for packaged entry points, HTML dependencies, runtime data, and MP4 JSON decoding.
+- Fixed the generation information inspector failing to open after installation.
+- Fixed reading generation information embedded in MP4 videos by Eagle Bridge.
 
 ### 🇯🇵 日本語
 #### 🐛 バグ修正
-- **配布版のインスペクター**: リリースに `inspector.html` を同梱し、インストール後に生成情報インスペクターを開けない問題を修正。
-- **ローカル配布物の不足**: prerelease ビルドも正式リリースと同じ梱包処理を使い、実行に必要な JavaScript と辞書をすべて同梱。
-- **MP4 の Eagle Bridge メタデータ**: MP4 内の `prompt`・`workflow`・`eagle_bridge` を JSON として解析し、後続の解析処理に渡すよう修正。
-- **リリースノート**: 英字付きバージョンでも、タグと一致する変更履歴を使用するよう修正。
-
-#### 🧪 テスト
-- 配布物の起動ページ・HTML 依存ファイル・実行時データ、および MP4 の JSON 解析を検証するテストを追加。
+- インストール後に生成情報インスペクターを開けない問題を修正。
+- Eagle Bridge が MP4 動画に埋め込んだ生成情報の読み取りを修正。
 
 ---
 
