@@ -41,10 +41,8 @@ jobs:
           # Create directory structure for plugin
           mkdir -p dist
 
-          # Copy only essential files for Eagle plugin runtime
-          cp index.html manifest.json logo.png LICENSE dist/
-          cp -r js dist/
-          cp -r _locales dist/
+          # Share runtime contents with the local prerelease build
+          node scripts/stage-plugin.js
 
           # Create plugin package
           cd dist

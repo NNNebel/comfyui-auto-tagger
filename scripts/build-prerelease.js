@@ -23,75 +23,8 @@ if (fs.existsSync('dist')) {
   fs.rmSync('dist', { recursive: true, force: true });
 }
 
-// Create directory structure
-console.log('Creating directory structure...');
-const dirs = [
-  'dist/js/metadata-parser/binary-extraction',
-  'dist/js/metadata-parser/parsers',
-  'dist/js/metadata-parser/integration',
-  'dist/_locales'
-];
-
-dirs.forEach(dir => {
-  fs.mkdirSync(dir, { recursive: true });
-});
-
-// Copy essential files
-console.log('Copying essential files...');
-
-// Root files
-const rootFiles = ['index.html', 'manifest.json', 'logo.png', 'LICENSE'];
-rootFiles.forEach(file => {
-  fs.copyFileSync(file, path.join('dist', file));
-  console.log(`  ✓ ${file}`);
-});
-
-// JavaScript files
-const jsFiles = ['js/core.js', 'js/plugin.js'];
-jsFiles.forEach(file => {
-  fs.copyFileSync(file, path.join('dist', file));
-  console.log(`  ✓ ${file}`);
-});
-
-// Metadata parser - binary extraction
-const binaryFiles = fs.readdirSync('js/metadata-parser/binary-extraction')
-  .filter(f => f.endsWith('.js'));
-binaryFiles.forEach(file => {
-  const src = path.join('js/metadata-parser/binary-extraction', file);
-  const dest = path.join('dist/js/metadata-parser/binary-extraction', file);
-  fs.copyFileSync(src, dest);
-  console.log(`  ✓ ${src}`);
-});
-
-// Metadata parser - parsers
-const parserFiles = fs.readdirSync('js/metadata-parser/parsers')
-  .filter(f => f.endsWith('.js'));
-parserFiles.forEach(file => {
-  const src = path.join('js/metadata-parser/parsers', file);
-  const dest = path.join('dist/js/metadata-parser/parsers', file);
-  fs.copyFileSync(src, dest);
-  console.log(`  ✓ ${src}`);
-});
-
-// Metadata parser - integration
-const integrationFiles = fs.readdirSync('js/metadata-parser/integration')
-  .filter(f => f.endsWith('.js'));
-integrationFiles.forEach(file => {
-  const src = path.join('js/metadata-parser/integration', file);
-  const dest = path.join('dist/js/metadata-parser/integration', file);
-  fs.copyFileSync(src, dest);
-  console.log(`  ✓ ${src}`);
-});
-
-// Localization files
-const localeFiles = fs.readdirSync('_locales')
-  .filter(f => f.endsWith('.json'));
-localeFiles.forEach(file => {
-  const src = path.join('_locales', file);
-  const dest = path.join('dist/_locales', file);
-  fs.copyFileSync(src, dest);
-  console.log(`  ✓ ${src}`);
-});
+// Stage the same runtime files as the GitHub release workflow.
+require('./stage-plugin')(path.resolve('dist'));
 
 // Create release notes (not included in package, for GitHub Release only)
 console.log('\nCreating release notes...');
