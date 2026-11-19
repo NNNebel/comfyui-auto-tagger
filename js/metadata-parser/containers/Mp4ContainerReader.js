@@ -66,7 +66,30 @@
         }
       }
 
+      // Parse JSON strings for prompt, workflow, eagle_bridge (matches ComfyUI format)
+      this._parseJsonMetadata(result);
+
       return result;
+    }
+
+    /**
+     * Parse JSON strings in metadata (prompt, workflow, eagle_bridge).
+     * Converts JSON string values to parsed objects for downstream processing.
+     * @private
+     */
+    _parseJsonMetadata(metadata) {
+      const keysToTry = ['prompt', 'workflow', 'eagle_bridge'];
+
+      for (const key of keysToTry) {
+        if (metadata[key] && typeof metadata[key] === 'string') {
+          try {
+            metadata[key] = JSON.parse(metadata[key]);
+          } catch (e) {
+            console.warn(`[Mp4ContainerReader] Failed to parse ${key} as JSON:`, e.message);
+            // Keep as string if parsing fails
+          }
+        }
+      }
     }
 
     _findBox(bytes, view, latin1, readU32, boxType, searchStart) {
